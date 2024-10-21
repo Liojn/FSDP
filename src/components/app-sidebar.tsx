@@ -13,6 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 // Menu items.
 const items = [
@@ -40,21 +41,24 @@ const items = [
 
 export function AppSidebar() {
   return (
-    <Sidebar className="w-64 h-screen bg-stone-950 text-white">
+    <Sidebar className="h-screen bg-stone-950 text-white">
         <SidebarHeader className="px-4 py-5">  
           <SidebarMenu>
             <SidebarMenuItem>
-            
+                {/* user logo and name here */}
                   <SidebarMenuButton
                     size="lg"
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   >
-                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                      
-                    </div>
-                    <div className="flex flex-col gap-0.5 leading-none">
-                      <span className="font-semibold">Documentation</span>
-                      <span className="">its logo time</span>
+                    
+                    <Avatar className='mr-3'>
+                        <AvatarImage src="https://github.com/shadcn.png" />
+                        <AvatarFallback>CN</AvatarFallback>
+                    </Avatar>
+
+                    
+                    <div className="flex flex-col  leading-none">
+                      <span className="font-semibold text-xl">EcoFarm</span>
                     </div>
                     
                   </SidebarMenuButton>
@@ -70,7 +74,7 @@ export function AppSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url} className="flex items-center space-x-3 px-4 py-5 hover:bg-stone-700">
+                    <a href={item.url} className="flex items-center space-x-3 px-4 py-6 hover:bg-stone-700">
                       <item.icon className="w-6 h-6" /> {/* Increased icon size */}
                       <span className='text-lg'>{item.title}</span>
                     </a>
