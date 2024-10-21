@@ -34,7 +34,7 @@ export default function RootLayout({
         {/* SidebarProvider wrapping the layout */}
         <SidebarProvider>
           {/* Sidebar component */}
-          <AppSidebar />
+          <AppSidebar  />
           <main>
             {/* Sidebar trigger button */}
             <SidebarTrigger />
