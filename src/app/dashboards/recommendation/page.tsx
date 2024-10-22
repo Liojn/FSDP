@@ -123,6 +123,7 @@ export default function SustainabilityRecommendations() {
   return (
     <div className="container mx-auto p-4">
       <div className="flex items-center mb-6">
+        
         <h1 className="text-3xl font-bold">AI-Curated Sustainability Recommendations</h1>
       </div>
 
