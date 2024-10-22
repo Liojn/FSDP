@@ -1,7 +1,8 @@
 import React from 'react';
-import { MdSpaceDashboard, MdLeaderboard } from "react-icons/md";
-import { BiStats } from "react-icons/bi";
-import { FaLightbulb } from "react-icons/fa";
+import { MdOutlineSpaceDashboard, MdOutlineLeaderboard } from "react-icons/md";
+import { IoStatsChartOutline } from "react-icons/io5";
+
+import { FaRegLightbulb } from "react-icons/fa";
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +13,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -21,28 +23,29 @@ const items = [
   {
     title: "Dashboard",
     url: "#",
-    icon: MdSpaceDashboard,
+    icon: MdOutlineSpaceDashboard,
   },
   {
     title: "Statistics",
     url: "#",
-    icon: BiStats,
+    icon: IoStatsChartOutline,
   },
   {
     title: "Leaderboard",
     url: "#",
-    icon: MdLeaderboard,
+    icon: MdOutlineLeaderboard,
   },
   {
     title: "Recommendations",
     url: "#",
-    icon: FaLightbulb,
+    icon: FaRegLightbulb,
   },
 ]
 
 export function AppSidebar() {
   return (
-    <Sidebar className="h-screen bg-stone-950 text-white flex flex-col ">
+    
+    <Sidebar className="h-screen flex flex-col" >
       <SidebarHeader className="px-6 py-5">  
         <div className="flex items-center">
           <Avatar className='mr-3'>
@@ -62,8 +65,8 @@ export function AppSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url} className="flex items-center space-x-3 px-4 py-5 hover:bg-gray-200 hover:text-stone-950">
-                      <item.icon className="w-6 h-6" />
+                    <a href={item.url} className="flex items-center space-x-2 ps-4 py-5 hover:bg-stone-800 hover:text-white">
+                      <item.icon className="!size-6" />
                       <span className='text-lg'>{item.title}</span>
                     </a>
                   </SidebarMenuButton>
@@ -79,5 +82,6 @@ export function AppSidebar() {
         </Button>
       </div>
     </Sidebar>
+   
   )
 }
