@@ -37,7 +37,7 @@ export default function RootLayout({
           <AppSidebar  />
           <main>
             {/* Sidebar trigger button */}
-            <SidebarTrigger />
+            <SidebarTrigger className="size-10" />
             {/* The main content of the page */}
             {children}
           </main>

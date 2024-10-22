@@ -44,10 +44,10 @@ const items = [
 
 export function AppSidebar() {
   return (
-    
     <Sidebar className="h-screen flex flex-col" >
       <SidebarHeader className="px-6 py-5">  
         <div className="flex items-center">
+          {/* change  */}
           <Avatar className='mr-3'>
             <AvatarImage src="https://github.com/shadcn.png" />
             <AvatarFallback>CN</AvatarFallback>
@@ -59,6 +59,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent className="flex-grow">
         <SidebarGroup>
+          {/* change */}
           <SidebarGroupLabel className="px-4 text-sm font-semibold py-5 text-gray-400">EcoFarm</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
