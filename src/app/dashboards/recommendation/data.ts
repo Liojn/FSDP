@@ -7,7 +7,7 @@ export const performanceData = {
     waste: { current: 120, average: 100 },
   }
   
-  const recommendations = [
+  export const recommendations = [
     {
       category: "energy",
       title: "Upgrade Irrigation Pumps",
