@@ -50,7 +50,7 @@ export default function SustainabilityRecommendations() {
   }, [])
 
   return (
-    <div className="p-4">
+    <div className="p-4 px-10">
       <div className="flex items-center mb-6">
         <h1 className="text-3xl font-bold">AI-Curated Sustainability Recommendations</h1>
       </div>

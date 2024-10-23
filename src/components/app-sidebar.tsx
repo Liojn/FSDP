@@ -65,9 +65,9 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <a 
                       href={item.url} 
-                      className="flex items-center space-x-2 px-4 py-3 hover:bg-stone-800 hover:text-white transition-colors"
+                      className="flex items-center space-x-2 px-4 py-3 hover:bg-stone-800 hover:text-white transition-colors text-base"
                     >
-                      <item.icon className="size-5" />
+                      <item.icon className="" />
                       <span>{item.title}</span>
                     </a>
                   </SidebarMenuButton>
