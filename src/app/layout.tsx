@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import localFont from "next/font/local"
 import "./globals.css"
+// Client-side component
+import ClientLayout from "./layouts/client-layout"; // Import the client layout component
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -19,8 +21,7 @@ export const metadata: Metadata = {
   description: "EcoFarm App",
 }
 
-// Client-side component
-import ClientLayout from "./client-layout"; // Import the client layout component
+
 
 export default function RootLayout({
   children,

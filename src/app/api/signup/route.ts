@@ -32,6 +32,7 @@ export async function POST (req: Request ){
 
         return NextResponse.json({ message: 'User created successfully' }, { status: 201 });
         }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         catch (error){
             return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
         }
