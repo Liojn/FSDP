@@ -2,7 +2,13 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+Firstly, npm install these modules using these in a new terminal:
+npm install
+npm install bcryptjs, jsonwebtoken
+npm i --save-dev @types/jsonwebtoken
+npm i --save-dev @types/bcryptjs
+
+Secondly, run the development server:
 
 ```bash
 npm run dev
