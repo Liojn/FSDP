@@ -32,7 +32,7 @@ const items = [
   },
   {
     title: "Leaderboard",
-    url: "#",
+    url: "/leaderboard",
     icon: MdOutlineLeaderboard,
   },
   {
