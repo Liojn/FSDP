@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button"
 const items = [
   {
     title: "Dashboard",
-    url: "#",
+    url: "http://localhost:3000/dashboards",
     icon: MdOutlineSpaceDashboard,
   },
   {
