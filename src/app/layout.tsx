@@ -1,8 +1,6 @@
 import type { Metadata } from "next"
 import localFont from "next/font/local"
 import "./globals.css"
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -21,27 +19,21 @@ export const metadata: Metadata = {
   description: "EcoFarm App",
 }
 
+// Client-side component
+import ClientLayout from "./client-layout"; // Import the client layout component
+
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        <SidebarProvider>
-            <AppSidebar />
-            <main className="flex-1 overflow-y-auto">
-              <div className="mx-auto px-4 py-6">
-                <SidebarTrigger className="lg:hidden mb-4" />
-                {children}
-              </div>
-            </main>
-         
-        </SidebarProvider>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
-  )
+  );
 }
