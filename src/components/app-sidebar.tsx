@@ -153,7 +153,9 @@ export function AppSidebar() {
                       )}
                       onClick={() => handleNavigate(item.url)}
                     >
-                      <item.icon size={20} />
+                      <span>
+                        <item.icon size={19} />
+                      </span>
                       <span className="flex-1">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
