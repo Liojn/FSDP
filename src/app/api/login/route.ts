@@ -34,7 +34,7 @@ export async function POST(req: Request, res: NextResponse) {
             { expiresIn: "1h" }
         )
 
-        return NextResponse.json({ token }, { status: 200 });
+        return NextResponse.json({ token, name: user.name }, { status: 200 });
         } catch (error) {
             return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
         }
