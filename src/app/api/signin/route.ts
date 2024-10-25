@@ -3,7 +3,7 @@ import dbClient from "../../../../dbConfig";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-export async function POST(req: Request, res: NextResponse) {
+export async function POST(req: Request) {
 
     try {
         // Connect to MongoDB
@@ -35,6 +35,7 @@ export async function POST(req: Request, res: NextResponse) {
         )
 
         return NextResponse.json({ token }, { status: 200 });
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
             return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
         }

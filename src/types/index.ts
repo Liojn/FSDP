@@ -59,3 +59,9 @@ export interface ChartDataPoint {
   category: CategoryType;
   color: string;
 }
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  avatarUrl: string;
+}
