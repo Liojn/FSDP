@@ -80,7 +80,6 @@ export function AppSidebar() {
   const userProfile: UserProfile = {
     name: "Placeholder Name", // TODO: Replace with real user profile data
     email: "placeholder.email@example.com", // TODO: Replace with real user profile data
-    avatarUrl: "https://via.placeholder.com/150", // TODO: Update the avatar URL or handle it dynamically
   };
 
   const handleLogout = async () => {
@@ -176,11 +175,6 @@ export function AppSidebar() {
                   className="w-full px-3 py-3 hover:bg-stone-800"
                 >
                   <div className="flex w-full items-center gap-3">
-                    <div className="relative flex-shrink-0">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-800 text-sm font-medium text-white">
-                        {userProfile.name[0]}
-                      </div>
-                    </div>
                     <div className="flex flex-1 flex-col text-left">
                       <span className="truncate text-sm font-semibold text-white">
                         {userProfile.name}
