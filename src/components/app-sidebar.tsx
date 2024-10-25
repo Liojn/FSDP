@@ -13,33 +13,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
-
-import {
-  BadgeCheck,
-  Bell,
-  ChartColumn,
-  ChevronsUpDown,
-  LayoutDashboard,
-  Lightbulb,
-  LogOut,
-  Medal,
-} from "lucide-react";
-
-import { cn } from "@/lib/utils"; // Import the 'cn' utility function
-
-const navigationItems = [
+const items = [
   {
     title: "Dashboard",
     url: "/dashboard",
@@ -163,76 +141,14 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="border-t border-stone-800">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="w-full px-3 py-3 hover:bg-stone-800"
-                >
-                  <div className="flex w-full items-center gap-3">
-                    <div className="flex flex-1 flex-col text-left">
-                      <span className="truncate text-sm font-semibold text-white">
-                        {userProfile.name}
-                      </span>
-                      <span className="truncate text-xs text-stone-400">
-                        {userProfile.email}
-                      </span>
-                    </div>
-                    <ChevronsUpDown className="size-4 text-stone-400" />
-                  </div>
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent
-                className="w-60 rounded-lg border border-stone-800 bg-stone-900 text-white"
-                side="top"
-                align="end"
-                sideOffset={4}
-              >
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <span className="text-sm font-medium">
-                      {userProfile.name}
-                    </span>
-                    <span className="text-xs text-stone-400">
-                      {userProfile.email}
-                    </span>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator className="border-stone-800" />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    className="flex cursor-pointer items-center gap-2 py-2 text-stone-400 hover:text-white"
-                    onClick={handleAccountSettings}
-                  >
-                    <BadgeCheck className="size-4" />
-                    Account
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="flex cursor-pointer items-center gap-2 py-2 text-stone-400 hover:text-white"
-                    onClick={handleNotifications}
-                  >
-                    <Bell className="size-4" />
-                    Notifications
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator className="border-stone-800" />
-                <DropdownMenuItem
-                  className="flex cursor-pointer items-center gap-2 py-2 text-red-400 hover:text-red-300"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="size-4" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+      <div className="p-4">
+        <Button
+          className="w-full bg-white text-black hover:bg-gray-200"
+          size="lg"
+        >
+          Sign Out
+        </Button>
+      </div>
     </Sidebar>
   );
 }

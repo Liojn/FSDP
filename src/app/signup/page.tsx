@@ -1,13 +1,16 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function SignUp() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
+    const router = useRouter();
     const reset = '';
+
     const handleSubmission = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage(reset);
@@ -28,6 +31,11 @@ export default function SignUp() {
             setName(reset);
             setEmail(reset);
             setPassword(reset);
+
+            // Redirect to login page after a brief delay
+            setTimeout(() => {
+              router.push('/login');
+          }, 1000);
         } else {
             setMessage(data.message);
         }
