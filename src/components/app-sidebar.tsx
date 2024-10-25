@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -36,6 +37,8 @@ import {
   Medal,
 } from "lucide-react";
 
+import { cn } from "@/lib/utils"; // Import the 'cn' utility function
+
 const navigationItems = [
   {
     title: "Dashboard",
@@ -61,7 +64,7 @@ const navigationItems = [
 
 const appConfig = {
   name: "EcoFarm",
-  logo: "/path/to/your/logo.png",
+  logo: "/path/to/your/logo.png", // TODO: Update the logo URL to a valid path
 };
 
 interface UserProfile {
@@ -75,14 +78,14 @@ export function AppSidebar() {
   const [imageError, setImageError] = React.useState(false);
 
   const userProfile: UserProfile = {
-    name: "Placeholder Name",
-    email: "placeholder.email@example.com",
-    avatarUrl: "https://via.placeholder.com/150",
+    name: "Placeholder Name", // TODO: Replace with real user profile data
+    email: "placeholder.email@example.com", // TODO: Replace with real user profile data
+    avatarUrl: "https://via.placeholder.com/150", // TODO: Update the avatar URL or handle it dynamically
   };
 
   const handleLogout = async () => {
     try {
-      // Add your logout logic here
+      // TODO: Add actual logout logic
       console.log("Logging out...");
     } catch (error) {
       console.error("Logout failed:", error);
@@ -90,41 +93,41 @@ export function AppSidebar() {
   };
 
   const handleNavigate = (url: string) => {
-    // Add any additional navigation logic here
+    // TODO: Add additional navigation logic if needed
     console.log(`Navigating to ${url}`);
   };
 
   const handleNotifications = () => {
-    // Add notifications handling logic
+    // TODO: Implement notification handling logic
     console.log("Opening notifications...");
   };
 
   const handleAccountSettings = () => {
-    // Add account settings logic
+    // TODO: Implement account settings logic
     console.log("Opening account settings...");
   };
 
   return (
     <Sidebar className="border-r border-stone-800 bg-stone-900">
       <SidebarHeader className="px-6 py-5">
-        <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-emerald-600 text-white">
-          {!imageError ? (
-            <Image
-              src={appConfig.logo}
-              alt={`${appConfig.name} Logo`}
-              width={20}
-              height={20}
-              className="size-2"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <span className="text-lg font-bold">
-              {appConfig.name.charAt(0)}
-            </span>
-          )}
-        </div>
-        <div className="grid flex-1 text-left">
-          <span className="truncate font-semibold text-white">
+        <div className="flex items-center space-x-3">
+          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-emerald-600 text-white">
+            {!imageError ? (
+              <Image
+                src={appConfig.logo}
+                alt={`${appConfig.name} Logo`}
+                width={20}
+                height={20}
+                className="size-5"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <span className="text-lg font-bold">
+                {appConfig.name.charAt(0)}
+              </span>
+            )}
+          </div>
+          <span className="text-lg font-semibold text-white">
             {appConfig.name}
           </span>
         </div>
@@ -132,8 +135,8 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="px-4 py-5 text-sm font-semibold text-stone-400">
-            {appConfig.name}
+          <SidebarGroupLabel className="px-4 py-3 text font-semibold text-stone-400">
+            Navigation
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -142,16 +145,16 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <Link
                       href={item.url}
-                      className={`flex space-x-1 px-4 py-5 transition-colors hover:bg-stone-100  ${
+                      className={cn(
+                        "group relative flex items-center space-x-3 px-4 py-3 transition-colors",
                         pathname === item.url
                           ? "bg-stone-800 text-white"
-                          : "text-white hover:text-stone-950"
-                      }`}
+                          : "text-stone-400 hover:bg-stone-800 hover:text-white"
+                      )}
                       onClick={() => handleNavigate(item.url)}
                     >
-                      <span>{item.icon && <item.icon size={21} />}</span>
-
-                      <span className="text-base">{item.title}</span>
+                      <item.icon size={20} />
+                      <span className="flex-1">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -171,6 +174,11 @@ export function AppSidebar() {
                   className="w-full px-3 py-3 hover:bg-stone-800"
                 >
                   <div className="flex w-full items-center gap-3">
+                    <div className="relative flex-shrink-0">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-800 text-sm font-medium text-white">
+                        {userProfile.name[0]}
+                      </div>
+                    </div>
                     <div className="flex flex-1 flex-col text-left">
                       <span className="truncate text-sm font-semibold text-white">
                         {userProfile.name}
@@ -185,47 +193,41 @@ export function AppSidebar() {
               </DropdownMenuTrigger>
 
               <DropdownMenuContent
-                className="w-[--radix-dropdown-menu-trigger-width] min-w-60 rounded-lg border border-stone-800 bg-stone-900 text-white"
+                className="w-60 rounded-lg border border-stone-800 bg-stone-900 text-white"
                 side="top"
                 align="end"
                 sideOffset={4}
               >
                 <DropdownMenuLabel className="font-normal">
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col">
-                      <span className="truncate font-semibold">
-                        {userProfile.name}
-                      </span>
-                      <span className="truncate text-xs text-stone-400">
-                        {userProfile.email}
-                      </span>
-                    </div>
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-sm font-medium">
+                      {userProfile.name}
+                    </span>
+                    <span className="text-xs text-stone-400">
+                      {userProfile.email}
+                    </span>
                   </div>
                 </DropdownMenuLabel>
-
                 <DropdownMenuSeparator className="border-stone-800" />
-
                 <DropdownMenuGroup>
                   <DropdownMenuItem
-                    className="flex items-center gap-2 py-2"
+                    className="flex cursor-pointer items-center gap-2 py-2 text-stone-400 hover:text-white"
                     onClick={handleAccountSettings}
                   >
                     <BadgeCheck className="size-4" />
                     Account
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="flex items-center gap-2 py-2 hover:text-white"
+                    className="flex cursor-pointer items-center gap-2 py-2 text-stone-400 hover:text-white"
                     onClick={handleNotifications}
                   >
                     <Bell className="size-4" />
                     Notifications
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
-
                 <DropdownMenuSeparator className="border-stone-800" />
-
                 <DropdownMenuItem
-                  className="flex items-center gap-2 text-red-400 hover:text-red-300"
+                  className="flex cursor-pointer items-center gap-2 py-2 text-red-400 hover:text-red-300"
                   onClick={handleLogout}
                 >
                   <LogOut className="size-4" />
@@ -241,3 +243,14 @@ export function AppSidebar() {
 }
 
 export default AppSidebar;
+
+/*
+TODO: Update the app logo path to a valid logo URL.
+TODO: Replace placeholder user profile data with dynamic user data fetched from a server or authentication provider.
+TODO: Implement the actual logout logic in `handleLogout`.
+TODO: Add real navigation logic (e.g., router push) in `handleNavigate`.
+TODO: Implement real notification handling in `handleNotifications`.
+TODO: Implement account settings handling logic in `handleAccountSettings`.
+TODO: Handle avatar image loading errors more gracefully, possibly with a default image fallback.
+TODO: Improve responsiveness for smaller screen sizes, especially for the sidebar.
+*/

@@ -19,7 +19,11 @@ export default function ClientLayout({
       {shouldShowSidebar && <AppSidebar />} {/* Show sidebar conditionally */}
       <main className="flex-1 overflow-y-auto">
         <div className="mx-auto px-4 py-6">
-          {shouldShowSidebar && <SidebarTrigger className=" mb-4" />}
+          {shouldShowSidebar && (
+            <span className="">
+              <SidebarTrigger className=" mb-4" />
+            </span>
+          )}
           {children}
         </div>
       </main>
