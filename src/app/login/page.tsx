@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 
-export default function Signin() {
+export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
@@ -11,7 +11,7 @@ export default function Signin() {
         e.preventDefault();
         setMessage(reset);
 
-        const response = await fetch('/api/signin', {
+        const response = await fetch('/api/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
