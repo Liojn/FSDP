@@ -3,10 +3,17 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ## Getting Started
 
 Firstly, npm install these modules using these in a new terminal:
+
+```bash
+
 npm install
+# and
 npm install bcryptjs, jsonwebtoken
+# and
 npm i --save-dev @types/jsonwebtoken
+# and
 npm i --save-dev @types/bcryptjs
+```
 
 Secondly, run the development server:
 
