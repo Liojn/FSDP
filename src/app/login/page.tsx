@@ -1,12 +1,15 @@
 "use client"
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
     const reset = '';
+    const router = useRouter();
+
     const handleSubmission = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage(reset);
@@ -22,8 +25,17 @@ export default function Login() {
         const data = await response.json();
 
         if (response.ok) {
+            // Save the token to localStorage
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('userName', data.name);
+            localStorage.setItem('userEmail', email);
             setMessage('Sign in successful!');
             console.log('Token:', data.token);
+
+            // Redirect to a protected page, e.g., dashboard
+            setTimeout(() => {
+              router.push('/dashboards');
+            }, 1000);
         } else {
             setMessage(data.message);
         }
