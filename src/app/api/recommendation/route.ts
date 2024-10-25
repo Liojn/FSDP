@@ -1,22 +1,20 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
+import Groq from "groq-sdk";
 
 // Type guard to check if API key exists
-const getOpenAIInstance = () => {
-  const apiKey = process.env.OPENAI_API_KEY;
+const getGroqInstance = () => {
+  const apiKey = process.env.GROQ_API_KEY;
 
   if (!apiKey) {
-    throw new Error("Missing OPENAI_API_KEY environment variable");
+    throw new Error("Missing GROQ_API_KEY environment variable");
   }
 
-  return new OpenAI({
-    apiKey: apiKey, // Now TypeScript knows this is definitely a string
-  });
+  return new Groq({ apiKey });
 };
 
 export async function POST(request: Request) {
   try {
-    const openai = getOpenAIInstance();
+    const groq = getGroqInstance();
     const { category } = await request.json();
 
     const prompt = `Generate 3 detailed sustainability recommendations for the ${category} category. 
@@ -27,8 +25,8 @@ export async function POST(request: Request) {
     - The environmental impact
     Format as JSON with properties: title, savings, description, impact.`;
 
-    // Send request to OpenAI API
-    const completion = await openai.chat.completions.create({
+    // Send request to Groq API
+    const completion = await groq.chat.completions.create({
       messages: [
         {
           role: "system",
@@ -40,7 +38,7 @@ export async function POST(request: Request) {
           content: prompt,
         },
       ],
-      model: "gpt-3.5-turbo",
+      model: "llama3-8b-8192", // Using Groq's LLaMA model
     });
 
     // Extract and parse the response
@@ -63,12 +61,12 @@ export async function POST(request: Request) {
       });
     } else {
       return NextResponse.json(
-        { error: "No recommendations returned from OpenAI" },
+        { error: "No recommendations returned from Groq" },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error("OpenAI API error:", error);
+    console.error("Groq API error:", error);
     return NextResponse.json(
       { error: "Failed to get recommendations" },
       { status: 500 }

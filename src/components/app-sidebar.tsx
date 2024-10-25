@@ -1,8 +1,8 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
@@ -13,11 +13,33 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 
-const items = [
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+
+import {
+  BadgeCheck,
+  Bell,
+  ChartColumn,
+  ChevronsUpDown,
+  LayoutDashboard,
+  Lightbulb,
+  LogOut,
+  Medal,
+} from "lucide-react";
+
+import { cn } from "@/lib/utils";
+
+const navigationItems = [
   {
     title: "Dashboard",
     url: "/dashboard",
@@ -42,45 +64,106 @@ const items = [
 
 const appConfig = {
   name: "EcoFarm",
-  logo: "/path/to/your/logo.png", // TODO: Update the logo URL to a valid path
+  logo: "/path/to/your/logo.png",
 };
-
-interface UserProfile {
-  name: string;
-  email: string;
-}
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const [imageError, setImageError] = React.useState(false);
+  const router = useRouter();
+  const [imageError, setImageError] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const [userData, setUserData] = useState({
+    name: "Placeholder Name", // Match server-side value
+    email: "placeholder@example.com",
+  });
 
-  const userProfile: UserProfile = {
-    name: "Placeholder Name", // TODO: Replace with real user profile data
-    email: "placeholder.email@example.com", // TODO: Replace with real user profile data
-  };
+  useEffect(() => {
+    setIsClient(true);
+    // Get user data from localStorage only after component mounts
+    const name = localStorage.getItem("userName") || "Placeholder Name";
+    const email = localStorage.getItem("userEmail") || "guest@example.com";
+    setUserData({ name, email });
+  }, []);
 
   const handleLogout = async () => {
     try {
-      // TODO: Add actual logout logic
-      console.log("Logging out...");
+      localStorage.removeItem("token");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("userEmail");
+      router.push("/login");
     } catch (error) {
       console.error("Logout failed:", error);
     }
   };
 
   const handleNavigate = (url: string) => {
-    // TODO: Add additional navigation logic if needed
-    console.log(`Navigating to ${url}`);
+    router.push(url);
   };
 
   const handleNotifications = () => {
-    // TODO: Implement notification handling logic
     console.log("Opening notifications...");
   };
 
   const handleAccountSettings = () => {
-    // TODO: Implement account settings logic
     console.log("Opening account settings...");
+  };
+
+  const renderUserProfile = () => {
+    return (
+      <div className="flex w-full items-center gap-3">
+        <div className="flex flex-1 flex-col text-left">
+          <span className="truncate text-sm font-semibold text-white">
+            {userData.name}
+          </span>
+          <span className="truncate text-xs text-stone-400">
+            {userData.email}
+          </span>
+        </div>
+        <ChevronsUpDown className="size-4 text-stone-400" />
+      </div>
+    );
+  };
+
+  const renderDropdownContent = () => {
+    if (!isClient) {
+      return null;
+    }
+
+    return (
+      <>
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <span className="text-sm font-medium">{userData.name}</span>
+            <span className="text-xs text-stone-400">{userData.email}</span>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator className="border-stone-800" />
+        <DropdownMenuGroup>
+          <DropdownMenuItem
+            className="flex cursor-pointer items-center gap-2 py-2 text-stone-400 hover:text-white"
+            onClick={handleAccountSettings}
+          >
+            <BadgeCheck className="size-4" />
+            Account
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="flex cursor-pointer items-center gap-2 py-2 text-stone-400 hover:text-white"
+            onClick={handleNotifications}
+          >
+            <Bell className="size-4" />
+            Notifications
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator className="border-stone-800" />
+        <DropdownMenuItem
+          className="flex cursor-pointer items-center gap-2 py-2 text-red-400 hover:text-red-300"
+          onClick={handleLogout}
+        >
+          <LogOut className="size-4" />
+          Log out
+        </DropdownMenuItem>
+      </>
+    );
   };
 
   return (
@@ -141,27 +224,34 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <div className="p-4">
-        <Button
-          className="w-full bg-white text-black hover:bg-gray-200"
-          size="lg"
-        >
-          Sign Out
-        </Button>
-      </div>
+
+      <SidebarFooter className="border-t border-stone-800">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  className="w-full px-3 py-3 hover:bg-stone-800"
+                >
+                  {renderUserProfile()}
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent
+                className="w-60 rounded-lg border border-stone-800 bg-stone-900 text-white"
+                side="top"
+                align="end"
+                sideOffset={4}
+              >
+                {renderDropdownContent()}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
 
 export default AppSidebar;
-
-/*
-TODO: Update the app logo path to a valid logo URL.
-TODO: Replace placeholder user profile data with dynamic user data fetched from a server or authentication provider.
-TODO: Implement the actual logout logic in `handleLogout`.
-TODO: Add real navigation logic (e.g., router push) in `handleNavigate`.
-TODO: Implement real notification handling in `handleNotifications`.
-TODO: Implement account settings handling logic in `handleAccountSettings`.
-TODO: Handle avatar image loading errors more gracefully, possibly with a default image fallback.
-TODO: Improve responsiveness for smaller screen sizes, especially for the sidebar.
-*/

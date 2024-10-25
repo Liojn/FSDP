@@ -13,7 +13,6 @@ export default function ClientLayout({
 
   // Determine if we should show the sidebar
   const shouldShowSidebar = pathname !== "/login" && pathname !== "/signup";
-  const shouldShowSidebar = pathname !== "/login" && pathname !== "/signup";
 
   return (
     <SidebarProvider>
