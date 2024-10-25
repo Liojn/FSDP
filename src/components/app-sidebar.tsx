@@ -70,7 +70,6 @@ const appConfig = {
 interface UserProfile {
   name: string;
   email: string;
-  avatarUrl: string;
 }
 
 export function AppSidebar() {
