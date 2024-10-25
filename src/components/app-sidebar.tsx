@@ -14,7 +14,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { SignOut } from "@/components/ui/signout";
 
 const items = [
   {
@@ -78,12 +78,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <div className="p-4">
-        <Button 
-          className="w-full bg-white text-black hover:bg-gray-200" 
-          size="lg"
-        >
-          Sign Out
-        </Button>
+        <SignOut /> {/* Signout function */}
       </div>
     </Sidebar>
   )
