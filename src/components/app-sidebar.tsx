@@ -23,6 +23,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   BadgeCheck,
   Bell,
@@ -33,8 +34,6 @@ import {
   LogOut,
   Medal,
 } from "lucide-react";
-
-import { UserProfile } from "@/types/";
 
 // TODO: Replace with actual navigation items from your routing configuration
 // TODO: Add active state handling for navigation items
@@ -67,6 +66,13 @@ const appConfig = {
   name: "EcoFarm",
   logo: "/path/to/your/logo.png", // TODO: Add actual logo file and update path
 };
+
+// TODO: Move interface to separate types file
+interface UserProfile {
+  name: string;
+  email: string;
+  avatarUrl: string;
+}
 
 export function AppSidebar() {
   // TODO: Integrate with authentication system
@@ -138,6 +144,18 @@ export function AppSidebar() {
                   className="w-full px-3 py-3 hover:bg-stone-800"
                 >
                   <div className="flex w-full items-center gap-3">
+                    <Avatar className="size-8 rounded-lg">
+                      <AvatarImage
+                        src={userProfile.avatarUrl}
+                        alt={userProfile.name}
+                      />
+                      <AvatarFallback className="rounded-lg bg-emerald-600 text-white">
+                        {userProfile.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex flex-1 flex-col text-left">
                       <span className="truncate text-sm font-semibold text-white">
                         {userProfile.name}
@@ -146,8 +164,8 @@ export function AppSidebar() {
                         {userProfile.email}
                       </span>
                     </div>
+                    <ChevronsUpDown className="size-4 text-stone-400" />
                   </div>
-                  <ChevronsUpDown className="size-4 text-stone-400" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
 
@@ -159,6 +177,18 @@ export function AppSidebar() {
               >
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex items-center gap-3">
+                    <Avatar className="size-8 rounded-lg">
+                      <AvatarImage
+                        src={userProfile.avatarUrl}
+                        alt={userProfile.name}
+                      />
+                      <AvatarFallback className="rounded-lg bg-emerald-600 text-white">
+                        {userProfile.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex flex-col">
                       <span className="truncate font-semibold">
                         {userProfile.name}
