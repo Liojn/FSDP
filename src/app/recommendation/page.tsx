@@ -1,4 +1,3 @@
-// app/sustainability/page.tsx
 "use client";
 
 import React, { useState, useMemo, useCallback, lazy, Suspense } from "react";
@@ -10,14 +9,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { recommendations, performanceData, COLORS } from "./data";
+import { performanceData, COLORS } from "./data";
 import ChartsSkeleton from "./components/ChartsSkeleton";
 import RecommendationCard from "./components/RecommendationCard";
+import { useToast } from "@/hooks/use-toast";
 import {
   CategoryType,
   Recommendation,
   ImplementedRecommendationsState,
   CategoryData,
+  ApiRecommendation,
 } from "@/types/index";
 
 // Lazy load the Charts component
@@ -29,6 +30,8 @@ function isCategoryType(category: string): category is CategoryType {
 }
 
 export default function SustainabilityRecommendations() {
+  const { toast } = useToast();
+
   // State Management
   const [implementedRecommendations, setImplementedRecommendations] =
     useState<ImplementedRecommendationsState>(new Set());
@@ -36,10 +39,13 @@ export default function SustainabilityRecommendations() {
     Recommendation[]
   >([]);
   const [loading, setLoading] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<CategoryType>(
+    CategoryType.ENERGY
+  );
 
   // Combine static and API recommendations
   const allRecommendations = useMemo(() => {
-    return [...recommendations, ...apiRecommendations];
+    return [...apiRecommendations, ...apiRecommendations];
   }, [apiRecommendations]);
 
   // Event handlers
@@ -79,9 +85,11 @@ export default function SustainabilityRecommendations() {
     }, initialCategories);
   }, [allRecommendations]);
 
-  // Fetch additional recommendations from API
+  // Fetch additional recommendations from Groq API
   const fetchRecommendations = async (category: CategoryType) => {
     setLoading(true);
+    setActiveCategory(category);
+
     try {
       const response = await fetch("/api/recommendation", {
         method: "POST",
@@ -89,25 +97,28 @@ export default function SustainabilityRecommendations() {
         body: JSON.stringify({ category }),
       });
 
-      const data: {
-        recommendations: Partial<Recommendation> | Partial<Recommendation>[];
-      } = await response.json();
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
 
       if (data.recommendations) {
-        const newRecs = Array.isArray(data.recommendations)
+        // Ensure recommendations is always treated as an array
+        const recommendationsArray = Array.isArray(data.recommendations)
           ? data.recommendations
           : [data.recommendations];
 
-        setApiRecommendations((prev) => [
-          ...prev.filter((r) => r.category !== category),
-          ...newRecs.map(
-            (rec): Recommendation => ({
-              title: rec.title || "Untitled Recommendation",
+        setApiRecommendations((prev: Recommendation[]) => [
+          ...prev.filter((r: Recommendation) => r.category !== category),
+          ...recommendationsArray.map(
+            (rec: ApiRecommendation): Recommendation => ({
+              title: rec.title || `${category} Recommendation`,
               description: rec.description || "No description available",
               impact: rec.impact || "Impact not specified",
               category: category,
-              savings: rec.savings || 0,
-              steps: rec.steps || [],
+              savings: typeof rec.savings === "number" ? rec.savings : 0,
+              steps: Array.isArray(rec.steps) ? rec.steps : [],
               implemented: false,
             })
           ),
@@ -115,6 +126,11 @@ export default function SustainabilityRecommendations() {
       }
     } catch (error) {
       console.error("Error fetching recommendations:", error);
+      toast({
+        title: "Failed to fetch recommendations",
+        description: "Please try again later",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -126,14 +142,20 @@ export default function SustainabilityRecommendations() {
     recs: Recommendation[]
   ) => (
     <TabsContent key={category} value={category}>
-      {recs.map((rec) => (
-        <RecommendationCard
-          key={rec.title}
-          rec={rec}
-          isImplemented={implementedRecommendations.has(rec.title)}
-          toggleRecommendation={toggleRecommendation}
-        />
-      ))}
+      {recs.length === 0 && !loading ? (
+        <div className="py-4 text-center text-gray-500">
+          No recommendations available. Click the tab to generate some!
+        </div>
+      ) : (
+        recs.map((rec) => (
+          <RecommendationCard
+            key={rec.title}
+            rec={rec}
+            isImplemented={implementedRecommendations.has(rec.title)}
+            toggleRecommendation={toggleRecommendation}
+          />
+        ))
+      )}
     </TabsContent>
   );
 
@@ -156,11 +178,12 @@ export default function SustainabilityRecommendations() {
         <CardHeader>
           <CardTitle>Personalized Recommendations</CardTitle>
           <CardDescription>
-            AI-generated suggestions to improve your sustainability
+            AI-generated suggestions powered by Groq to improve your
+            sustainability
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue={CategoryType.ENERGY}>
+          <Tabs defaultValue={CategoryType.ENERGY} value={activeCategory}>
             <TabsList>
               {Object.values(CategoryType).map((category) => (
                 <TabsTrigger
@@ -173,7 +196,11 @@ export default function SustainabilityRecommendations() {
               ))}
             </TabsList>
             {loading ? (
-              <div className="py-4">Loading recommendations...</div>
+              <div className="py-4 flex items-center justify-center">
+                <div className="animate-pulse text-base">
+                  Generating {activeCategory} recommendations...
+                </div>
+              </div>
             ) : (
               Object.values(CategoryType).map((category) =>
                 renderRecommendations(

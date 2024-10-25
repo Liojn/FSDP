@@ -65,3 +65,11 @@ export interface UserProfile {
   email: string;
   avatarUrl: string;
 }
+
+export interface ApiRecommendation {
+  title?: string;
+  description?: string;
+  impact?: string;
+  savings?: number;
+  steps?: string[];
+}
