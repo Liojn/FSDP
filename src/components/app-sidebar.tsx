@@ -57,7 +57,7 @@ const navigationItems = [
   },
   {
     title: "Recommendations",
-    url: "/recommendations",
+    url: "/recommendation",
     icon: Lightbulb,
   },
 ];

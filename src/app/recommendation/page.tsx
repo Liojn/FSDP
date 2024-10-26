@@ -20,6 +20,7 @@ import {
   CategoryData,
   ApiRecommendation,
 } from "@/types/index";
+import RecommendationSkeleton from "./components/RecommendationSkeleton";
 
 // Lazy load the Charts component
 const Charts = lazy(() => import("./components/Charts"));
@@ -196,11 +197,7 @@ export default function SustainabilityRecommendations() {
               ))}
             </TabsList>
             {loading ? (
-              <div className="py-4 flex items-center justify-center">
-                <div className="animate-pulse text-base">
-                  Generating {activeCategory} recommendations...
-                </div>
-              </div>
+              <RecommendationSkeleton />
             ) : (
               Object.values(CategoryType).map((category) =>
                 renderRecommendations(
