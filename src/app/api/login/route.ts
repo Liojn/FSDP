@@ -3,7 +3,7 @@ import dbClient from "../../../../dbConfig";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-export async function POST(req: Request, res: NextResponse) {
+export async function POST(req: Request) {
 
     try {
         // Connect to MongoDB
@@ -31,10 +31,12 @@ export async function POST(req: Request, res: NextResponse) {
         const token = jwt.sign(
             { userId: user._id, email: user.email },
             process.env.JWT_SECRET_KEY || "your-jwt-secret-key",
-            { expiresIn: "1h" }
+            { expiresIn: "24h" }
+            // remember to change this
         )
 
         return NextResponse.json({ token, name: user.name }, { status: 200 });
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
             return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
         }
