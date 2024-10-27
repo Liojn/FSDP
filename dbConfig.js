@@ -8,10 +8,18 @@ const url = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}
 //Create client instance as a 'user'
 const client = new MongoClient(url);
 
+let connectedClient;
+
 async function connectToDatabase() {
-  try {
+    if (connectedClient) {
+        return connectedClient.db(process.env.DB_NAME);
+    }
+    try {
     await client.connect();
     console.log('Successfully connected to MongoDB Atlas');
+
+    connectedClient = client;
+
     return client.db(process.env.DB_NAME);
   } catch (error) {
     console.error('Error connecting to MongoDB Atlas:', error);
@@ -22,7 +30,7 @@ async function connectToDatabase() {
 // Function to close the database connection
 async function closeDatabaseConnection() {
     try {
-        await client.close();
+        await connectedClient?.close();
         console.log("Database connection closed");
     } catch (err) {
         console.error("Error closing database connection:", err);
