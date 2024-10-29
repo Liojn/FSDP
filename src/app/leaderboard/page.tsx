@@ -22,12 +22,16 @@ const DashboardPage = () => {
   const [filter, setFilter] = useState("Today");
   const [dataFilter, setDataFilter] = useState("Energy Consumption");
 
-  const handleFilterChange = (event) => {
+  const handleFilterChange = (event: {
+    target: { value: React.SetStateAction<string> };
+  }) => {
     setFilter(event.target.value);
     // Add logic here to update leaderboardData based on the selected filter
   };
 
-  const handleDataFilterChange = (event) => {
+  const handleDataFilterChange = (event: {
+    target: { value: React.SetStateAction<string> };
+  }) => {
     setDataFilter(event.target.value);
     // Add logic here to update data based on the selected data filter
   };
@@ -78,7 +82,10 @@ const DashboardPage = () => {
 
         {/* Other Companies Section */}
         <h3 className="text-lg font-semibold mt-6">Other companies</h3>
-        <div className="bg-gray-100 p-4 rounded-lg flex-grow overflow-y-auto custom-scrollbar" style={{ maxHeight: '600px' }}>
+        <div
+          className="bg-gray-100 p-4 rounded-lg flex-grow overflow-y-auto custom-scrollbar"
+          style={{ maxHeight: "600px" }}
+        >
           <ul className="space-y-4">
             {leaderboardData.map((company, index) => (
               <li
@@ -87,7 +94,9 @@ const DashboardPage = () => {
               >
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gray-400 rounded-full"></div>
-                  <span className="font-medium text-gray-700">{company.name}</span>
+                  <span className="font-medium text-gray-700">
+                    {company.name}
+                  </span>
                 </div>
                 <span className="text-gray-600">Score: {company.score}%</span>
               </li>
@@ -98,8 +107,10 @@ const DashboardPage = () => {
 
       {/* Campaign Progress Section - occupies 1 column on larger screens */}
       <div className="bg-white p-4 shadow-md rounded-lg flex flex-col justify-between space-y-4">
-        <h3 className="text-lg font-semibold">Reduce Carbon Emissions Campaign</h3>
-        
+        <h3 className="text-lg font-semibold">
+          Reduce Carbon Emissions Campaign
+        </h3>
+
         {/* Progress Display */}
         <div className="flex flex-col items-center mt-4">
           <div className="text-5xl font-bold text-pink-500">86%</div>
@@ -109,7 +120,10 @@ const DashboardPage = () => {
         {/* Top 5 Contributors */}
         <ul className="space-y-4 flex-grow">
           {leaderboardData.slice(0, 5).map((contributor, index) => (
-            <li key={index} className="bg-gray-100 p-4 rounded-lg flex flex-col space-y-2">
+            <li
+              key={index}
+              className="bg-gray-100 p-4 rounded-lg flex flex-col space-y-2"
+            >
               <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-gray-400 rounded-full"></div>
