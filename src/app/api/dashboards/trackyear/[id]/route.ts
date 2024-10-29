@@ -4,10 +4,11 @@ const { ObjectId } = require('mongodb');
 
 // API Route Handler, logic for getting the year
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const companyId = params.id;
-  console.log(companyId.length); //test wheteher objectId is correct 24 hexa
- 
+  
   try {
+    const companyId = params.id;
+    console.log(companyId.length); //test wheteher objectId is correct 24 hexa'
+
     //convert companyId to ObjectId
     const objectId = new ObjectId(companyId);
     //connect to MongoDB

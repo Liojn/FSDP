@@ -1,5 +1,8 @@
 
-//Controller for getting the available Years
+//Client side functions for calling fetch, to store them here
+
+
+//for getting the available Years
 export const fetchUniqueYears = async (companyId: string): Promise<number[]> => {
     try {
       const response = await fetch(`api/dashboards/trackyear/${companyId}`, {
