@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { performanceData, COLORS } from "./data";
 import ChartsSkeleton from "./components/ChartsSkeleton";
 import RecommendationCard from "./components/RecommendationCard";
 import { useToast } from "@/hooks/use-toast";
@@ -19,11 +18,21 @@ import {
   ImplementedRecommendationsState,
   CategoryData,
   ApiRecommendation,
-} from "@/types/index";
+  MetricData,
+  RecommendationRequest,
+} from "@/types/";
 import RecommendationSkeleton from "./components/RecommendationSkeleton";
 
-// Lazy load the Charts component
-const Charts = lazy(() => import("./components/Charts"));
+// Lazy load components
+const YearlyComparison = lazy(() => import("./components/YearlyComparison"));
+const CategoryBreakdown = lazy(() => import("./components/CategoryBreakdown"));
+const TrendAnalysis = lazy(() => import("./components/TrendAnalysis"));
+const CrossCategoryInsights = lazy(
+  () => import("./components/CrossCategoryInsights")
+);
+const ImplementationTracker = lazy(
+  () => import("./components/ImplementationTracker")
+);
 
 // Type guard to check if a string is a valid CategoryType
 function isCategoryType(category: string): category is CategoryType {
@@ -41,12 +50,13 @@ export default function SustainabilityRecommendations() {
   >([]);
   const [loading, setLoading] = useState(false);
   const [activeCategory, setActiveCategory] = useState<CategoryType>(
-    CategoryType.ENERGY
+    CategoryType.OVERALL
   );
+  const [metrics, setMetrics] = useState<MetricData | null>(null);
 
-  // Combine static and API recommendations
+  // Combine recommendations
   const allRecommendations = useMemo(() => {
-    return [...apiRecommendations, ...apiRecommendations];
+    return [...apiRecommendations];
   }, [apiRecommendations]);
 
   // Event handlers
@@ -72,10 +82,11 @@ export default function SustainabilityRecommendations() {
   // Group recommendations by category
   const recommendationsByCategory = useMemo<CategoryData>(() => {
     const initialCategories: CategoryData = {
-      [CategoryType.ENERGY]: [],
-      [CategoryType.EMISSIONS]: [],
-      [CategoryType.WATER]: [],
+      [CategoryType.EQUIPMENT]: [],
+      [CategoryType.LIVESTOCK]: [],
+      [CategoryType.CROPS]: [],
       [CategoryType.WASTE]: [],
+      [CategoryType.OVERALL]: [],
     };
 
     return allRecommendations.reduce((acc, rec) => {
@@ -86,16 +97,42 @@ export default function SustainabilityRecommendations() {
     }, initialCategories);
   }, [allRecommendations]);
 
-  // Fetch additional recommendations from Groq API
+  // Fetch metrics data
+  const fetchMetrics = async () => {
+    try {
+      const response = await fetch("/api/metrics");
+      if (!response.ok) throw new Error("Failed to fetch metrics");
+      const data = await response.json();
+      setMetrics(data);
+    } catch (error) {
+      console.error("Error fetching metrics:", error);
+      toast({
+        title: "Failed to fetch metrics",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Fetch recommendations from API
   const fetchRecommendations = async (category: CategoryType) => {
     setLoading(true);
     setActiveCategory(category);
 
     try {
+      if (!metrics) await fetchMetrics();
+
+      const requestBody: RecommendationRequest = {
+        category,
+        metrics: metrics!,
+        timeframe: "monthly",
+        previousImplementations: Array.from(implementedRecommendations),
+      };
+
       const response = await fetch("/api/recommendation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -105,7 +142,6 @@ export default function SustainabilityRecommendations() {
       const data = await response.json();
 
       if (data.recommendations) {
-        // Ensure recommendations is always treated as an array
         const recommendationsArray = Array.isArray(data.recommendations)
           ? data.recommendations
           : [data.recommendations];
@@ -121,6 +157,12 @@ export default function SustainabilityRecommendations() {
               savings: typeof rec.savings === "number" ? rec.savings : 0,
               steps: Array.isArray(rec.steps) ? rec.steps : [],
               implemented: false,
+              priority: rec.priority,
+              difficulty: rec.difficulty,
+              roi: rec.roi,
+              implementationTimeline: rec.implementationTimeline,
+              sourceData: rec.sourceData,
+              dashboardLink: rec.dashboardLink,
             })
           ),
         ]);
@@ -160,31 +202,42 @@ export default function SustainabilityRecommendations() {
     </TabsContent>
   );
 
+  // React.useEffect to fetch initial metrics
+  React.useEffect(() => {
+    fetchMetrics();
+  }, []);
+
   return (
     <div className="p-4 px-10">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">
-          AI-Curated Sustainability Recommendations
+          AI-Curated Farm Management Recommendations
         </h1>
         <div className="text-xl font-semibold text-green-600">
           Potential Savings: ${totalSavings.toLocaleString()}
         </div>
       </div>
 
-      <Suspense fallback={<ChartsSkeleton />}>
-        <Charts performanceData={performanceData} COLORS={COLORS} />
-      </Suspense>
+      {metrics && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <Suspense fallback={<ChartsSkeleton />}>
+            <YearlyComparison data={metrics} />
+            <CategoryBreakdown data={metrics} category={activeCategory} />
+            <TrendAnalysis data={metrics} category={activeCategory} />
+            <CrossCategoryInsights data={metrics} />
+          </Suspense>
+        </div>
+      )}
 
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Personalized Recommendations</CardTitle>
           <CardDescription>
-            AI-generated suggestions powered by Groq to improve your
-            sustainability
+            AI-generated suggestions to improve your farm management
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue={CategoryType.ENERGY} value={activeCategory}>
+          <Tabs defaultValue={CategoryType.OVERALL} value={activeCategory}>
             <TabsList>
               {Object.values(CategoryType).map((category) => (
                 <TabsTrigger
@@ -209,6 +262,35 @@ export default function SustainabilityRecommendations() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Implementation Progress Section */}
+      {implementedRecommendations.size > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Implementation Progress</CardTitle>
+            <CardDescription>
+              Track your sustainability initiatives
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {allRecommendations
+                .filter((rec) => implementedRecommendations.has(rec.title))
+                .map((rec) => (
+                  <Suspense
+                    key={rec.title}
+                    fallback={<div>Loading tracker...</div>}
+                  >
+                    <ImplementationTracker
+                      recommendation={rec}
+                      progress={Math.random() * 100} // This should be replaced with actual progress tracking
+                    />
+                  </Suspense>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
