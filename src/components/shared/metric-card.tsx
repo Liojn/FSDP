@@ -17,9 +17,9 @@ export function MetricCard({
   className = "",
 }: MetricCardProps) {
   return (
-    <Card className={`w-full max-w-xs ${className}`}>
+    <Card className={`w-full max-w-xs ${className} shadow text-center`}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="text-md font-medium text-muted-foreground ">
           {title}
         </CardTitle>
       </CardHeader>
