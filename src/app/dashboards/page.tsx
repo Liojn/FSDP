@@ -1,7 +1,7 @@
 "use client"; //treat this component as a Client Component
 
 import React, { useState, useEffect } from 'react';
-import { fetchUniqueYears } from '../api/dashboards/controller';
+import { fetchUniqueYears } from '../api/dashboards/api';
 
 const LineChart = () => <div className="bg-gray-200 h-full flex justify-center items-center">Line graph</div>;
 
@@ -66,10 +66,10 @@ const DashboardPage = () => {
 
   
   return (
-    <div className="p-4 space-y-6">
+    <div className="pt-0 p-4 space-y-6">
       {/* Dashboard Header */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-xl font-bold">Dashboard</div>
+      <div className="pt-0 flex justify-between items-center mb-4">
+        <div className="text-2xl font-bold">Dashboard</div>
         <div> {/*Dropdown menu */}
         <span className="font-semibold">Year: </span>
         <select
