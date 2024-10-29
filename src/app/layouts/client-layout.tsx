@@ -1,18 +1,21 @@
-"use client"; // The "use client" directive must be at the top of the client-side file
+"use client"; // Ensure this component is treated as a Client Component
 
-import { usePathname } from "next/navigation"; // Import client-side hooks
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/shared/app-sidebar";
+import { useEffect, useState } from "react";
 
 export default function ClientLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = usePathname(); // Get the current path
+  const [shouldShowSidebar, setShouldShowSidebar] = useState(false);
 
-  // Determine if we should show the sidebar
-  const shouldShowSidebar = pathname !== "/login" && pathname !== "/signup";
+  // Update sidebar visibility once the component mounts and we can access the pathname
+  useEffect(() => {
+    const pathname = window.location.pathname; // Use window.location instead of usePathname on mount
+    setShouldShowSidebar(pathname !== "/login" && pathname !== "/signup");
+  }, []);
 
   return (
     <SidebarProvider>
