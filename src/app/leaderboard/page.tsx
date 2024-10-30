@@ -1,6 +1,6 @@
 "use client"; // treat this component as a Client Component
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 const leaderboardData = [
   { name: "EcoFarm", score: 95 },
@@ -20,17 +20,29 @@ const leaderboardData = [
 const LeaderboardPage = () => {
   const [filter, setFilter] = useState("Today");
   const [dataFilter, setDataFilter] = useState("Energy Consumption");
+  const [isAtBottom, setIsAtBottom] = useState(false);
 
-  // Ensure the page background is set correctly on mount
-  useEffect(() => {
-    document.body.classList.add("bg-lime-50", "min-h-screen");
-  }, []);
+  const listRef = useRef(null);
 
   const handleFilterChange = (event) => setFilter(event.target.value);
   const handleDataFilterChange = (event) => setDataFilter(event.target.value);
 
+  // Check if the user has scrolled to the bottom
+  const handleScroll = () => {
+    const element = listRef.current;
+    const isBottom =
+      element.scrollHeight - element.scrollTop <= element.clientHeight;
+    setIsAtBottom(isBottom);
+  };
+
+  useEffect(() => {
+    const element = listRef.current;
+    element.addEventListener("scroll", handleScroll);
+    return () => element.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <div className="p-4 h-screen flex flex-col space-y-6 bg-lime-50">
+    <div className="p-4 h-screen flex flex-col space-y-6">
       {/* Header Section */}
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-2">
@@ -80,8 +92,9 @@ const LeaderboardPage = () => {
       {/* Other Companies Section */}
       <h3 className="text-lg font-semibold text-lime-700 mt-6">Other companies</h3>
       <div
-        className="bg-lime-100 p-4 rounded-lg flex-grow overflow-y-auto custom-scrollbar"
-        style={{ maxHeight: "600px" }}
+        ref={listRef}
+        className="p-4 rounded-lg flex-grow relative"
+        style={{ maxHeight: "600px", overflowY: "scroll", scrollbarWidth: "none" }}
       >
         <ul className="space-y-4">
           {leaderboardData.map((company, index) => (
@@ -97,6 +110,18 @@ const LeaderboardPage = () => {
             </li>
           ))}
         </ul>
+
+        {/* Fade Effect at Bottom */}
+        {!isAtBottom && (
+          <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+        )}
+
+        {/* Scroll Down Indicator */}
+        {!isAtBottom && (
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-lime-700 animate-bounce">
+            ↓ Scroll down
+          </div>
+        )}
       </div>
     </div>
   );
