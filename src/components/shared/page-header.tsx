@@ -1,4 +1,5 @@
 // src/components/shared/page-header.tsx
+"use client";
 import { SidebarTrigger } from "../ui/sidebar";
 
 interface PageHeaderProps {
