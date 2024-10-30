@@ -1,4 +1,4 @@
-"use client"; // Ensure this component is treated as a Client Component
+"use client";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import dynamic from "next/dynamic";

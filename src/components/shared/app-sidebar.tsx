@@ -35,6 +35,7 @@ import {
   Lightbulb,
   LogOut,
   Medal,
+  PencilLine,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -54,6 +55,11 @@ const navigationItems = [
     title: "Leaderboard",
     url: "/leaderboard",
     icon: Medal,
+  },
+  {
+    title: "Campaign",
+    url: "/campaign",
+    icon: PencilLine,
   },
   {
     title: "Recommendations",

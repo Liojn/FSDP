@@ -1,4 +1,4 @@
-"use client"; // treat this component as a Client Component
+"use client";
 
 import { PageHeader } from "@/components/shared/page-header";
 import React, { useState } from "react";
