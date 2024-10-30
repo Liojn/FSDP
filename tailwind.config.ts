@@ -69,7 +69,8 @@ const config: Config = {
   			sm: 'calc(var(--radius) - 4px)'
   		},
 
-		fontFamily: { geistSans: ['"Inter"', 'sans-serif'] },
+		fontFamily: {  sans: ['var(--font-geist-sans)'],
+        mono: ['var(--font-geist-mono)'], },
   	}
   },
   // eslint-disable-next-line @typescript-eslint/no-require-imports
