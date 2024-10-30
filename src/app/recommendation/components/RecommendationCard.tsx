@@ -25,7 +25,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
                 )}
                 {rec.roi && (
                   <span className="text-sm px-2 py-1 rounded-full bg-green-100 text-green-800">
-                    ROI: {rec.roi}%
+                    ROI: {rec.roi}
                   </span>
                 )}
               </div>

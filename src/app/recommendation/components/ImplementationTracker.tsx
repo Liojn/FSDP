@@ -35,7 +35,7 @@ const ImplementationTracker: React.FC<ImplementationTrackerProps> = ({
               </span>
               {recommendation.roi && (
                 <div className="text-sm text-green-600">
-                  ROI: {recommendation.roi}%
+                  ROI: {recommendation.roi}
                 </div>
               )}
             </div>
