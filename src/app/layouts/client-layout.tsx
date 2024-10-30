@@ -1,21 +1,28 @@
 "use client"; // Ensure this component is treated as a Client Component
 
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/shared/app-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+
+const AppSidebar = dynamic(() => import("@/components/shared/app-sidebar"));
+const SidebarTrigger = dynamic(() =>
+  import("@/components/ui/sidebar").then((mod) => mod.SidebarTrigger)
+);
 
 export default function ClientLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [shouldShowSidebar, setShouldShowSidebar] = useState(false);
+  const pathname = usePathname();
+  const [shouldShowSidebar, setShouldShowSidebar] = useState(
+    pathname !== "/login" && pathname !== "/signup"
+  );
 
-  // Update sidebar visibility once the component mounts and we can access the pathname
   useEffect(() => {
-    const pathname = window.location.pathname; // Use window.location instead of usePathname on mount
     setShouldShowSidebar(pathname !== "/login" && pathname !== "/signup");
-  }, []);
+  }, [pathname]);
 
   return (
     <SidebarProvider>
@@ -23,8 +30,8 @@ export default function ClientLayout({
       <main className="flex-1 overflow-y-auto">
         <div className="mx-auto px-4 py-6">
           {shouldShowSidebar && (
-            <span className="">
-              <SidebarTrigger className=" mb-4" />
+            <span>
+              <SidebarTrigger className="mb-4" />
             </span>
           )}
           {children}
