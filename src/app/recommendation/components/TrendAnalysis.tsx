@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendAnalysisProps, CategoryType } from "@/types/";
+import { TrendAnalysisProps, CategoryType } from "@/types";
 
 const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ data, category }) => {
   const renderTrendInsights = () => {

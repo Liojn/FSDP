@@ -1,4 +1,4 @@
-import { CategoryType } from "@/types/";
+import { CategoryType } from "@/types";
 
 // Keep only the colors for styling
 export const COLORS: readonly string[] = [

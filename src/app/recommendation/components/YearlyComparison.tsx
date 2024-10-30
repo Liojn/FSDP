@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { YearlyComparisonProps } from "@/types/";
+import { YearlyComparisonProps } from "@/types";
 
 const YearlyComparison: React.FC<YearlyComparisonProps> = ({ data }) => {
   return (
