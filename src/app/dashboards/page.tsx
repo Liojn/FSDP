@@ -1,4 +1,4 @@
-"use client"; //treat this component as a Client Component
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { fetchUniqueYears } from "../api/dashboards/api";
