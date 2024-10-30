@@ -1,5 +1,6 @@
 "use client"; //treat this component as a Client Component
 
+import { PageHeader } from "@/components/shared/page-header";
 import React from "react";
 
 const metricsData = [
@@ -30,11 +31,7 @@ const StatisticsPage = () => {
   return (
     <div className="h-full w-full p-2 rounded-lg">
       {/* Header Section */}
-      <header className=" text-black">
-        <h1 className="text-2xl font-Helvetica font-bold">
-          Statistics Sustainability KPI
-        </h1>
-      </header>
+      <PageHeader title="Statistics Sustainability KPI" />
 
       {/* Filter Bar */}
       <div className="flex justify-start items-center text-sm font-bold space-x-6 mt-1">

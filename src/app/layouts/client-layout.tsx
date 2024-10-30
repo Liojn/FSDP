@@ -6,9 +6,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const AppSidebar = dynamic(() => import("@/components/shared/app-sidebar"));
-const SidebarTrigger = dynamic(() =>
-  import("@/components/ui/sidebar").then((mod) => mod.SidebarTrigger)
-);
 
 export default function ClientLayout({
   children,
@@ -26,16 +23,9 @@ export default function ClientLayout({
 
   return (
     <SidebarProvider>
-      {shouldShowSidebar && <AppSidebar />} {/* Show sidebar conditionally */}
+      {shouldShowSidebar && <AppSidebar />}
       <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto px-4 py-6">
-          {shouldShowSidebar && (
-            <span>
-              <SidebarTrigger className="mb-4" />
-            </span>
-          )}
-          {children}
-        </div>
+        <div className="mx-auto px-4 py-6">{children}</div>
       </main>
     </SidebarProvider>
   );

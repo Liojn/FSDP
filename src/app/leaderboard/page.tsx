@@ -1,5 +1,6 @@
 "use client"; // treat this component as a Client Component
 
+import { PageHeader } from "@/components/shared/page-header";
 import React, { useState } from "react";
 
 // Expanded leaderboard data with more companies
@@ -43,7 +44,7 @@ const DashboardPage = () => {
         {/* Leaderboard Header */}
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <h2 className="text-2xl font-bold">Leaderboard for</h2>
+            <PageHeader title="Leaderboard for" />
             <select
               value={filter}
               onChange={handleFilterChange}

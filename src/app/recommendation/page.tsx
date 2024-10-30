@@ -1,6 +1,7 @@
 import RecommendationClient from "./recommendation-client";
 import { CategoryType } from "@/types";
 import { getMetrics } from "@/lib/api";
+import { PageHeader } from "@/components/shared/page-header";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 3600; // Revalidate every hour
@@ -11,11 +12,7 @@ async function RecommendationPage() {
 
   return (
     <div className="p-4 px-10">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">
-          AI-Curated Farm Management Recommendations
-        </h1>
-      </div>
+      <PageHeader title="AI-Curated Farm Management Recommendations" />
 
       {/* Pass server fetched data to client components */}
       <RecommendationClient
