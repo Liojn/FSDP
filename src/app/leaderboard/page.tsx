@@ -118,7 +118,7 @@ const LeaderboardPage = () => {
 
         {/* Scroll Down Indicator */}
         {!isAtBottom && (
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-lime-700 animate-bounce">
+          <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 text-lime-700 animate-bounce">
             ↓ Scroll down
           </div>
         )}

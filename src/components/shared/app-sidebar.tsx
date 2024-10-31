@@ -42,7 +42,7 @@ import { cn } from "@/lib/utils";
 const navigationItems = [
   {
     title: "Dashboard",
-    url: "/dashboard",
+    url: "/dashboards",
     icon: LayoutDashboard,
   },
   {
