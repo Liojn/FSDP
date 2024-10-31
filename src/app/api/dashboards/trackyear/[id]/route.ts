@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from '@/../dbConfig'
 const { ObjectId } = require('mongodb');
 
-// API Route Handler, logic for getting the year
+// API Route Handler, logic for getting the year eg. http://localhost:3000/api/dashboards/trackyear/671cf9a6e994afba6c2f332d
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   
   try {
