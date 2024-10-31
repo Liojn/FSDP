@@ -1,4 +1,19 @@
-import { z } from "zod";
+import * as z from 'zod';
+
+// Zod schema for form validation
+export const formSchema = z.object({
+  companyInfo: z.object({
+    companyName: z.string().min(1, 'Company name is required'),
+    industry: z.string().min(1, 'Industry is required'),
+    targetReduction: z
+      .number({ invalid_type_error: 'Target reduction must be a number' })
+      .min(1, 'Target reduction must be at least 1 ton'),
+    contactPerson: z.string().min(1, 'Contact person is required'),
+    email: z.string().email('Invalid email address'),
+  }),
+});
+
+export type FormValues = z.infer<typeof formSchema>;
 
 export interface Signee {
   companyName: string;
@@ -9,17 +24,6 @@ export interface Signee {
 
 export interface CampaignData {
   totalReduction: number;
+  targetReduction: number;
   signees: Signee[];
 }
-
-export const formSchema = z.object({
-  companyInfo: z.object({
-    companyName: z.string().min(2, "Company name must be at least 2 characters"),
-    industry: z.string().min(2, "Industry must be at least 2 characters"),
-    targetReduction: z.number().min(1, "Target reduction must be at least 1"),
-  }),
-  sustainabilityGoals: z.object({}).optional(),
-  reportingPreferences: z.object({}).optional(),
-});
-
-export type FormValues = z.infer<typeof formSchema>;

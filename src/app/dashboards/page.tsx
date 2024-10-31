@@ -43,7 +43,7 @@ const AdditionalGraph = () => (
 const DashboardPage = () => {
   const [yearFilter, setYearFilter] = useState<string>(""); //Year filter selection, holds the currently selected year from the dropdown. Initially set to an empty string
   const [yearOptions, setYearOptions] = useState<number[]>([]); //store Year options from API fetch, initialized as an empty array,
-  const [selectedYear, setSelectedYear] = useState<number | null>(null); //Store selected year for subsequent API calls
+  const [, setSelectedYear] = useState<number | null>(null); //Store selected year for subsequent API calls
 
   //Fetch the avail list of years from the API
   useEffect(() => {
