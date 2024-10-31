@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation"; // Import client-side hooks
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/shared/app-sidebar";
 
 export default function ClientLayout({
   children,
