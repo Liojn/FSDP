@@ -4,14 +4,14 @@ import { Collection, ObjectId } from "mongodb";
 import dbConfig from "dbConfig";
 
 export interface Campaign {
-  _id: ObjectId;
+  _id?: ObjectId;  // Make _id optional
   totalReduction: number;
   targetReduction: number;
   signeesCount: number;
 }
 
 export interface Signee {
-  _id: ObjectId;
+  _id?: ObjectId;  // Make _id optional here too for consistency
   campaignId: ObjectId;
   companyName: string;
   industry: string;
@@ -28,13 +28,21 @@ export async function GET() {
     const campaignsCollection: Collection<Campaign> = db.collection("campaigns");
     const signeesCollection: Collection<Signee> = db.collection("signees");
 
-    const campaign = await campaignsCollection.findOne();
+    let campaign = await campaignsCollection.findOne();
 
+    // If no campaign exists, create a default one
     if (!campaign) {
-      return NextResponse.json(
-        { message: "Campaign not found" },
-        { status: 404 }
-      );
+      const defaultCampaign: Campaign = {
+        totalReduction: 0,
+        targetReduction: 1000000, // 1 million tons as target
+        signeesCount: 0,
+      };
+
+      const result = await campaignsCollection.insertOne(defaultCampaign);
+      campaign = {
+        _id: result.insertedId,
+        ...defaultCampaign,
+      };
     }
 
     const signees = await signeesCollection

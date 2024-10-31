@@ -279,6 +279,7 @@ const SidebarTrigger = React.forwardRef<
         toggleSidebar();
       }}
       {...props}
+      aria-label="Toggle sidebar"
     >
       <PanelLeft className="h-10 w-10" /> {/* Increase icon size */}
     </Button>

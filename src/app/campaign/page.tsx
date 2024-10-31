@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { CampaignData, FormValues, Signee, formSchema } from "./types";
 import {
@@ -16,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/shared/page-header";
+import { Label } from "@/components/ui/label";
 
 export default function CampaignPage() {
   const [campaignData, setCampaignData] = useState<CampaignData | null>(null);
@@ -38,6 +40,7 @@ export default function CampaignPage() {
   });
 
   useEffect(() => {
+    // Fetch campaign data from API
     const fetchCampaignData = async () => {
       try {
         const response = await fetch("/api/campaign");
@@ -47,10 +50,10 @@ export default function CampaignPage() {
         const data = await response.json();
         setCampaignData(data);
       } catch (error) {
-        let errorMessage = "An unexpected error occurred";
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        }
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred";
         setError(errorMessage);
       } finally {
         setLoading(false);
@@ -83,12 +86,13 @@ export default function CampaignPage() {
         joinedAt: new Date().toISOString(),
       };
 
+      // Update campaign data with the new signee
       setCampaignData((prevData) => {
         if (!prevData) return prevData;
         return {
           ...prevData,
           totalReduction: prevData.totalReduction + newSignee.reduction,
-          signees: [newSignee, ...prevData.signees], // Add new signee at the top
+          signees: [newSignee, ...prevData.signees],
         };
       });
 
@@ -99,10 +103,8 @@ export default function CampaignPage() {
         className: "bg-green-100 border-green-200",
       });
     } catch (error) {
-      let errorMessage = "An unexpected error occurred";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected error occurred";
       toast({
         title: "Error",
         description: errorMessage,
@@ -186,113 +188,84 @@ export default function CampaignPage() {
             Join the Campaign
           </h2>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label
-                htmlFor="companyName"
-                className="block text-sm font-medium mb-1 text-lime-700"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="companyName" className="text-lime-700">
                 Company Name
-              </label>
-              <input
+              </Label>
+              <Input
                 id="companyName"
                 type="text"
-                className="w-full p-2 border rounded "
                 {...form.register("companyInfo.companyName")}
               />
               {form.formState.errors.companyInfo?.companyName && (
-                <p className="text-red-500 text-sm mt-1">
+                <p className="text-red-500 text-sm">
                   {form.formState.errors.companyInfo.companyName.message}
                 </p>
               )}
             </div>
 
-            <div>
-              <label
-                htmlFor="industry"
-                className="block text-sm font-medium mb-1 text-lime-700"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="industry" className="text-lime-700">
                 Industry
-              </label>
-              <input
+              </Label>
+              <Input
                 id="industry"
                 type="text"
-                className="w-full p-2 border rounded "
                 {...form.register("companyInfo.industry")}
               />
               {form.formState.errors.companyInfo?.industry && (
-                <p className="text-red-500 text-sm mt-1">
+                <p className="text-red-500 text-sm">
                   {form.formState.errors.companyInfo.industry.message}
                 </p>
               )}
             </div>
 
-            <div>
-              <label
-                htmlFor="targetReduction"
-                className="block text-sm font-medium mb-1 text-lime-700"
-              >
-                Target Reduction (tons)
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="targetReduction" className="text-lime-700">
+                Planned Target Reduction (tons)
+              </Label>
+              <Input
                 id="targetReduction"
                 type="number"
-                className="w-full p-2 border rounded "
                 min="1"
                 {...form.register("companyInfo.targetReduction", {
                   valueAsNumber: true,
-                  onChange: (e) => {
-                    const value = e.target.value;
-                    form.setValue(
-                      "companyInfo.targetReduction",
-                      value === "" ? 0 : Number(value)
-                    );
-                  },
                 })}
               />
               {form.formState.errors.companyInfo?.targetReduction && (
-                <p className="text-red-500 text-sm mt-1">
+                <p className="text-red-500 text-sm">
                   {form.formState.errors.companyInfo.targetReduction.message}
                 </p>
               )}
             </div>
 
-            {/* Contact Person */}
-            <div>
-              <label
-                htmlFor="contactPerson"
-                className="block text-sm font-medium mb-1 text-lime-700"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="contactPerson" className="text-lime-700">
                 Contact Person
-              </label>
-              <input
+              </Label>
+              <Input
                 id="contactPerson"
                 type="text"
-                className="w-full p-2 border rounded "
                 {...form.register("companyInfo.contactPerson")}
               />
               {form.formState.errors.companyInfo?.contactPerson && (
-                <p className="text-red-500 text-sm mt-1">
+                <p className="text-red-500 text-sm">
                   {form.formState.errors.companyInfo.contactPerson.message}
                 </p>
               )}
             </div>
 
-            {/* Email */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium mb-1 text-lime-700"
-              >
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-lime-700">
                 Email
-              </label>
-              <input
+              </Label>
+              <Input
                 id="email"
                 type="email"
-                className="w-full p-2 border rounded "
                 {...form.register("companyInfo.email")}
               />
               {form.formState.errors.companyInfo?.email && (
-                <p className="text-red-500 text-sm mt-1">
+                <p className="text-red-500 text-sm">
                   {form.formState.errors.companyInfo.email.message}
                 </p>
               )}
