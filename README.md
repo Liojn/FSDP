@@ -13,6 +13,8 @@ npm install bcryptjs, jsonwebtoken
 npm i --save-dev @types/jsonwebtoken
 # and
 npm i --save-dev @types/bcryptjs
+# and
+npm install @heroicons/react
 ```
 
 Secondly, run the development server:
