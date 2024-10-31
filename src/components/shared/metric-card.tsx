@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface MetricCardProps {
   title: string;
-  value: number;
+  value: number | string;
   unit: string;
   className?: string;
 }

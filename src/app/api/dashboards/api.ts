@@ -20,3 +20,27 @@ export const fetchUniqueYears = async (companyId: string): Promise<number[]> => 
       return []; // Return an empty array on error
     }
 };
+
+export type EmissionData = {
+    "energyAverage in kWh": number;
+    "carbonAverage in CO2E": number;
+    "netAverage in CO2E": number;
+} | null;
+
+//for getting the data to display on the 3 cards dashboard
+export const getMetricsData = async (companyId: string, year: number): Promise<EmissionData> => {
+   try {
+        const response = await fetch(`/api/dashboards/cards/${companyId}?year=${year}`);
+        
+        if (!response.ok) {
+            throw new Error(`Error fetching data: ${response.statusText}`);
+        }
+        
+        const data: EmissionData = await response.json();
+        console.log("Emission Data:", data);
+        return data;
+    } catch (error) {
+        console.error("Failed to fetch emission data:", error);
+        return null;
+    }
+}
