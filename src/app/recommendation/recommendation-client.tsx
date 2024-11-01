@@ -23,7 +23,7 @@ import {
   MetricData,
 } from "@/types";
 
-// Optimized dynamic imports with no SSR configuration
+// Dynamic imports remain the same
 const YearlyComparison = dynamic(
   () => import("./components/YearlyComparison"),
   {
@@ -58,7 +58,6 @@ const ImplementationTracker = dynamic(
   }
 );
 
-// Separate fetcher logic
 const recommendationFetcher = async ({
   url,
   data,
@@ -80,7 +79,6 @@ const recommendationFetcher = async ({
   return response.json();
 };
 
-// Simplified error boundary component
 class ErrorBoundary extends React.Component<{
   fallback: React.ReactNode;
   children: React.ReactNode;
@@ -109,19 +107,43 @@ export default function RecommendationClient({
   const [activeCategory, setActiveCategory] =
     useState<CategoryType>(initialCategory);
   const [metrics] = useState<MetricData>(initialMetrics);
+  const [shouldFetch, setShouldFetch] = useState(false);
 
-  // Optimized SWR configuration
-  const { data: recommendationsData, error: fetchError } = useSWR(
-    {
-      url: "/api/recommendation",
-      data: {
-        category: activeCategory,
-        metrics,
-        timeframe: "monthly",
-        previousImplementations: Array.from(implementedRecommendations),
-      },
+  // Store fetched recommendations in state to prevent refetching
+  const [fetchedCategories, setFetchedCategories] = useState<Set<CategoryType>>(
+    new Set()
+  );
+  const [recommendationsByCategory, setRecommendationsByCategory] =
+    useState<CategoryData>(
+      Object.values(CategoryType).reduce(
+        (acc, category) => ({ ...acc, [category]: [] }),
+        {} as CategoryData
+      )
+    );
+
+  // Modified SWR configuration
+  const { error: fetchError } = useSWR(
+    shouldFetch && !fetchedCategories.has(activeCategory)
+      ? {
+          url: "/api/recommendation",
+          data: {
+            category: activeCategory,
+            metrics,
+            timeframe: "monthly",
+            previousImplementations: Array.from(implementedRecommendations),
+          },
+        }
+      : null,
+    async (key) => {
+      const result = await recommendationFetcher(key);
+      // Store the fetched recommendations
+      setRecommendationsByCategory((prev) => ({
+        ...prev,
+        [activeCategory]: result.recommendations,
+      }));
+      setFetchedCategories((prev) => new Set(prev).add(activeCategory));
+      return result;
     },
-    recommendationFetcher,
     {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
@@ -137,35 +159,15 @@ export default function RecommendationClient({
     }
   );
 
-  // Memoized calculations
-  const allRecommendations = useMemo(
-    () => recommendationsData?.recommendations || [],
-    [recommendationsData]
-  );
-
   const totalSavings = useMemo(
     () =>
-      allRecommendations
+      Object.values(recommendationsByCategory)
+        .flat()
         .filter((rec) => implementedRecommendations.has(rec.title))
         .reduce((acc, rec) => acc + rec.savings, 0),
-    [allRecommendations, implementedRecommendations]
+    [recommendationsByCategory, implementedRecommendations]
   );
 
-  const recommendationsByCategory = useMemo(() => {
-    const initialCategories: CategoryData = Object.values(CategoryType).reduce(
-      (acc, category) => ({ ...acc, [category]: [] }),
-      {} as CategoryData
-    );
-
-    return allRecommendations.reduce((acc, rec) => {
-      if (rec.category) {
-        acc[rec.category].push(rec);
-      }
-      return acc;
-    }, initialCategories);
-  }, [allRecommendations]);
-
-  // Optimized toggle function
   const toggleRecommendation = useCallback((title: string) => {
     setImplementedRecommendations((prev) => {
       const newSet = new Set(prev);
@@ -178,14 +180,17 @@ export default function RecommendationClient({
     });
   }, []);
 
+  const handleTabChange = useCallback((category: CategoryType) => {
+    setActiveCategory(category);
+    setShouldFetch(true);
+  }, []);
+
   return (
     <div className="space-y-6">
-      {/* Total savings display */}
       <div className="text-xl font-semibold text-green-600">
         Potential Savings: ${totalSavings.toLocaleString()}
       </div>
 
-      {/* Charts section */}
       {metrics && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <ErrorBoundary fallback={<div>Error loading charts</div>}>
@@ -199,7 +204,6 @@ export default function RecommendationClient({
         </div>
       )}
 
-      {/* Recommendations section */}
       <Card>
         <CardHeader>
           <CardTitle>Personalized Recommendations</CardTitle>
@@ -214,7 +218,7 @@ export default function RecommendationClient({
                 <TabsTrigger
                   key={category}
                   value={category}
-                  onClick={() => setActiveCategory(category)}
+                  onClick={() => handleTabChange(category)}
                   className="w-full"
                 >
                   {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -226,7 +230,11 @@ export default function RecommendationClient({
               <div className="py-4 text-center text-red-500">
                 Failed to load recommendations. Please try again.
               </div>
-            ) : !recommendationsData ? (
+            ) : !shouldFetch ? (
+              <div className="py-4 text-center text-gray-500">
+                Select a category to view recommendations
+              </div>
+            ) : !fetchedCategories.has(activeCategory) ? (
               <div className="mt-4">
                 <RecommendationSkeleton />
               </div>
@@ -258,7 +266,6 @@ export default function RecommendationClient({
         </CardContent>
       </Card>
 
-      {/* Implementation progress section */}
       {implementedRecommendations.size > 0 && (
         <Card>
           <CardHeader>
@@ -269,7 +276,8 @@ export default function RecommendationClient({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {allRecommendations
+              {Object.values(recommendationsByCategory)
+                .flat()
                 .filter((rec) => implementedRecommendations.has(rec.title))
                 .map((rec) => (
                   <ErrorBoundary

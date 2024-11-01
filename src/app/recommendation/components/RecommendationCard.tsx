@@ -1,10 +1,20 @@
-import React, { memo } from "react";
+import React, { memo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RecommendationCardProps } from "@/types";
 
 const RecommendationCard: React.FC<RecommendationCardProps> = memo(
   ({ rec, isImplemented, toggleRecommendation }) => {
+    // Memoize the click handler to prevent recreating the function on every render
+    const handleImplementationToggle = useCallback(
+      (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleRecommendation(rec.title);
+      },
+      [toggleRecommendation, rec.title]
+    );
+
     return (
       <Card className="mb-4">
         <CardHeader>
@@ -55,7 +65,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
               </span>
               <Button
                 variant={isImplemented ? "secondary" : "default"}
-                onClick={() => toggleRecommendation(rec.title)}
+                onClick={handleImplementationToggle}
               >
                 {isImplemented ? "Implemented" : "Mark as Implemented"}
               </Button>
@@ -76,6 +86,14 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
           </div>
         </CardContent>
       </Card>
+    );
+  },
+  // Add a custom comparison function to prevent unnecessary re-renders
+  (prevProps, nextProps) => {
+    return (
+      prevProps.rec.title === nextProps.rec.title &&
+      prevProps.isImplemented === nextProps.isImplemented &&
+      prevProps.rec.savings === nextProps.rec.savings
     );
   }
 );
