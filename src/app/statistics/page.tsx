@@ -363,7 +363,7 @@ const StatisticsPage = () => {
                 category={category}
               />
             ) : (
-              <p>Please select "All" to view the line chart.</p>
+              <p>Please select &quot;All&quot; to view the line chart.</p>
             )}
           </div>
         </div>

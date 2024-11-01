@@ -1,11 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  fetchUniqueYears,
-  getMetricsData,
-  EmissionData,
-} from "../api/dashboards/api";
+import { fetchUniqueYears, getMetricsData } from "../api/dashboards/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { MetricCard } from "@/components/shared/metric-card"; //Cards component
 

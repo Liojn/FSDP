@@ -1,15 +1,16 @@
 "use client";
 
-import { PageHeader } from "@/components/shared/page-header";
 import React, { useState, useEffect, useRef } from "react";
+import { ChangeEvent } from "react";
 
-const leaderboardData = [
-  { name: "EcoFarm", score: 95 },
-  { name: "GreenCo", score: 88 },
-  { name: "SustainInc", score: 84 },
-  { name: "BioWorks", score: 78 },
-  { name: "EcoGrow", score: 72 },
-  { name: "GreenFarm", score: 65 },
+// Define interfaces for data types
+interface LeaderboardEntry {
+  name: string;
+  score: number;
+}
+
+// Type the leaderboard data
+const leaderboardData: LeaderboardEntry[] = [
   { name: "EarthWise", score: 60 },
   { name: "NatureNet", score: 58 },
   { name: "PlanetRoots", score: 55 },
@@ -18,28 +19,43 @@ const leaderboardData = [
   { name: "GreenLeaf", score: 48 },
 ];
 
+// Define types for filter options
+type FilterOption = "Today" | "This Week" | "This Month" | "This Year";
+type DataFilterOption =
+  | "Energy Consumption"
+  | "Carbon Emissions"
+  | "Water Usage";
+
 const LeaderboardPage = () => {
-  const [filter, setFilter] = useState("Today");
-  const [dataFilter, setDataFilter] = useState("Energy Consumption");
-  const [isAtBottom, setIsAtBottom] = useState(false);
+  const [filter, setFilter] = useState<FilterOption>("Today");
+  const [dataFilter, setDataFilter] =
+    useState<DataFilterOption>("Energy Consumption");
+  const [isAtBottom, setIsAtBottom] = useState<boolean>(false);
 
-  const listRef = useRef(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
-  const handleFilterChange = (event) => setFilter(event.target.value);
-  const handleDataFilterChange = (event) => setDataFilter(event.target.value);
+  const handleFilterChange = (event: ChangeEvent<HTMLSelectElement>) =>
+    setFilter(event.target.value as FilterOption);
+
+  const handleDataFilterChange = (event: ChangeEvent<HTMLSelectElement>) =>
+    setDataFilter(event.target.value as DataFilterOption);
 
   // Check if the user has scrolled to the bottom
   const handleScroll = () => {
     const element = listRef.current;
-    const isBottom =
-      element.scrollHeight - element.scrollTop <= element.clientHeight;
-    setIsAtBottom(isBottom);
+    if (element) {
+      const isBottom =
+        element.scrollHeight - element.scrollTop <= element.clientHeight;
+      setIsAtBottom(isBottom);
+    }
   };
 
   useEffect(() => {
     const element = listRef.current;
-    element.addEventListener("scroll", handleScroll);
-    return () => element.removeEventListener("scroll", handleScroll);
+    if (element) {
+      element.addEventListener("scroll", handleScroll);
+      return () => element.removeEventListener("scroll", handleScroll);
+    }
   }, []);
 
   return (
