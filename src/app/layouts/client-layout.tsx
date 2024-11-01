@@ -1,11 +1,9 @@
 "use client";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
-import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 
-const AppSidebar = dynamic(() => import("@/components/shared/app-sidebar"));
+import AppSidebar from "@/components/shared/app-sidebar";
 
 export default function ClientLayout({
   children,
@@ -13,13 +11,10 @@ export default function ClientLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const [shouldShowSidebar, setShouldShowSidebar] = useState(
-    pathname !== "/login" && pathname !== "/signup"
-  );
 
-  useEffect(() => {
-    setShouldShowSidebar(pathname !== "/login" && pathname !== "/signup");
-  }, [pathname]);
+  // Modify the condition to exclude the root path (`/`) along with `/login` and `/signup`
+  const shouldShowSidebar =
+    pathname !== "/" && pathname !== "/login" && pathname !== "/signup";
 
   return (
     <SidebarProvider>
