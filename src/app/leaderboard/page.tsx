@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/shared/page-header";
 import React, { useState, useEffect, useRef } from "react";
 import { ChangeEvent } from "react";
 
@@ -63,7 +64,7 @@ const LeaderboardPage = () => {
       {/* Header Section */}
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-2">
-          <h2 className="text-2xl font-bold text-lime-900">Leaderboard for</h2>
+          <PageHeader title="Leaderboard for" className="text-lime-900" />
           <select
             value={filter}
             onChange={handleFilterChange}
