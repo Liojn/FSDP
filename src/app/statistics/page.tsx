@@ -83,6 +83,12 @@ const StatisticsPage = () => {
       });
       const dataPrevious = await responsePrevious.json();
       const unit = dataType === 'carbon-emissions' ? 'CO2e' : 'kWh';
+
+          // Ensure dataCurrent and dataPrevious have the required properties
+      if (!dataCurrent || !dataPrevious || typeof dataCurrent.total === 'undefined' || typeof dataPrevious.total === 'undefined') {
+        console.error("Data structure mismatch. Missing 'total' or 'calculations' in API response.");
+        return;
+      }
 // Store impact data for current and previous year
       const transformedMetricsData: Metric[] = [
         { title: `${selectedYear}'s IMPACT`, value: dataCurrent.total.toFixed(2), unit: unit },
@@ -91,52 +97,49 @@ const StatisticsPage = () => {
       setMetricsData(transformedMetricsData);
 
 
-// Calculate percentage reduction or increase for each category
-      const calculateReduction = (current: number, previous: number): string => {
-        if (previous === 0) return "N/A"; // Handle division by zero if needed
-        const reduction = ((current - previous) / previous) * 100;
-        return reduction >= 0 ? `increase by ${Math.abs(reduction).toFixed(2)}` : `reduced by ${Math.abs(reduction).toFixed(2)}`;
-      };
-      
-      const categoryReductionData: CategoryReductionData = {
-        all: {
-          reduction: dataCurrent.total && dataPrevious.total
-            ? calculateReduction(dataCurrent.total, dataPrevious.total)
-            : "0"
-        },
-        equipment: {
-          reduction: dataCurrent.calculations?.equipment && dataPrevious.calculations?.equipment
-            ? calculateReduction(dataCurrent.calculations.equipment, dataPrevious.calculations.equipment)
-            : "0"
-        },
-        livestock: {
-          reduction: dataCurrent.calculations?.livestock && dataPrevious.calculations?.livestock
-            ? calculateReduction(dataCurrent.calculations.livestock, dataPrevious.calculations.livestock)
-            : "0"
-        },
-        crops: {
-          reduction: dataCurrent.calculations?.crops && dataPrevious.calculations?.crops
-            ? calculateReduction(dataCurrent.calculations.crops, dataPrevious.calculations.crops)
-            : "0"
-        },
-        waste: {
-          reduction: dataCurrent.calculations?.waste && dataPrevious.calculations?.waste
-            ? calculateReduction(dataCurrent.calculations.waste, dataPrevious.calculations.waste)
-            : "0"
-        }
-      };
-      setCategoryReductionData(categoryReductionData);
+    // Calculate percentage reduction or increase for each category
+    const calculateReduction = (current: number, previous: number): string => {
+      if (previous === 0) return "N/A"; // Handle division by zero
+      const reduction = ((current - previous) / previous) * 100;
+      return reduction >= 0 ? `increase by ${Math.abs(reduction).toFixed(2)}%` : `reduced by ${Math.abs(reduction).toFixed(2)}%`;
+    };
 
+    const categoryReductionData: CategoryReductionData = {
+      all: {
+        reduction: calculateReduction(dataCurrent.total, dataPrevious.total)
+      },
+      equipment: {
+        reduction: dataCurrent.yearlyData.equipment && dataPrevious.yearlyData.equipment
+          ? calculateReduction(dataCurrent.yearlyData.equipment, dataPrevious.yearlyData.equipment)
+          : "N/A"
+      },
+      livestock: {
+        reduction: dataCurrent.yearlyData.livestock && dataPrevious.yearlyData.livestock
+          ? calculateReduction(dataCurrent.yearlyData.livestock, dataPrevious.yearlyData.livestock)
+          : "N/A"
+      },
+      crops: {
+        reduction: dataCurrent.yearlyData.crops && dataPrevious.yearlyData.crops
+          ? calculateReduction(dataCurrent.yearlyData.crops, dataPrevious.yearlyData.crops)
+          : "N/A"
+      },
+      waste: {
+        reduction: dataCurrent.yearlyData.waste && dataPrevious.yearlyData.waste
+          ? calculateReduction(dataCurrent.yearlyData.waste, dataPrevious.yearlyData.waste)
+          : "N/A"
+      }
+    };
+    setCategoryReductionData(categoryReductionData);
 
-// Total emissions per category per year
-      const transformedCategoryData: CategoryData = {
-        all: { actual: dataCurrent.total.toFixed(2), unit: unit },
-        equipment: { actual: dataCurrent.calculations.equipment.toFixed(2), unit: unit },
-        livestock: { actual: dataCurrent.calculations.livestock.toFixed(2), unit: unit },
-        crops: { actual: dataCurrent.calculations.crops.toFixed(2), unit: unit },
-        waste: { actual: dataCurrent.calculations.waste.toFixed(2), unit: unit }
-      };
-      setCategoryData(transformedCategoryData);
+    // Total emissions per category per year
+    const transformedCategoryData: CategoryData = {
+      all: { actual: dataCurrent.total.toFixed(2), unit: unit },
+      equipment: { actual: dataCurrent.yearlyData.equipment?.toFixed(2) || "0", unit: unit },
+      livestock: { actual: dataCurrent.yearlyData.livestock?.toFixed(2) || "0", unit: unit },
+      crops: { actual: dataCurrent.yearlyData.crops?.toFixed(2) || "0", unit: unit },
+      waste: { actual: dataCurrent.yearlyData.waste?.toFixed(2) || "0", unit: unit }
+    };
+    setCategoryData(transformedCategoryData);
 
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -166,7 +169,7 @@ const StatisticsPage = () => {
         {/* Year Dropdown */}
         <div>
           <span>Year: </span>
-          <select value={year} onChange={(e) => setYear(parseInt(e.target.value))} className="bg-lime-50">
+          <select value={year} onChange={(e) => setYear(parseInt(e.target.value))} className="">
             <option value="" disabled selected>
               Select Year
             </option>
@@ -180,7 +183,7 @@ const StatisticsPage = () => {
         {/* Data Dropdown */}
         <div>
           <span>Data Type: </span>
-          <select value={dataType} onChange={(e) => setDataType(e.target.value)} className="bg-lime-50">
+          <select value={dataType} onChange={(e) => setDataType(e.target.value)} className="">
             <option value="" disabled selected>
               Select Data Type
             </option>
@@ -236,7 +239,7 @@ const StatisticsPage = () => {
                   </div>
                   <div className="w-full h-2 bg-gray-200 rounded-lg">
                     <div
-                      className={`h-full ${isIncrease ? 'bg-red-500' : 'bg-lime-100'} rounded-lg`}
+                      className={`h-full ${isIncrease ? 'bg-red-400' : 'bg-lime-400'} rounded-lg`}
                       style={{ width: `${Math.min(Number(percentage), 100)}%` }}
                     ></div>
                   </div>
