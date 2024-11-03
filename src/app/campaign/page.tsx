@@ -105,6 +105,21 @@ export default function CampaignPage() {
     };
   }, []);
 
+  // Remove industry code and replace with email auto-fill
+  useEffect(() => {
+    // Get email from localStorage
+    const userEmail = localStorage.getItem("userEmail");
+    const userName = localStorage.getItem("userName");
+    
+    if (userEmail) {
+      companyForm.setValue("email", userEmail);
+    }
+    if (userName) {
+      companyForm.setValue("contactPerson", userName);
+    }
+
+  }, []); // Empty dependency array since we only want this to run once on mount
+
   // Update target range when industry and size are selected
   useEffect(() => {
     const industry = companyForm.watch("industry");
@@ -226,7 +241,7 @@ export default function CampaignPage() {
     100;
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 pb-8">
       <PageHeader title={campaignData.campaign.name} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
