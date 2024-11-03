@@ -115,7 +115,7 @@ export default function CampaignPage() {
       companyForm.setValue("email", userEmail);
     }
     if (userName) {
-      companyForm.setValue("contactPerson", userName);
+      companyForm.setValue("name", userName);
     }
 
   }, []); // Empty dependency array since we only want this to run once on mount
@@ -332,7 +332,7 @@ export default function CampaignPage() {
               <Label htmlFor="name" className="text-lime-700">
                 Company Name
               </Label>
-              <Input id="name" type="text" {...companyForm.register("name")} />
+              <Input disabled id="name" type="text" {...companyForm.register("name")} />
               {companyForm.formState.errors.name && (
                 <p className="text-red-500 text-sm">
                   {companyForm.formState.errors.name.message}
