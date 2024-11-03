@@ -15,6 +15,8 @@ npm i --save-dev @types/jsonwebtoken
 npm i --save-dev @types/bcryptjs
 # and
 npm install @heroicons/react
+# and
+npm install chart.js
 ```
 
 Secondly, run the development server:
