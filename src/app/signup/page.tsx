@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert"; // Ensure this path is correct
 
 export default function SignUp() {
     const [name, setName] = useState('');
@@ -36,10 +37,9 @@ export default function SignUp() {
             setEmail(reset);
             setPassword(reset);
 
-            // Redirect to login page after a brief delay
-            setTimeout(() => {
+            
               router.push('/login');
-          }, 1000);
+           
         } else {
             setMessage(data.message);
         }
@@ -49,8 +49,12 @@ export default function SignUp() {
         <div className="flex flex-col items-center justify-center min-h-screen p-4">
           <Card className="w-full max-w-sm">
             <CardHeader>
-              <h1 className="text-2xl font-bold text-center">Sign Up</h1>
-              {message && <p className="text-red-500">{message}</p>}
+              <h1 className="text-2xl font-bold text-center pb-4">Sign Up</h1>
+              {message && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertDescription>{message}</AlertDescription>
+                </Alert>
+              )}
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmission}>
@@ -62,7 +66,7 @@ export default function SignUp() {
                       id="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter your company name"
+                      placeholder="Enter company name"
                       required
                     />
                   </div>
@@ -74,7 +78,7 @@ export default function SignUp() {
                       id="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
+                      placeholder="Enter company email"
                       required
                     />
                   </div>

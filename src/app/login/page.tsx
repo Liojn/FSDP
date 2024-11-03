@@ -6,6 +6,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -33,7 +34,7 @@ export default function Login() {
       localStorage.setItem("userName", data.name);
       localStorage.setItem("userEmail", email);
       setMessage("Sign in successful!");
-      setTimeout(() => router.push("/dashboard"), 2000);
+      router.push("/dashboards");
     } else {
       setMessage(data.message);
     }
@@ -44,7 +45,11 @@ export default function Login() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <h1 className="text-2xl font-bold text-center">Login</h1>
-          {message && <p className="text-red-500">{message}</p>}
+           {message && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertDescription>{message}</AlertDescription>
+                </Alert>
+              )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmission}>
