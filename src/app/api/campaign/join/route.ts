@@ -8,7 +8,7 @@ import {
   CompanySize,
   CompanyFormValues
 } from "../../../campaign/types";
-import { companyFormSchema, participationFormSchema } from "../../../campaign/types";
+import { companyFormSchema, participationFormSchema } from "@/app/campaign/types";
 
 interface JoinRequestBody {
   companyInfo: CompanyFormValues;
