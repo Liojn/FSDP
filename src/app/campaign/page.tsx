@@ -34,7 +34,7 @@ export default function CampaignPage() {
       try {
         const [campaignResponse, userResponse] = await Promise.all([
           fetch("/api/campaign"),
-          fetch("/api/user/campaign-status", {
+          fetch("/api/campaign/user/campaign-status", {
             headers: {
               "user-email": localStorage.getItem("userEmail") || "",
             },
