@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase } from '@/../dbConfig';
+import  connectToDatabase  from '@/../dbConfig';
 import { ObjectId } from 'mongodb';
 
 // List of collections that we would be using
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         const objectId = new ObjectId(companyId);
 
         // Connect to MongoDB
-        const db = await connectToDatabase();
+        const db = await connectToDatabase.connectToDatabase();
         if (!db) {
             throw new Error("Database connection failed."); // If no db instance is defined
         }
