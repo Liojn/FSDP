@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase } from "@/../dbConfig";
+import  connectToDatabase  from "@/../dbConfig";
 import { ObjectId } from "mongodb";
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     const objectId = new ObjectId(userId);
-    const db = await connectToDatabase();
+    const db = await connectToDatabase.connectToDatabase();
     if (!db) {
       throw new Error("Database connection failed.");
     }

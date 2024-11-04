@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase } from "@/../dbConfig";
+import  connectToDatabase  from "@/../dbConfig";
 
 export async function GET(request: NextRequest, { params }: { params: { email: string } }) {
   try {
     const email = params?.email;  // assuming id is the user_id you are passing
 
-    const db = await connectToDatabase();
+    const db = await connectToDatabase.connectToDatabase();
     if (!db) {
       throw new Error("Database connection failed.");
     }
