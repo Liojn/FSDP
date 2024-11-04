@@ -1,70 +1,60 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import {
   CampaignData,
   CompanyFormValues,
   ParticipationFormValues,
-  CompanySize,
-  companyFormSchema,
-  participationFormSchema,
 } from "./types";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { PageHeader } from "@/components/shared/page-header";
-import { Label } from "@/components/ui/label";
+import { CampaignProgress } from "./components/CampaignProgress";
+import { CampaignMilestones } from "./components/CampaignMilestones";
+import { JoinCampaignForm } from "./components/JoinCampaignForm";
+import { CompanyParticipation } from "./components/CompanyParticipation";
+import { ParticipantsTable } from "./components/ParticipantsTable";
+import { CompanyParticipationProps } from "./components/CompanyParticipation";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 
 export default function CampaignPage() {
   const [campaignData, setCampaignData] = useState<CampaignData | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [targetRange, setTargetRange] = useState<{
-    min: number;
-    max: number;
-  } | null>(null);
-
-  const companyForm = useForm<CompanyFormValues>({
-    resolver: zodResolver(companyFormSchema),
-    mode: "onChange",
-  });
-
-  const participationForm = useForm<ParticipationFormValues>({
-    resolver: zodResolver(participationFormSchema),
-    mode: "onChange",
-  });
+  const [hasJoined, setHasJoined] = useState(false);
+  const [userCompany, setUserCompany] = useState<
+    CompanyParticipationProps["company"] | null
+  >(null);
+  const [, setUserName] = useState<string>("");
 
   useEffect(() => {
-    // Fetch campaign data from API
-    const fetchCampaignData = async () => {
+    // Fetch campaign data and check user participation
+    const fetchData = async () => {
       try {
-        const response = await fetch("/api/campaign");
-        if (!response.ok) {
+        const [campaignResponse, userResponse] = await Promise.all([
+          fetch("/api/campaign"),
+          fetch("/api/user/campaign-status", {
+            headers: {
+              "user-email": localStorage.getItem("userEmail") || "",
+            },
+          }),
+        ]);
+
+        if (!campaignResponse.ok) {
           throw new Error("Failed to fetch campaign data");
         }
-        const data = await response.json();
-        setCampaignData(data);
+
+        const campaignData = await campaignResponse.json();
+        setCampaignData(campaignData);
+
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData.hasJoined) {
+            setHasJoined(true);
+            setUserCompany(userData.company);
+          }
+        }
       } catch (error) {
         const errorMessage =
           error instanceof Error
@@ -76,7 +66,10 @@ export default function CampaignPage() {
       }
     };
 
-    fetchCampaignData();
+    // Only run if we're in the browser
+    if (typeof window !== "undefined") {
+      fetchData();
+    }
 
     // Set up WebSocket connection for real-time updates
     const ws = new WebSocket(
@@ -105,46 +98,14 @@ export default function CampaignPage() {
     };
   }, []);
 
-  // Remove industry code and replace with email auto-fill
   useEffect(() => {
-    // Get email from localStorage
-    const userEmail = localStorage.getItem("userEmail");
-    const userName = localStorage.getItem("userName");
-    
-    if (userEmail) {
-      companyForm.setValue("email", userEmail);
+    // Access localStorage inside useEffect
+    const storedUserName = localStorage.getItem("userName");
+    if (storedUserName) {
+      setUserName(storedUserName);
+      // If you're using form.setValue, make sure to check if it's available
     }
-    if (userName) {
-      companyForm.setValue("name", userName);
-    }
-
-  }, []); // Empty dependency array since we only want this to run once on mount
-
-  // Update target range when industry and size are selected
-  useEffect(() => {
-    const industry = companyForm.watch("industry");
-    const size = companyForm.watch("size");
-
-    if (industry && size && campaignData?.industryStandards) {
-      const industryStandard = campaignData.industryStandards.find(
-        (is) => is.industry === industry
-      );
-
-      if (industryStandard) {
-        const sizeMultipliers: Record<CompanySize, number> = {
-          Small: 1,
-          Medium: 2,
-          Large: 3,
-        };
-        const multiplier =
-          sizeMultipliers[size as CompanySize] * industryStandard.multiplier;
-        setTargetRange({
-          min: industryStandard.minReduction * multiplier,
-          max: industryStandard.maxReduction * multiplier,
-        });
-      }
-    }
-  }, [campaignData?.industryStandards, companyForm]);
+  }, []);
 
   const onSubmit = async (
     companyValues: CompanyFormValues,
@@ -191,8 +152,6 @@ export default function CampaignPage() {
         };
       });
 
-      companyForm.reset();
-      participationForm.reset();
       toast({
         title: "Success",
         description: "Successfully joined the campaign!",
@@ -235,288 +194,50 @@ export default function CampaignPage() {
     );
   }
 
-  const progressPercentage =
-    (campaignData.campaign.totalReduction /
-      campaignData.campaign.targetReduction) *
-    100;
-
   return (
-    <div className="container mx-auto px-4 pb-8">
+    <div className="container mx-auto px-4 py-8">
       <PageHeader title={campaignData.campaign.name} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Campaign Progress Section */}
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-6 text-gray-800">
-            Campaign Progress
-          </h2>
+        <div>
+          <Card className="p-6">
+            {" "}
+            <CampaignProgress
+              totalReduction={campaignData.campaign.totalReduction}
+              targetReduction={campaignData.campaign.targetReduction}
+              startDate={campaignData.campaign.startDate}
+              endDate={campaignData.campaign.endDate}
+              signeesCount={campaignData.campaign.signeesCount}
+            />
+            <CampaignMilestones
+              milestones={campaignData.campaign.milestones.map((milestone) => ({
+                ...milestone,
+                reachedAt: milestone.reachedAt
+                  ? milestone.reachedAt.toISOString()
+                  : undefined,
+              }))}
+            />
+          </Card>
+        </div>
 
-          {/* Progress bar */}
-          <div className="space-y-2 mb-4">
-            <Progress value={progressPercentage} className="h-2" />
-            <p className="text-sm text-gray-600 text-right">
-              {progressPercentage.toFixed(1)}%
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-600">Campaign Period</p>
-              <p className="text-base">
-                {new Date(campaignData.campaign.startDate).toLocaleDateString()}{" "}
-                - {new Date(campaignData.campaign.endDate).toLocaleDateString()}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Reduction Achieved</p>
-              <p className="text-2xl font-bold text-lime-600">
-                {campaignData.campaign.totalReduction.toLocaleString()} tons
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Reduction Target</p>
-              <p className="text-2xl font-bold text-lime-600">
-                {campaignData.campaign.targetReduction.toLocaleString()} tons
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Number of Participants</p>
-              <p className="text-2xl font-bold text-lime-600">
-                {campaignData.campaign.signeesCount}
-              </p>
-            </div>
-          </div>
-
-          {/* Milestones */}
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-4">Campaign Milestones</h3>
-            <div className="space-y-2">
-              {campaignData.campaign.milestones.map((milestone, index) => (
-                <div
-                  key={index}
-                  className={`p-3 rounded-lg ${
-                    milestone.reached
-                      ? "bg-lime-100 text-lime-700"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  <div className="flex justify-between items-center">
-                    <span>{milestone.percentage}% Target Reached</span>
-                    {milestone.reached && (
-                      <span className="text-sm">
-                        {new Date(milestone.reachedAt!).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-
-        {/* Join Form Section */}
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-6 text-lime-700">
-            Join the Campaign
-          </h2>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const companyValues = companyForm.getValues();
-              const participationValues = participationForm.getValues();
-              onSubmit(companyValues, participationValues);
-            }}
-            className="space-y-4"
-          >
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-lime-700">
-                Company Name
-              </Label>
-              <Input disabled id="name" type="text" {...companyForm.register("name")} />
-              {companyForm.formState.errors.name && (
-                <p className="text-red-500 text-sm">
-                  {companyForm.formState.errors.name.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="industry" className="text-lime-700">
-                Industry
-              </Label>
-              <Select
-                onValueChange={(value) =>
-                  companyForm.setValue("industry", value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select industry" />
-                </SelectTrigger>
-                <SelectContent>
-                  {campaignData.industryStandards.map((is) => (
-                    <SelectItem key={is.industry} value={is.industry}>
-                      {is.industry}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {companyForm.formState.errors.industry && (
-                <p className="text-red-500 text-sm">
-                  {companyForm.formState.errors.industry.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="size" className="text-lime-700">
-                Company Size
-              </Label>
-              <Select
-                onValueChange={(value) =>
-                  companyForm.setValue("size", value as CompanySize)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select size" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Small">Small</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="Large">Large</SelectItem>
-                </SelectContent>
-              </Select>
-              {companyForm.formState.errors.size && (
-                <p className="text-red-500 text-sm">
-                  {companyForm.formState.errors.size.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="targetReduction" className="text-lime-700">
-                Planned Target Reduction (tons)
-              </Label>
-              <Input
-                id="targetReduction"
-                type="number"
-                min="1"
-                {...participationForm.register("targetReduction", {
-                  valueAsNumber: true,
-                })}
-              />
-              {targetRange && (
-                <p className="text-sm text-gray-600">
-                  Recommended range: {targetRange.min.toLocaleString()} -{" "}
-                  {targetRange.max.toLocaleString()} tons
-                </p>
-              )}
-              {participationForm.formState.errors.targetReduction && (
-                <p className="text-red-500 text-sm">
-                  {participationForm.formState.errors.targetReduction.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contactPerson" className="text-lime-700">
-                Contact Person
-              </Label>
-              <Input
-                id="contactPerson"
-                type="text"
-                {...companyForm.register("contactPerson")}
-              />
-              {companyForm.formState.errors.contactPerson && (
-                <p className="text-red-500 text-sm">
-                  {companyForm.formState.errors.contactPerson.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-lime-700">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                {...companyForm.register("email")}
-              />
-              {companyForm.formState.errors.email && (
-                <p className="text-red-500 text-sm">
-                  {companyForm.formState.errors.email.message}
-                </p>
-              )}
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full bg-lime-600 hover:bg-lime-700 text-white"
-              disabled={submitting}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                "Join Campaign"
-              )}
-            </Button>
-          </form>
-        </Card>
+        {hasJoined && userCompany ? (
+          <CompanyParticipation company={userCompany} />
+        ) : (
+          <JoinCampaignForm onSubmit={onSubmit} submitting={submitting} />
+        )}
       </div>
 
-      {/* Participants Section */}
-      <div className="mt-12">
-        <h2 className="text-xl font-semibold mb-6 text-lime-700">
-          Campaign Participants
-        </h2>
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Company</TableHead>
-                <TableHead>Industry</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Target Reduction</TableHead>
-                <TableHead>Current Progress</TableHead>
-                <TableHead>Joined</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {campaignData.participants.map((p, index) => (
-                <TableRow key={index}>
-                  <TableCell>{p.company.name}</TableCell>
-                  <TableCell>{p.company.industry}</TableCell>
-                  <TableCell>{p.company.size}</TableCell>
-                  <TableCell>
-                    {p.participation.targetReduction.toLocaleString()} tons
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Progress
-                        value={
-                          (p.participation.currentProgress /
-                            p.participation.targetReduction) *
-                          100
-                        }
-                        className="w-24 h-2"
-                      />
-                      <span>
-                        {p.participation.currentProgress.toLocaleString()} tons
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(p.participation.joinedAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      </div>
+      <ParticipantsTable
+        participants={campaignData.participants.map((participant) => ({
+          ...participant,
+          participation: {
+            ...participant.participation,
+            joinedAt: new Date(
+              participant.participation.joinedAt
+            ).toISOString(),
+          },
+        }))}
+      />
     </div>
   );
 }

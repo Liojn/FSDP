@@ -28,7 +28,6 @@ export interface CampaignBase {
 
 export interface CompanyBase {
   name: string;
-  industry: string;
   size: CompanySize;
   contactPerson: string;
   email: string;
@@ -53,13 +52,6 @@ export interface TestimonialBase {
   approved: boolean;
 }
 
-export interface IndustryStandardBase {
-  industry: string;
-  minReduction: number;
-  maxReduction: number;
-  multiplier: number;
-}
-
 // MongoDB document interfaces
 export interface Campaign extends CampaignBase {
   _id?: string | ObjectId;
@@ -77,14 +69,9 @@ export interface Testimonial extends TestimonialBase {
   _id?: string | ObjectId;
 }
 
-export interface IndustryStandard extends IndustryStandardBase {
-  _id?: string | ObjectId;
-}
-
 // Zod schema for company registration form validation
 export const companyFormSchema = z.object({
   name: z.string().min(1, 'Company name is required'),
-  industry: z.string().min(1, 'Industry is required'),
   size: z.enum(['Small', 'Medium', 'Large'], {
     required_error: 'Company size is required',
   }),
@@ -119,5 +106,4 @@ export interface CampaignData {
     participation: CampaignParticipant;
   }>;
   testimonials: Testimonial[];
-  industryStandards: IndustryStandard[];
 }

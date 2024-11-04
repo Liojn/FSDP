@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { Collection, ObjectId, Document } from "mongodb";
+import { Collection, ObjectId,  Filter } from "mongodb";
 import dbConfig from "dbConfig";
-import { Campaign, Company, CampaignParticipant, Testimonial, IndustryStandard } from "../../campaign/types";
+import { Campaign, Company, CampaignParticipant } from "../../campaign/types";
 
 export async function GET() {
   try {
@@ -11,8 +11,6 @@ export async function GET() {
     const campaignsCollection: Collection<Campaign> = db.collection("campaigns");
     const companiesCollection: Collection<Company> = db.collection("companies");
     const participantsCollection: Collection<CampaignParticipant> = db.collection("campaign_participants");
-    const testimonialsCollection: Collection<Testimonial> = db.collection("testimonials");
-    const industryStandardsCollection: Collection<IndustryStandard> = db.collection("industry_standards");
 
     // Get active campaign
     const activeCampaign = await campaignsCollection.findOne({ status: "Active" });
@@ -44,9 +42,7 @@ export async function GET() {
       // Return empty campaign data with default campaign
       return NextResponse.json({
         campaign: { ...defaultCampaign, _id: result.insertedId.toString() },
-        participants: [],
-        testimonials: [],
-        industryStandards: []
+        participants: []
       });
     }
 
@@ -64,24 +60,8 @@ export async function GET() {
       typeof p.companyId === 'string' ? new ObjectId(p.companyId) : p.companyId
     );
     
-    const companies = await companiesCollection
-      .find({ _id: { $in: companyIds } } as Document)
-      .toArray();
-
-    // Get approved testimonials
-    const testimonials = await testimonialsCollection
-      .find({ 
-        campaignId: activeCampaign._id instanceof ObjectId 
-          ? activeCampaign._id.toString() 
-          : activeCampaign._id,
-        approved: true 
-      })
-      .toArray();
-
-    // Get all industry standards
-    const industryStandards = await industryStandardsCollection
-      .find({})
-      .toArray();
+    const query: Filter<Company> = { _id: { $in: companyIds } };
+    const companies = await companiesCollection.find(query).toArray();
 
     // Combine participant and company data
     const participantData = participants.map(participant => ({
@@ -99,15 +79,7 @@ export async function GET() {
           ? activeCampaign._id.toString() 
           : activeCampaign._id
       },
-      participants: participantData,
-      testimonials: testimonials.map(t => ({
-        ...t,
-        _id: t._id instanceof ObjectId ? t._id.toString() : t._id
-      })),
-      industryStandards: industryStandards.map(is => ({
-        ...is,
-        _id: is._id instanceof ObjectId ? is._id.toString() : is._id
-      }))
+      participants: participantData
     });
   } catch (error) {
     console.error("Error fetching campaign data:", error);
@@ -127,13 +99,6 @@ export async function POST(request: Request) {
     const db = await dbConfig.connectToDatabase();
     const campaignsCollection: Collection<Campaign> = db.collection("campaigns");
 
-    // Set any currently active campaign to completed
-    await campaignsCollection.updateMany(
-      { status: "Active" },
-      { $set: { status: "Completed" } }
-    );
-
-    // Create new campaign
     const newCampaign: Omit<Campaign, '_id'> = {
       name,
       startDate: new Date(startDate),
@@ -151,11 +116,11 @@ export async function POST(request: Request) {
     };
 
     const result = await campaignsCollection.insertOne(newCampaign);
-    
-    return NextResponse.json({
-      ...newCampaign,
-      _id: result.insertedId.toString()
-    }, { status: 201 });
+
+    return NextResponse.json(
+      { ...newCampaign, _id: result.insertedId.toString() },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating campaign:", error);
     return NextResponse.json(
@@ -174,9 +139,8 @@ export async function PATCH(request: Request) {
     const db = await dbConfig.connectToDatabase();
     const campaignsCollection: Collection<Campaign> = db.collection("campaigns");
 
-    const campaign = await campaignsCollection.findOne({
-      _id: new ObjectId(campaignId)
-    } as Document);
+    const campaignObjectId = new ObjectId(campaignId);
+    const campaign = await campaignsCollection.findOne({ _id: campaignObjectId });
 
     if (!campaign) {
       return NextResponse.json(
@@ -185,30 +149,35 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // Calculate new milestone achievements
-    const updatedMilestones = campaign.milestones.map(milestone => {
-      const milestoneTarget = (campaign.targetReduction * milestone.percentage) / 100;
-      if (!milestone.reached && progress >= milestoneTarget) {
+    const updatedTotalReduction = campaign.totalReduction + progress;
+
+    // Update totalReduction and milestones
+    const updatedMilestones = campaign.milestones.map((milestone) => {
+      if (
+        !milestone.reached &&
+        updatedTotalReduction >=
+          campaign.targetReduction * (milestone.percentage / 100)
+      ) {
         return { ...milestone, reached: true, reachedAt: new Date() };
       }
       return milestone;
     });
 
-    // Update campaign progress and milestones
     await campaignsCollection.updateOne(
-      { _id: new ObjectId(campaignId) } as Document,
+      { _id: campaignObjectId },
       {
         $set: {
-          totalReduction: progress,
-          milestones: updatedMilestones
-        }
+          totalReduction: updatedTotalReduction,
+          milestones: updatedMilestones,
+        },
       }
     );
 
-    return NextResponse.json({ 
-      message: "Progress updated successfully",
-      milestones: updatedMilestones
+    const updatedCampaign = await campaignsCollection.findOne({
+      _id: campaignObjectId,
     });
+
+    return NextResponse.json(updatedCampaign, { status: 200 });
   } catch (error) {
     console.error("Error updating campaign progress:", error);
     return NextResponse.json(

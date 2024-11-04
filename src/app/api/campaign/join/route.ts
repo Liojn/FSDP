@@ -1,23 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Collection, ObjectId } from "mongodb";
 import dbConfig from "dbConfig";
-import { 
-  Company, 
-  CampaignParticipant, 
-  IndustryStandard, 
-  CompanySize,
-  CompanyFormValues
-} from "../../../campaign/types";
-import { companyFormSchema, participationFormSchema } from "@/app/campaign/types";
-
-interface JoinRequestBody {
-  companyInfo: CompanyFormValues;
-  targetReduction: number;
-}
+import { Company, CampaignParticipant } from "../../../campaign/types";
+import { companyFormSchema, participationFormSchema } from "../../../campaign/types";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json() as JoinRequestBody;
+    const body = await request.json();
     const { companyInfo, targetReduction } = body;
 
     // Validate company info
@@ -43,7 +32,6 @@ export async function POST(request: NextRequest) {
     const campaignsCollection = db.collection("campaigns");
     const companiesCollection: Collection<Company> = db.collection("companies");
     const participantsCollection: Collection<CampaignParticipant> = db.collection("campaign_participants");
-    const industryStandardsCollection: Collection<IndustryStandard> = db.collection("industry_standards");
 
     // Get active campaign
     const campaign = await campaignsCollection.findOne({ status: "Active" });
@@ -54,125 +42,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get industry standards for validation
-    const industryStandard = await industryStandardsCollection.findOne({
-      industry: companyInfo.industry
-    });
-
-    if (!industryStandard) {
-      return NextResponse.json(
-        { message: "Industry standards not found" },
-        { status: 400 }
-      );
-    }
-
-    // Calculate size-based multiplier
-    const sizeMultipliers: Record<CompanySize, number> = {
-      Small: 1,
-      Medium: 2,
-      Large: 3
-    };
-    const multiplier = sizeMultipliers[companyInfo.size as CompanySize] * industryStandard.multiplier;
-
-    // Calculate acceptable range
-    const minReduction = industryStandard.minReduction * multiplier;
-    const maxReduction = industryStandard.maxReduction * multiplier;
-
-    // Validate target reduction against industry standards
-    if (targetReduction < minReduction || targetReduction > maxReduction) {
-      return NextResponse.json(
-        {
-          message: "Target reduction outside acceptable range",
-          range: { min: minReduction, max: maxReduction }
-        },
-        { status: 400 }
-      );
-    }
-
-    // Create or update company profile
+    // Check if company name or email already exists
     const existingCompany = await companiesCollection.findOne({
-      email: companyInfo.email
+      $or: [
+        { name: { $regex: new RegExp(`^${companyInfo.name}$`, 'i') } },
+        { email: { $regex: new RegExp(`^${companyInfo.email}$`, 'i') } }
+      ]
     });
 
-    let company: Company;
-
-    if (!existingCompany) {
-      // Create new company
-      const newCompany: Omit<Company, '_id'> = {
-        ...companyInfo,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      const result = await companiesCollection.insertOne(newCompany);
-      company = {
-        _id: result.insertedId,
-        ...newCompany
-      };
-    } else {
-      // Update existing company profile
-      const updatedCompany: Company = {
-        ...existingCompany,
-        ...companyInfo,
-        createdAt: existingCompany.createdAt,
-        updatedAt: new Date()
-      };
-      await companiesCollection.updateOne(
-        { _id: existingCompany._id },
-        { $set: updatedCompany }
-      );
-      company = updatedCompany;
-    }
-
-    // Check if company is already participating in the campaign
-    const existingParticipation = await participantsCollection.findOne({
-      campaignId: campaign._id?.toString(),
-      companyId: company._id?.toString()
-    });
-
-    if (existingParticipation) {
+    if (existingCompany) {
       return NextResponse.json(
-        { message: "Company is already participating in this campaign" },
+        { message: "Company with this name or email is already registered" },
         { status: 400 }
       );
     }
 
-    // Create new participation record
-    const newParticipation: Omit<CampaignParticipant, '_id'> = {
-      campaignId: campaign._id?.toString() || '',
-      companyId: company._id?.toString() || '',
-      targetReduction,
-      currentProgress: 0,
-      lastUpdated: new Date(),
-      joinedAt: new Date()
+    // Create new company
+    const newCompany: Omit<Company, '_id'> = {
+      ...companyInfo,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    const companyResult = await companiesCollection.insertOne(newCompany);
+    const company: Company = {
+      _id: companyResult.insertedId,
+      ...newCompany
     };
 
-    const participationResult = await participantsCollection.insertOne(newParticipation);
+    // Create campaign participant entry
+    const newParticipant: Omit<CampaignParticipant, '_id'> = {
+      campaignId: campaign._id.toString(),
+      companyId: (company._id as ObjectId).toString(),
+      targetReduction: targetReduction,
+      currentProgress: 0,
+      joinedAt: new Date(),
+      lastUpdated: new Date()
+    };
+    await participantsCollection.insertOne(newParticipant);
 
     // Update campaign totals
     await campaignsCollection.updateOne(
       { _id: campaign._id },
       {
         $inc: {
-          signeesCount: 1,
-          totalReduction: targetReduction
+          totalReduction: targetReduction,
+          signeesCount: 1
         }
       }
     );
 
     return NextResponse.json(
-      { 
-        message: "Successfully joined the campaign",
-        company: {
-          ...companyInfo,
-          _id: company._id?.toString(),
-          createdAt: company.createdAt,
-          updatedAt: company.updatedAt
-        },
-        participation: {
-          ...newParticipation,
-          _id: participationResult.insertedId.toString()
-        }
-      },
+      { message: "Successfully joined the campaign" },
       { status: 201 }
     );
   } catch (error) {
