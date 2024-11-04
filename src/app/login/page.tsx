@@ -41,9 +41,7 @@ export default function Login() {
       localStorage.setItem("userId", userId);
 
       // Redirect to a protected page, e.g., dashboard
-      setTimeout(() => {
-        router.push("/dashboards");
-      }, 1000);
+      router.push("/dashboards");
     } else {
       setMessage(data.message);
     }
