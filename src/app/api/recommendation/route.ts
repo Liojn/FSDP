@@ -1,31 +1,36 @@
 import { NextResponse } from "next/server";
-import { CategoryType, Recommendation } from "@/types/";
-import { Groq } from "groq-sdk";
+import { CategoryType, Recommendation, RecommendationRequest } from "@/types/";
+import Anthropic from '@anthropic-ai/sdk';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
+// Initialize the Claude client with the provided API key
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY // Use environment variable
 });
 
+// Define the structure of a recommendation returned from the API
 interface ApiRecommendation {
-  title: string;
-  description: string;
-  impact: string;
-  steps: string[];
-  savings: number;
+  title: string;                       
+  description: string;                 
+  impact: string;                      
+  steps: string[];                     
+  savings: number;                     
+  priority?: number;                   
+  difficulty?: 'easy' | 'medium' | 'hard'; 
+  roi?: number;                        
+  implementationTimeline?: string;     
+  sourceData?: string;                 
+  dashboardLink?: string;              
 }
 
 interface ApiResponse {
-  recommendations: ApiRecommendation[];
+  recommendations: ApiRecommendation[]; 
 }
 
-// Function to clean and parse JSON response
 const cleanAndParseJSON = (str: string): ApiResponse => {
   try {
-    // Find the first { and last }
     const start = str.indexOf('{');
     const end = str.lastIndexOf('}') + 1;
     if (start === -1 || end === 0) throw new Error("No JSON object found");
-    
     const jsonStr = str.slice(start, end);
     return JSON.parse(jsonStr);
   } catch (error) {
@@ -34,62 +39,115 @@ const cleanAndParseJSON = (str: string): ApiResponse => {
   }
 };
 
+// Function to generate a category-specific prompt based on provided metrics
+interface Metrics {
+  energy: {
+    consumption: number;          // Energy consumption in kWh
+    previousYearComparison: number; // Comparison percentage with the previous year
+  };
+  emissions: {
+    total: number;                // Total emissions in tons CO2e
+  };
+  waste: {
+    quantity: number;             // Quantity of waste in tons
+  };
+  crops: {
+    area: number;                 // Area of crops in hectares
+    fertilizer: number;           // Amount of fertilizer used in tons
+  };
+  livestock: {
+    count: number;                // Count of livestock
+    emissions: number;            // Emissions from livestock in tons CO2e
+  };
+}
+
+// Function to generate a prompt for the AI based on the category and metrics
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const generatePrompt = (category: CategoryType, metrics: Metrics, _timeframe: string) => {
+  const systemContext = `You are a JSON-only response system specialized in farm management recommendations. Only output valid JSON objects with no additional text.`;
+  
+  const prompt = `${systemContext}
+
+Generate exactly 3 practical recommendations for the ${category} category based on the following metrics:
+
+Energy: ${metrics.energy.consumption}kWh (${metrics.energy.previousYearComparison}% vs last year)
+Emissions: ${metrics.emissions.total} tons CO2e
+Waste: ${metrics.waste.quantity} tons
+Crops: ${metrics.crops.area} hectares, ${metrics.crops.fertilizer} tons fertilizer
+Livestock: ${metrics.livestock.count} animals, ${metrics.livestock.emissions} tons CO2e emissions
+
+Return ONLY a JSON object in this exact format with no additional text:
+{
+  "recommendations": [
+    {
+      "title": "Clear action-oriented title",
+      "description": "Clear 1-2 sentence description",
+      "impact": "Specific metrics and numbers",
+      "steps": ["step1", "step2", "step3"],
+      "savings": 1000,
+      "priority": 1-5 number,
+      "difficulty": "easy|medium|hard",
+      "roi": percentage number,
+      "implementationTimeline": "timeframe string",
+      "sourceData": "reference to metrics used",
+      "dashboardLink": "/dashboards/category-specific-path"
+    }
+  ]
+}`;
+
+  return prompt;
+};
+
+// Handler function for the POST request
 export async function POST(req: Request) {
   try {
-    const { category } = await req.json();
+    const { category, metrics, timeframe } = await req.json() as RecommendationRequest;
     
-    if (!category || !Object.values(CategoryType).includes(category)) {
-      return NextResponse.json({ error: "Valid category is required" }, { status: 400 });
+    if (!category || !metrics || !timeframe) {
+      return NextResponse.json(
+        { error: "Category, metrics, and timeframe are required" },
+        { status: 400 }
+      );
     }
 
-    const prompt = `You are a sustainability recommendation system. Generate exactly 3 practical recommendations for the ${category} category. It is vital that you generate only three. No more than that 
-    Return ONLY a JSON object in this exact format with no additional text:
-    {
-      "recommendations": [
-        {
-          "title": "Clear action-oriented title",
-          "description": "Clear 1-2 sentence description",
-          "impact": "Specific metrics and numbers",
-          "steps": ["step1", "step2", "step3"],
-          "savings": 1000
-        }
-      ]
-    }`;
+    const prompt = generatePrompt(category, metrics, timeframe);
 
-    const completion = await groq.chat.completions.create({
+    const message = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      max_tokens: 1024,
       messages: [
-        { 
-          role: "system", 
-          content: "You are a JSON-only response system. Only output valid JSON objects with no additional text or explanation."
-        },
-        { 
-          role: "user", 
-          content: prompt 
+        {
+          role: "user",
+          content: prompt
         }
       ],
-      model: "mixtral-8x7b-32768",
-      temperature: 0.7,
-      max_tokens: 1024,
+      temperature: 0.7
     });
 
-    const response = completion.choices[0]?.message?.content;
-    
-    if (!response) {
-      throw new Error("No response from AI");
+    // Check for valid response and get the text content
+    const textContent = message.content.find(block => block.type === 'text');
+    if (!textContent || typeof textContent.text !== 'string') {
+      throw new Error("No valid text response from Claude");
     }
 
-    // Parse and validate the response
-    const parsedResponse = cleanAndParseJSON(response);
-
-    // Transform API response to match your Recommendation type
+    // Parse and validate response
+    const parsedResponse = cleanAndParseJSON(textContent.text);
+    
+    // Transform recommendations
     const recommendations: Recommendation[] = parsedResponse.recommendations.map((rec) => ({
       title: rec.title,
       description: rec.description,
       impact: rec.impact,
       steps: rec.steps,
       savings: typeof rec.savings === 'number' ? rec.savings : 0,
-      category: category as CategoryType,
-      implemented: false
+      category,
+      implemented: false,
+      priority: rec.priority,
+      difficulty: rec.difficulty,
+      roi: rec.roi,
+      implementationTimeline: rec.implementationTimeline,
+      sourceData: rec.sourceData,
+      dashboardLink: rec.dashboardLink
     }));
 
     return NextResponse.json({ recommendations }, { status: 200 });

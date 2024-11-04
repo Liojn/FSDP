@@ -1,5 +1,5 @@
-const { ObjectId } = require('mongodb');
-const  { connectToDatabase } = require('./dbConfig');
+import { ObjectId } from 'mongodb';
+import { connectToDatabase } from './dbConfig';
 
 
 async function seedForestData() {

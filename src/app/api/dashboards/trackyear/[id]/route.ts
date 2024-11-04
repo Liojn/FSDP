@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { connectToDatabase } from '@/../dbConfig'
-const { ObjectId } = require('mongodb');
+import connectToDatabase from '@/../dbConfig'
+import { ObjectId } from 'mongodb';
 
-// API Route Handler, logic for getting the year
+// API Route Handler, logic for getting the year eg. http://localhost:3000/api/dashboards/trackyear/671cf9a6e994afba6c2f332d
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   
   try {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     //convert companyId to ObjectId
     const objectId = new ObjectId(companyId);
     //connect to MongoDB
-    const db  = await connectToDatabase();
+    const db  = await connectToDatabase.connectToDatabase();
 
     if (!db) {
         throw new Error("Database connection failed."); //If no db instances is defined

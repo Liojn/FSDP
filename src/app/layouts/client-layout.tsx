@@ -1,31 +1,26 @@
-"use client"; // The "use client" directive must be at the top of the client-side file
+"use client";
 
-import { usePathname } from "next/navigation"; // Import client-side hooks
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/shared/app-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { usePathname } from "next/navigation";
+
+import AppSidebar from "@/components/shared/app-sidebar";
 
 export default function ClientLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = usePathname(); // Get the current path
+  const pathname = usePathname();
 
-  // Determine if we should show the sidebar
-  const shouldShowSidebar = pathname !== "/login" && pathname !== "/signup";
+  // Modify the condition to exclude the root path (`/`) along with `/login` and `/signup`
+  const shouldShowSidebar =
+    pathname !== "/" && pathname !== "/login" && pathname !== "/signup";
 
   return (
     <SidebarProvider>
-      {shouldShowSidebar && <AppSidebar />} {/* Show sidebar conditionally */}
+      {shouldShowSidebar && <AppSidebar />}
       <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto px-4 py-6">
-          {shouldShowSidebar && (
-            <span className="">
-              <SidebarTrigger className=" mb-4" />
-            </span>
-          )}
-          {children}
-        </div>
+        <div className="mx-auto px-4 py-6">{children}</div>
       </main>
     </SidebarProvider>
   );

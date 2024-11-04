@@ -1,6 +1,7 @@
 
-require('dotenv').config(); //Load env var from .env file
-const { MongoClient } = require('mongodb');
+import dotenv from 'dotenv';
+dotenv.config(); //Load env var from .env file
+import { MongoClient } from 'mongodb';
 
 //MongoDB Atlas connect
 const url = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@fullstackdev.kb2qe.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
@@ -38,6 +39,6 @@ async function closeDatabaseConnection() {
     }
 }
 
-module.exports = 
+export default 
 { connectToDatabase,
   closeDatabaseConnection };
