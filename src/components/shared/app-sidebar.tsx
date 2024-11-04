@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -35,31 +35,17 @@ import {
   Lightbulb,
   LogOut,
   Medal,
+  PencilLine,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
-  {
-    title: "Dashboard",
-    url: "/dashboards",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Statistics",
-    url: "/statistics",
-    icon: ChartColumn,
-  },
-  {
-    title: "Leaderboard",
-    url: "/leaderboard",
-    icon: Medal,
-  },
-  {
-    title: "Recommendations",
-    url: "/recommendation",
-    icon: Lightbulb,
-  },
+  { title: "Dashboard", url: "/dashboards", icon: LayoutDashboard },
+  { title: "Statistics", url: "/statistics", icon: ChartColumn },
+  { title: "Leaderboard", url: "/leaderboard", icon: Medal },
+  { title: "Campaign", url: "/campaign", icon: PencilLine },
+  { title: "Recommendations", url: "/recommendation", icon: Lightbulb },
 ];
 
 const appConfig = {
@@ -67,49 +53,36 @@ const appConfig = {
   logo: "/path/to/your/logo.png",
 };
 
-export function AppSidebar() {
+// Memoize the entire component to prevent unnecessary re-renders
+const AppSidebar = React.memo(function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [imageError, setImageError] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-  const [userData, setUserData] = useState({
-    name: "Placeholder Name", // Match server-side value
-    email: "placeholder@example.com",
-  });
 
-  useEffect(() => {
-    setIsClient(true);
-    // Get user data from localStorage only after component mounts
-    const name = localStorage.getItem("userName") || "Placeholder Name";
-    const email = localStorage.getItem("userEmail") || "guest@example.com";
-    setUserData({ name, email });
+  // Memoize userData to avoid frequent reads from localStorage
+  const userData = useMemo(() => {
+    return {
+      name: localStorage.getItem("userName") || "Placeholder Name",
+      email: localStorage.getItem("userEmail") || "guest@example.com",
+    };
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userName");
-      localStorage.removeItem("userEmail");
-      router.push("/login");
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
+  const handleLogout = useCallback(async () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+    router.push("/login");
+  }, [router]);
 
-  const handleNavigate = (url: string) => {
-    router.push(url);
-  };
+  const handleNavigate = useCallback(
+    (url: string) => {
+      router.push(url);
+    },
+    [router]
+  );
 
-  const handleNotifications = () => {
-    console.log("Opening notifications...");
-  };
-
-  const handleAccountSettings = () => {
-    console.log("Opening account settings...");
-  };
-
-  const renderUserProfile = () => {
-    return (
+  const renderUserProfile = useMemo(
+    () => (
       <div className="flex w-full items-center gap-3">
         <div className="flex flex-1 flex-col text-left">
           <span className="truncate text-sm font-semibold text-white">
@@ -121,15 +94,12 @@ export function AppSidebar() {
         </div>
         <ChevronsUpDown className="size-4 text-stone-400" />
       </div>
-    );
-  };
+    ),
+    [userData]
+  );
 
-  const renderDropdownContent = () => {
-    if (!isClient) {
-      return null;
-    }
-
-    return (
+  const renderDropdownContent = useMemo(
+    () => (
       <>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
@@ -141,14 +111,14 @@ export function AppSidebar() {
         <DropdownMenuGroup>
           <DropdownMenuItem
             className="flex cursor-pointer items-center gap-2 py-2 text-stone-400 hover:text-white"
-            onClick={handleAccountSettings}
+            onClick={() => console.log("Opening account settings...")}
           >
             <BadgeCheck className="size-4" />
             Account
           </DropdownMenuItem>
           <DropdownMenuItem
             className="flex cursor-pointer items-center gap-2 py-2 text-stone-400 hover:text-white"
-            onClick={handleNotifications}
+            onClick={() => console.log("Opening notifications...")}
           >
             <Bell className="size-4" />
             Notifications
@@ -163,8 +133,9 @@ export function AppSidebar() {
           Log out
         </DropdownMenuItem>
       </>
-    );
-  };
+    ),
+    [userData, handleLogout]
+  );
 
   return (
     <Sidebar className="border-r border-stone-800 bg-stone-900">
@@ -194,7 +165,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="px-4 py-3 text font-semibold text-stone-400">
+          <SidebarGroupLabel className="px-4 py-3 font-semibold text-stone-400">
             Navigation
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -234,17 +205,16 @@ export function AppSidebar() {
                   size="lg"
                   className="w-full px-3 py-3 hover:bg-stone-800"
                 >
-                  {renderUserProfile()}
+                  {renderUserProfile}
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-
               <DropdownMenuContent
                 className="w-60 rounded-lg border border-stone-800 bg-stone-900 text-white"
                 side="top"
                 align="end"
                 sideOffset={4}
               >
-                {renderDropdownContent()}
+                {renderDropdownContent}
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
@@ -252,6 +222,6 @@ export function AppSidebar() {
       </SidebarFooter>
     </Sidebar>
   );
-}
+});
 
 export default AppSidebar;

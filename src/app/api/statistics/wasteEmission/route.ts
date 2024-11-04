@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-const { connectToDatabase } = require("../../../../../dbConfig");
+import  connectToDatabase  from "@/../dbConfig";
 
 export async function POST(req: Request) {
     try {
-        const db = await connectToDatabase();
+        const db = await connectToDatabase.connectToDatabase();
         const userName = req.headers.get('userName');
         const { endYear, dataType } = await req.json();
         let companyId;
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
                 if (item.waste_type === 'Manure') {
                     wasteMonthlyData.manure[month] += (item.waste_quantity_kg || 0) * (emissionRates.waste_emissions.manure || 0);
                 } else if (item.waste_type === 'Yard Waste') {
-                    wasteMonthlyData.yardWaste[month] += (item.waste_quantity_kg || 0) * (emissionRates.waste_emissions.yard_waste || 0);
+                    wasteMonthlyData.yardWaste[month] += (item.waste_quantity_kg || 0) * (emissionRates.waste_emissions['yard waste'] || 0);
                 }
             });
         } else if (dataType === 'energy-consumption') {

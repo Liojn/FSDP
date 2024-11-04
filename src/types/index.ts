@@ -1,34 +1,49 @@
-// types/index.ts
-
 // Data Types
-export interface PerformanceMetric {
-  current: number;
-  average: number;
-}
-
-export interface PerformanceData {
-  energy: PerformanceMetric;
-  emissions: PerformanceMetric;
-  water: PerformanceMetric;
-  waste: PerformanceMetric;
+export interface MetricData {
+  energy: {
+    consumption: number;
+    previousYearComparison: number;
+  };
+  emissions: {
+    total: number;
+    byCategory: Record<string, number>;
+  };
+  waste: {
+    quantity: number;
+    byType: Record<string, number>;
+  };
+  crops: {
+    fertilizer: number;
+    area: number;
+  };
+  livestock: {
+    count: number;
+    emissions: number;
+  };
 }
 
 export interface Recommendation {
   title: string;
-  description: string; // Added this required field
-  impact: string; // Added this required field
+  description: string;
+  impact: string;
   category: CategoryType;
   savings: number;
-  steps: string[]; // Made this required instead of optional
-  implemented?: boolean;
+  steps: string[];
+  implemented: boolean;
+  priority?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  roi?: number;
+  implementationTimeline?: string;
+  sourceData?: string;
+  dashboardLink?: string;
 }
 
-// Enum for type safety on categories
 export enum CategoryType {
-  ENERGY = "energy",
-  EMISSIONS = "emissions",
-  WATER = "water",
+  EQUIPMENT = "equipment",
+  LIVESTOCK = "livestock",
+  CROPS = "crops",
   WASTE = "waste",
+  OVERALL = "overall"
 }
 
 // Component Props Types
@@ -38,21 +53,42 @@ export interface RecommendationCardProps {
   toggleRecommendation: (title: string) => void;
 }
 
-export interface ChartsProps {
-  performanceData: PerformanceData;
-  COLORS: readonly string[];
+export interface YearlyComparisonProps {
+  data: MetricData;
 }
 
-// State Types (for useState)
-export type ImplementedRecommendationsState = Set<string>;
+export interface CategoryBreakdownProps {
+  data: MetricData;
+  category: CategoryType;
+}
 
-// Utility Types
+export interface ImplementationTrackerProps {
+  recommendation: Recommendation;
+  progress: number;
+}
+
+export interface TrendAnalysisProps {
+  data: MetricData;
+  category: CategoryType;
+}
+
+export interface CrossCategoryInsightsProps {
+  data: MetricData;
+}
+
+// API Types
+export interface RecommendationRequest {
+  category: CategoryType;
+  metrics: MetricData;
+  timeframe: string;
+  previousImplementations: string[];
+}
+
+// State Types
+export type ImplementedRecommendationsState = Set<string>;
 export type CategoryData = Record<CategoryType, Recommendation[]>;
 
-// Map Categories to Colors
-export type CategoryColors = Record<CategoryType, string>;
-
-// Chart Data Types
+// Chart Types
 export interface ChartDataPoint {
   name: string;
   value: number;
@@ -72,4 +108,10 @@ export interface ApiRecommendation {
   impact?: string;
   savings?: number;
   steps?: string[];
+  priority?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  roi?: number;
+  implementationTimeline?: string;
+  sourceData?: string;
+  dashboardLink?: string;
 }

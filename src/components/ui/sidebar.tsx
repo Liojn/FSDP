@@ -19,7 +19,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "16rem";
@@ -273,16 +272,16 @@ const SidebarTrigger = React.forwardRef<
       ref={ref}
       data-sidebar="trigger"
       variant="ghost"
-      size="icon"
-      className={cn("h-7 w-7", className)}
+      size="iconLg"
+      className={cn("p-0", className)} // Remove padding to allow icon to scale
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
       }}
       {...props}
+      aria-label="Toggle sidebar"
     >
-      <PanelLeft />
-      <span className="sr-only">Toggle Sidebar</span>
+      <PanelLeft className="h-10 w-10" /> {/* Increase icon size */}
     </Button>
   );
 });
