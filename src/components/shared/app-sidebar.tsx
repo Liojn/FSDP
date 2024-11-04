@@ -50,7 +50,7 @@ const navigationItems = [
 
 const appConfig = {
   name: "EcoFarm",
-  logo: "/path/to/your/logo.png",
+  logo: "",
 };
 
 // Memoize the entire component to prevent unnecessary re-renders
