@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login() {
   const [email, setEmail] = useState("");
+  console.log(email);
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const reset = "";
@@ -28,15 +29,45 @@ export default function Login() {
     });
 
     const data = await response.json();
-
     if (response.ok) {
       localStorage.setItem("token", data.token);
       localStorage.setItem("userName", data.name);
       localStorage.setItem("userEmail", email);
       setMessage("Sign in successful!");
-      router.push("/dashboards");
+      console.log("Token:", data.token);
+
+      const userId = await fetchUserId();
+      console.log(userId);
+      localStorage.setItem("userId", userId);
+
+      // Redirect to a protected page, e.g., dashboard
+      setTimeout(() => {
+        router.push("/dashboards");
+      }, 1000);
     } else {
       setMessage(data.message);
+    }
+  };
+
+  const fetchUserId = async () => {
+    try {
+      const email = localStorage.getItem("userEmail");
+      if (!email) {
+        throw new Error("No email found in local storage.");
+      }
+      const res = await fetch(`/api/company/${encodeURIComponent(email)}`, {
+        method: "GET",
+      });
+      const data = await res.json();
+      console.log(data);
+
+      if (res.ok) {
+        return data[0]?._id; // Assuming API returns array with `user_id`
+      } else {
+        throw new Error(data.error || "Failed to fetch user ID");
+      }
+    } catch (err) {
+      console.error("Error fetching user ID:", err);
     }
   };
 
@@ -45,11 +76,11 @@ export default function Login() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <h1 className="text-2xl font-bold text-center">Login</h1>
-           {message && (
-                <Alert variant="destructive" className="mt-4">
-                  <AlertDescription>{message}</AlertDescription>
-                </Alert>
-              )}
+          {message && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmission}>
@@ -80,11 +111,11 @@ export default function Login() {
                 Login
               </Button>
               <p className="mt-4 text-sm text-gray-600 text-center">
-        Don&apos;t have an account?{" "}
-        <a href="/signup" className="text-blue-500">
-          Sign Up
-        </a>
-      </p>
+                Don&apos;t have an account?{" "}
+                <a href="/signup" className="text-blue-500">
+                  Sign Up
+                </a>
+              </p>
             </div>
           </form>
         </CardContent>

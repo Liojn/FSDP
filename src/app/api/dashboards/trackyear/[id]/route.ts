@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import connectToDatabase from '@/../dbConfig'
+import  connectToDatabase  from '@/../dbConfig'
 import { ObjectId } from 'mongodb';
 
 // API Route Handler, logic for getting the year eg. http://localhost:3000/api/dashboards/trackyear/671cf9a6e994afba6c2f332d
