@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-const { connectToDatabase } = require("../../../../../dbConfig");
+import  connectToDatabase  from "@/../dbConfig";
 
 export async function POST(req: Request) {
     try {
-        const db = await connectToDatabase();
+        const db = await connectToDatabase.connectToDatabase();
         const userName = req.headers.get('userName');
         const { endYear, dataType } = await req.json();
         let companyId;
