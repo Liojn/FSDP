@@ -119,9 +119,22 @@ export async function PATCH(request: NextRequest) {
     });
 
     if (!participation) {
+      console.error("Participation record not found.");
       return NextResponse.json(
         { message: "Participation record not found" },
         { status: 404 }
+      );
+    }
+
+    // Add log for participation details
+    console.log("Participation record found:", participation);
+
+    // Ensure participation has 'joinedAt' property before accessing it
+    if (!participation.joinedAt) {
+      console.error("Missing 'joinedAt' property in participation record.");
+      return NextResponse.json(
+        { message: "'joinedAt' property missing in participation record" },
+        { status: 500 }
       );
     }
 
@@ -164,3 +177,5 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
+
+

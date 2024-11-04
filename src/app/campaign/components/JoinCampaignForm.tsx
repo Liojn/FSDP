@@ -98,12 +98,7 @@ export function JoinCampaignForm({
           <Label htmlFor="name" className="text-lime-700">
             Company Name
           </Label>
-          <Input
-            disabled
-            id="name"
-            type="text"
-            {...companyForm.register("name")}
-          />
+          <Input id="name" type="text" {...companyForm.register("name")} />
           {companyForm.formState.errors.name && (
             <p className="text-red-500 text-sm">
               {companyForm.formState.errors.name.message}
@@ -124,9 +119,15 @@ export function JoinCampaignForm({
               <SelectValue placeholder="Select size" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Small">Small (1-50 employees)</SelectItem>
-              <SelectItem value="Medium">Medium (51-250 employees)</SelectItem>
-              <SelectItem value="Large">Large (250+ employees)</SelectItem>
+              <SelectItem value="Small">
+                Small (1-50 employees) - Typically lower emissions
+              </SelectItem>
+              <SelectItem value="Medium">
+                Medium (51-250 employees) - Moderate emissions
+              </SelectItem>
+              <SelectItem value="Large">
+                Large (250+ employees) - Higher emissions, greater impact
+              </SelectItem>
             </SelectContent>
           </Select>
           {companyForm.formState.errors.size && (
@@ -151,7 +152,8 @@ export function JoinCampaignForm({
           {targetRange && (
             <p className="text-sm text-gray-600">
               Recommended range: {targetRange.min.toLocaleString()} -{" "}
-              {targetRange.max.toLocaleString()} tons
+              {targetRange.max.toLocaleString()} tons. Adjust based on company
+              size.
             </p>
           )}
           {participationForm.formState.errors.targetReduction && (
