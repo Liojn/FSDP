@@ -12,6 +12,7 @@ const metricsData = [
     { title: "Net Emission (Average)", value: "19", unit: "%" }
 ];
   
+
 const leaderboardData = [
     { name: "EcoFarm", score: 95 },
     { name: "EcoFarm", score: 95 },
