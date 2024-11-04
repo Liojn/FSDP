@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 export default function Login() {
   const [email, setEmail] = useState("");
+  console.log(email)
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const reset = "";
@@ -23,7 +24,6 @@ export default function Login() {
     });
 
     const data = await response.json();
-
     if (response.ok) {
       // Save the token to localStorage
       localStorage.setItem("token", data.token);
@@ -32,12 +32,38 @@ export default function Login() {
       setMessage("Sign in successful!");
       console.log("Token:", data.token);
 
+      const userId = await fetchUserId();
+      console.log(userId)
+      localStorage.setItem("userId", userId);
+
       // Redirect to a protected page, e.g., dashboard
       setTimeout(() => {
         router.push("/dashboards");
       }, 1000);
     } else {
       setMessage(data.message);
+    }
+  };
+
+   const fetchUserId = async () => {
+    try {
+      const email = localStorage.getItem("userEmail");
+      if (!email) {
+        throw new Error("No email found in local storage.");
+      }
+      const res = await fetch(`/api/company/${encodeURIComponent(email)}`, {
+        method: 'GET',
+      });
+      const data = await res.json();
+      console.log(data)
+
+      if (res.ok) {
+        return data[0]?._id;  // Assuming API returns array with `user_id`
+      } else {
+        throw new Error(data.error || "Failed to fetch user ID");
+      }
+    } catch (err) {
+      console.error("Error fetching user ID:", err);
     }
   };
 

@@ -13,37 +13,37 @@ const AchievementsPage = () => {
   const categories = ["ALL", "Energy", "Waste", "Carbon", "Equipment", "Crop", "Livestock"];
 
   // Fetch the user_id using email from local storage
-  const fetchUserId = async () => {
-    try {
-      const email = localStorage.getItem("userEmail");
-      if (!email) {
-        throw new Error("No email found in local storage.");
-      }
-      const res = await fetch(`/api/badges/company/${encodeURIComponent(email)}`, {
-        method: 'GET',
-      });
-      const data = await res.json();
-      console.log(data)
+  // const fetchUserId = async () => {
+  //   try {
+  //     const email = localStorage.getItem("userEmail");
+  //     if (!email) {
+  //       throw new Error("No email found in local storage.");
+  //     }
+  //     const res = await fetch(`/api/badges/company/${encodeURIComponent(email)}`, {
+  //       method: 'GET',
+  //     });
+  //     const data = await res.json();
+  //     console.log(data)
 
-      if (res.ok) {
-        return data[0]?.user_id;  // Assuming API returns array with `user_id`
-      } else {
-        throw new Error(data.error || "Failed to fetch user ID");
-      }
-    } catch (err) {
-      console.error("Error fetching user ID:", err);
-      setError(err.message);
-      setLoading(false);
-    }
-  };
+  //     if (res.ok) {
+  //       return data[0]?.user_id;  // Assuming API returns array with `user_id`
+  //     } else {
+  //       throw new Error(data.error || "Failed to fetch user ID");
+  //     }
+  //   } catch (err) {
+  //     console.error("Error fetching user ID:", err);
+  //     setError(err.message);
+  //     setLoading(false);
+  //   }
+  // };
 
   const fetchAchievements = async () => {
     try {
       setLoading(true);
-      const userId = await fetchUserId();
+      const userId = localStorage.getItem("userId");
       if (!userId) return;
 
-      const res = await fetch(`/api/achievements/${userId}`);
+      const res = await fetch(`/api/badges/achivements/${userId}`);
       const data = await res.json();
 
       if (res.ok) {
