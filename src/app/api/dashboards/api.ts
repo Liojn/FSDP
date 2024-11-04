@@ -30,7 +30,9 @@ export type EmissionData = {
 //for getting the data to display on the 3 cards dashboard
 export const getMetricsData = async (companyId: string, year: number): Promise<EmissionData> => {
    try {
-        const response = await fetch(`/api/dashboards/cards/${companyId}?year=${year}`);
+        const response = await fetch(`/api/dashboards/cards/${companyId}?year=${year}`, {
+          method: 'GET',
+        });
         
         if (!response.ok) {
             throw new Error(`Error fetching data: ${response.statusText}`);
@@ -42,5 +44,33 @@ export const getMetricsData = async (companyId: string, year: number): Promise<E
     } catch (error) {
         console.error("Failed to fetch emission data:", error);
         return null;
+    }
+}
+
+//Define interface for API Response to CarbonMonthly Emission
+export interface MonthlyCarbonEmissionResponse {
+    monthlyEmissions: number[];
+    averageAbsorb: number;
+}
+
+//Fetch function to get monthly carbon emissions from the API
+export const fetchMonthlyCarbonEmissions = async(companyId: string, year: number): Promise<MonthlyCarbonEmissionResponse | null> => {
+    try {
+        const response = await fetch(`/api/dashboards/monthlyEmission/${companyId}?year=${year}`,{
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data: MonthlyCarbonEmissionResponse = await response.json();
+        return data; //Return the data received from the API
+    } catch (error) {
+        console.error("Failed to fetch monthly carbon emissions:", error);
+        return null; // Return null on error or handle as needed
     }
 }
