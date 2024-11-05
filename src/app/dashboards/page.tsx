@@ -1,17 +1,25 @@
 "use client"; //treat this component as a Client Component
 
 import React, { useState, useEffect } from 'react';
-import { fetchUniqueYears } from '../api/dashboards/controller';
+import { fetchUniqueYears, getMetricsData, EmissionData, fetchMonthlyCarbonEmissions,  } from '../api/dashboards/api';
+import { MetricCard } from '@/components/shared/metric-card'; //Cards component
+import CarbonEmissionChart from '@/app/dashboards/charts/carbonEmissionChart';
 
-const LineChart = () => <div className="bg-gray-200 h-full flex justify-center items-center">Line graph</div>;
+// Define the props interface for BarChart
+interface BarChartProps {
+  monthlyEmissions: number[];
+  averageAbsorbed: number | null;
+}
+//Components of the Bar Graph
+const BarChart: React.FC<BarChartProps> = ({ monthlyEmissions, averageAbsorbed }) => {
+  return (
+    <div className="bg-white-200 h-full flex justify-center items-center min-h-[350px]">
+        <CarbonEmissionChart monthlyEmissions={monthlyEmissions} averageAbsorbed={averageAbsorbed} />
+    </div>
+  );
+};
 
-//Fake data for metrics and leaderboard
-const metricsData = [
-    { title: "Total Carbon Emissions", value: "1234.56", unit: "KG CO2" },
-    { title: "Total Energy Consumed", value: "2344", unit: "kWh" },
-    { title: "Net Emission (Average)", value: "19", unit: "%" }
-];
-  
+
 const leaderboardData = [
     { name: "EcoFarm", score: 95 },
     { name: "EcoFarm", score: 95 },
@@ -24,7 +32,7 @@ const leaderboardData = [
 
 
 const AdditionalGraph = () => (
-  <div className="bg-white p-4 shadow-md rounded-lg h-56 flex flex-col"> 
+  <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"> 
     <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Overall Pie Chart Graph</h3>
     <div className="flex-1 flex flex-col">
       <div className="bg-gray-300 flex-1 flex justify-center items-center pb-4">Your Graph Here</div>
@@ -37,6 +45,16 @@ const DashboardPage = () => {
   const [yearFilter, setYearFilter] = useState<string>(''); //Year filter selection, holds the currently selected year from the dropdown. Initially set to an empty string
   const [yearOptions, setYearOptions] = useState<number[]>([]); //store Year options from API fetch, initialized as an empty array,
   const [selectedYear, setSelectedYear] = useState<number | null>(null); //Store selected year for subsequent API calls
+  //state for monthly emission
+  const [monthlyEmissions, setMonthlyEmissions] = useState<number[]>([]);
+  const [averageAbsorbed, setAverageAbsorbed] = useState<number | null>(null);
+
+
+  const [metricsData, setMetricsData] = useState([ //var to store the data and display, initially predefined
+  { title: "Average Energy Consumption", value: "Loading...", unit: "kWh" },
+  { title: "Average Carbon Emissions", value: "Loading...", unit: "KG CO2" },
+  { title: "Average Net Emission", value: "Loading...", unit: "KG CO2" }
+  ]);
 
   //Fetch the avail list of years from the API
   useEffect(() => {
@@ -59,17 +77,53 @@ const DashboardPage = () => {
     fetchYears();
   }, []); //Empty dependency array, runs once after render
 
+  //Fetch emission and energy data based on the selected year
+  useEffect(() => {
+    const fetchMetricsData = async () => {
+      if (selectedYear) {
+        try {
+          const companyId = '671cf9a6e994afba6c2f332d';
+          //Fetch both metrics data as well as emission bar chart data
+          const [data, emissionsData] = await Promise.all([
+                    getMetricsData(companyId, selectedYear),
+                    fetchMonthlyCarbonEmissions(companyId, selectedYear), // Fetch the monthly emissions data
+          ]);
+
+          if (data) {
+            setMetricsData([
+              { title: "Average Energy Consumption", value: data["energyAverage in kWh"].toFixed(2), unit: "kWh" },
+              { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
+              { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
+            ]);
+          }
+
+          if (emissionsData) {
+            setMonthlyEmissions(emissionsData.monthlyEmissions); //Set the monthly emissions data
+            setAverageAbsorbed(emissionsData.averageAbsorb); //Set the average absorbed value
+          }
+        } catch (error) {
+          console.error("Failed to fetch emission data:", error);
+        }
+      }
+    };
+
+    fetchMetricsData();
+  }, [selectedYear]);
+
   //Handle year filter change
   const handleYearFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const year = parseInt(event.target.value, 10);
     setYearFilter(event.target.value); //retrieves the selected year, which is then stored in yearFilter
+    setSelectedYear(year);
+
   };
 
   
   return (
-    <div className="p-4 space-y-6">
+    <div className="pt-0 p-4 space-y-6">
       {/* Dashboard Header */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-xl font-bold">Dashboard</div>
+      <div className="pt-0 flex justify-between items-center mb-4">
+        <div className="text-2xl font-bold">Dashboard</div>
         <div> {/*Dropdown menu */}
         <span className="font-semibold">Year: </span>
         <select
@@ -94,22 +148,22 @@ const DashboardPage = () => {
           {/* Dashboard Cards for Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
-              <div key={index} className="bg-white p-4 shadow-md rounded-lg flex flex-col items-center">
-                <h3 className="text-lg font-semibold text-gray-700">{metric.title}</h3>
-                <div className="text-4xl font-bold mt-2">{metric.value}</div>
-                <div className="text-gray-500">{metric.unit}</div>
-              </div>
+              <MetricCard
+                key={index}
+                title={metric.title}
+                value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value)} // condition ? valueIfTrue : valueIfFalse
+                unit={metric.unit}
+                className="bg-white p-4 shadow-md rounded-lg"
+              />
             ))}
           </div>
 
-          {/* Line Chart: */}
+          {/* Bar Chart: */}
           <div className="bg-white p-4 shadow-md rounded-lg">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">
-              Carbon Emission Trend/Fuel Consumption Trend/Energy Consumption Trend
+              Analysis of Net Zero Emission's Progress
             </h3>
-            <div className="h-96"> {/* Adjusted to occupy more space */}
-              <LineChart />
-            </div>
+              <BarChart monthlyEmissions={monthlyEmissions} averageAbsorbed={averageAbsorbed} />
           </div>
         </div>
 
