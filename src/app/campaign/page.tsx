@@ -6,7 +6,6 @@ import { toast } from "@/hooks/use-toast";
 import {
   CampaignData,
   CompanyFormValues,
-  ParticipationFormValues,
 } from "./types";
 import { PageHeader } from "@/components/shared/page-header";
 import { CampaignProgress } from "./components/CampaignProgress";
@@ -109,7 +108,7 @@ export default function CampaignPage() {
 
   const onSubmit = async (
     companyValues: CompanyFormValues,
-    participationValues: ParticipationFormValues
+    
   ) => {
     setSubmitting(true);
     try {
@@ -120,7 +119,6 @@ export default function CampaignPage() {
         },
         body: JSON.stringify({
           companyInfo: companyValues,
-          targetReduction: participationValues.targetReduction,
         }),
       });
 
@@ -137,9 +135,7 @@ export default function CampaignPage() {
           ...prevData,
           campaign: {
             ...prevData.campaign,
-            totalReduction:
-              prevData.campaign.totalReduction +
-              participationValues.targetReduction,
+    
             signeesCount: prevData.campaign.signeesCount + 1,
           },
           participants: [
@@ -203,11 +199,10 @@ export default function CampaignPage() {
           <Card className="p-6">
             {" "}
             <CampaignProgress
-              totalReduction={campaignData.campaign.totalReduction}
+              currentProgress={campaignData.campaign.currentProgress}
               targetReduction={campaignData.campaign.targetReduction}
               startDate={campaignData.campaign.startDate}
               endDate={campaignData.campaign.endDate}
-              signeesCount={campaignData.campaign.signeesCount}
             />
             <CampaignMilestones
               milestones={campaignData.campaign.milestones.map((milestone) => ({
@@ -229,7 +224,8 @@ export default function CampaignPage() {
 
       <ParticipantsTable
         participants={campaignData.participants.map((participant) => ({
-          ...participant,
+          company: participant.company,
+          progress: participant.participation.currentProgress,
           participation: {
             ...participant.participation,
             joinedAt: new Date(

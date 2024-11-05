@@ -20,7 +20,7 @@ export interface CampaignBase {
   startDate: Date;
   endDate: Date;
   status: CampaignStatus;
-  totalReduction: number;
+  currentProgress: number;
   targetReduction: number;
   signeesCount: number;
   milestones: CampaignMilestone[];
@@ -38,7 +38,6 @@ export interface CompanyBase {
 export interface CampaignParticipantBase {
   campaignId: string;
   companyId: string;
-  targetReduction: number;
   currentProgress: number;
   lastUpdated: Date;
   joinedAt: Date;
@@ -54,6 +53,7 @@ export interface TestimonialBase {
 
 // MongoDB document interfaces
 export interface Campaign extends CampaignBase {
+  currentProgress: number;
   _id?: string | ObjectId;
 }
 
@@ -72,19 +72,12 @@ export interface Testimonial extends TestimonialBase {
 // Zod schema for company registration form validation
 export const companyFormSchema = z.object({
   name: z.string().min(1, 'Company name is required'),
-  size: z.enum(['Small', 'Medium', 'Large'], {
-    required_error: 'Company size is required',
-  }),
   contactPerson: z.string().min(1, 'Contact person is required'),
   email: z.string().email('Invalid email address'),
 });
 
 // Zod schema for campaign participation form validation
-export const participationFormSchema = z.object({
-  targetReduction: z
-    .number({ invalid_type_error: 'Target reduction must be a number' })
-    .min(1, 'Target reduction must be at least 1 ton'),
-});
+
 
 // Zod schema for testimonial submission form validation
 export const testimonialFormSchema = z.object({
@@ -95,7 +88,6 @@ export const testimonialFormSchema = z.object({
 });
 
 export type CompanyFormValues = z.infer<typeof companyFormSchema>;
-export type ParticipationFormValues = z.infer<typeof participationFormSchema>;
 export type TestimonialFormValues = z.infer<typeof testimonialFormSchema>;
 
 // Campaign data interface for frontend display

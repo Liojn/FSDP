@@ -1,22 +1,36 @@
 import { Progress } from "@/components/ui/progress";
+import { useEffect, useState } from "react";
 
 interface CampaignProgressProps {
-  totalReduction: number;
+  currentProgress: number;
   targetReduction: number;
   startDate: Date;
   endDate: Date;
-  signeesCount: number;
 }
 
 export function CampaignProgress({
-  totalReduction,
+  currentProgress,
   targetReduction,
   startDate,
   endDate,
-  signeesCount,
 }: CampaignProgressProps) {
-  const progressPercentage = (totalReduction / targetReduction) * 100;
+  const [signeesCount, setSigneesCount] = useState(0);
+  const progressPercentage = !targetReduction ? 0 : (currentProgress / targetReduction) * 100;
   const isGoalExceeded = progressPercentage > 100;
+
+  useEffect(() => {
+    const fetchSigneesCount = async () => {
+      try {
+        const response = await fetch('/api/campaign/participants/count');
+        const data = await response.json();
+        setSigneesCount(data.count);
+      } catch (error) {
+        console.error('Failed to fetch signees count:', error);
+      }
+    };
+
+    fetchSigneesCount();
+  }, []);
 
   return (
     <div>
@@ -44,16 +58,10 @@ export function CampaignProgress({
           </p>
         </div>
         <div>
-          <p className="text-sm text-gray-600">Total Reduction Achieved</p>
-          <p className="text-2xl font-bold text-lime-600">
-            {totalReduction.toLocaleString()} tons
-          </p>
+
         </div>
         <div>
-          <p className="text-sm text-gray-600">Total Reduction Target</p>
-          <p className="text-2xl font-bold text-lime-600">
-            {targetReduction.toLocaleString()} tons
-          </p>
+
         </div>
         <div>
           <p className="text-sm text-gray-600">Number of Participants</p>

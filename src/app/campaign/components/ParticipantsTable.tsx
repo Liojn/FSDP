@@ -1,8 +1,8 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { CaretSortIcon } from "@radix-ui/react-icons";
+import { Progress } from "@/components/ui/progress"; // Assuming you have a Progress component in Shadcn
+
 import {
   Table,
   TableBody,
@@ -25,74 +25,28 @@ import {
 interface Participant {
   company: {
     name: string;
-    size: string;
   };
-  participation: {
-    targetReduction: number;
-    currentProgress: number;
-    joinedAt: string;
-  };
+  progress: number; // Track current progress as a percentage
 }
 
 interface ParticipantsTableProps {
   participants: Participant[];
 }
 
-// Define the columns for the table
+// Update columns to show company name and progress as a progress bar
 const columns: ColumnDef<Participant>[] = [
   {
-    accessorKey: "company.name",
-    header: ({ column }) => (
-      <button
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        className=" flex items-center space-x-1"
-      >
-        Company
-        <CaretSortIcon className="ml-2 h-4 w-4" />
-      </button>
-    ),
+    accessorFn: (row) => row.company.name,
+    header: "Company Name",
     cell: (info) => info.getValue(),
   },
   {
-    accessorKey: "company.size",
-    header: "Size",
-    cell: (info) => info.getValue(),
-  },
-  {
-    accessorKey: "participation.targetReduction",
-    header: ({ column }) => (
-      <button
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        className="flex items-center space-x-1"
-      >
-        Target Reduction (tons)
-        <CaretSortIcon className="ml-2 h-4 w-4" />
-      </button>
+    accessorFn: (row) => row.progress,
+    header: "Progress",
+    cell: (info) => (
+      <Progress value={info.getValue() as number} max={100} className=" h-2" /> // Customize the width and height as needed
     ),
-    cell: (info) => (info.renderValue() as number).toLocaleString(),
-  },
-  {
-    accessorKey: "participation.currentProgress",
-    header: "Current Progress",
-    cell: ({ row }) => {
-      const progress = row.original.participation.currentProgress;
-      const target = row.original.participation.targetReduction;
-      const percentage = (progress / target) * 100;
-      return (
-        <div className="flex items-center space-x-2">
-          <Progress value={percentage} className="w-24 h-2" />
-          <span>
-            {progress.toLocaleString()} tons ({percentage.toFixed(1)}%)
-          </span>
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "participation.joinedAt",
-    header: "Joined",
-    cell: (info) => new Date(info.getValue() as string).toLocaleDateString(),
-  },
+  }
 ];
 
 export function ParticipantsTable({ participants }: ParticipantsTableProps) {

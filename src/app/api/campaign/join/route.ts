@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { Collection, ObjectId } from "mongodb";
 import dbConfig from "dbConfig";
 import { Company, CampaignParticipant } from "../../../campaign/types";
-import { companyFormSchema, participationFormSchema } from "../../../campaign/types";
+import { companyFormSchema } from "../../../campaign/types";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { companyInfo, targetReduction } = body;
+    const { companyInfo } = body;
 
     // Validate company info
     const companyValidation = companyFormSchema.safeParse(companyInfo);
@@ -18,22 +18,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate target reduction
-    const targetValidation = participationFormSchema.safeParse({ targetReduction });
-    if (!targetValidation.success) {
-      return NextResponse.json(
-        { message: "Invalid target reduction", errors: targetValidation.error.flatten() },
-        { status: 400 }
-      );
-    }
-
     const db = await dbConfig.connectToDatabase();
-    
     const campaignsCollection = db.collection("campaigns");
     const companiesCollection: Collection<Company> = db.collection("companies");
     const participantsCollection: Collection<CampaignParticipant> = db.collection("campaign_participants");
 
-    // Get active campaign
+    // Check for active campaign
     const campaign = await campaignsCollection.findOne({ status: "Active" });
     if (!campaign) {
       return NextResponse.json(
@@ -42,73 +32,84 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if company name or email already exists
-    const existingCompany = await companiesCollection.findOne({
-      $or: [
-        { name: { $regex: new RegExp(`^${companyInfo.name}$`, 'i') } },
-        { email: { $regex: new RegExp(`^${companyInfo.email}$`, 'i') } }
-      ]
+    // Check for existing company or create new one
+    let company = await companiesCollection.findOne({ email: companyInfo.email });
+    if (!company) {
+      const result = await companiesCollection.insertOne({
+        ...companyInfo,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      company = {
+        _id: result.insertedId,
+        ...companyInfo,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+    }
+
+    // Check for existing participation
+    const existingParticipation = await participantsCollection.findOne({
+      campaignId: campaign._id?.toString(),
+      companyId: company?._id?.toString() || ''
     });
 
-    if (existingCompany) {
+    if (existingParticipation) {
       return NextResponse.json(
-        { message: "Company with this name or email is already registered" },
+        { message: "Company already joined this campaign" },
         { status: 400 }
       );
     }
 
-    // Create new company
-    const newCompany: Omit<Company, '_id'> = {
-      ...companyInfo,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    const companyResult = await companiesCollection.insertOne(newCompany);
-    const company: Company = {
-      _id: companyResult.insertedId,
-      ...newCompany
-    };
-
-    // Create campaign participant entry
-    const newParticipant: Omit<CampaignParticipant, '_id'> = {
-      campaignId: campaign._id.toString(),
-      companyId: (company._id as ObjectId).toString(),
-      targetReduction: targetReduction,
-      currentProgress: 0,
+    // Create new participation with all required fields
+    const newParticipation: CampaignParticipant = {
+      _id: new ObjectId(), // Explicitly create an _id
+      campaignId: campaign._id?.toString() || '',
+      companyId: company?._id?.toString() || '',
       joinedAt: new Date(),
+      currentProgress: 0,
       lastUpdated: new Date()
     };
-    await participantsCollection.insertOne(newParticipant);
 
-    // Update campaign totals
-    await campaignsCollection.updateOne(
-      { _id: campaign._id },
-      {
-        $inc: {
-          totalReduction: targetReduction,
-          signeesCount: 1
-        }
-      }
-    );
+    await participantsCollection.insertOne(newParticipation);
 
     return NextResponse.json(
-      { message: "Successfully joined the campaign" },
+      { 
+        message: "Successfully joined the campaign",
+        company: {
+          ...companyInfo,
+          _id: company ? company._id?.toString() : '',
+          createdAt: company ? company.createdAt : new Date(),
+          updatedAt: company ? company.updatedAt : new Date()
+        },
+        participation: {
+          _id: newParticipation._id ? newParticipation._id.toString() : '',
+          joinedAt: newParticipation.joinedAt,
+          currentProgress: newParticipation.currentProgress
+        }
+      },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error joining campaign:", error);
+    console.error("Campaign join error:", error);
     return NextResponse.json(
-      { message: "Error joining campaign" },
+      { error: "Failed to process join request" },
       { status: 500 }
     );
   }
 }
 
-// Update participation progress
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
     const { participationId, progress } = body;
+
+    if (!participationId || typeof progress !== 'number') {
+      return NextResponse.json(
+        { message: "Invalid request parameters" },
+        { status: 400 }
+      );
+    }
 
     const db = await dbConfig.connectToDatabase();
     const participantsCollection: Collection<CampaignParticipant> = db.collection("campaign_participants");
@@ -119,21 +120,17 @@ export async function PATCH(request: NextRequest) {
     });
 
     if (!participation) {
-      console.error("Participation record not found.");
       return NextResponse.json(
         { message: "Participation record not found" },
         { status: 404 }
       );
     }
 
-    // Add log for participation details
-    console.log("Participation record found:", participation);
-
-    // Ensure participation has 'joinedAt' property before accessing it
-    if (!participation.joinedAt) {
-      console.error("Missing 'joinedAt' property in participation record.");
+    // Ensure participation has all required fields
+    if (!participation.joinedAt || !participation.campaignId) {
+      console.error("Invalid participation record:", participation);
       return NextResponse.json(
-        { message: "'joinedAt' property missing in participation record" },
+        { message: "Invalid participation record structure" },
         { status: 500 }
       );
     }
@@ -155,7 +152,7 @@ export async function PATCH(request: NextRequest) {
       .toArray();
 
     const totalProgress = allParticipants.reduce(
-      (sum, p) => sum + (p._id?.toString() === participationId ? progress : p.currentProgress),
+      (sum, p) => sum + (p.currentProgress || 0),
       0
     );
 
@@ -177,5 +174,3 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
-
-

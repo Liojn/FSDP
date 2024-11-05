@@ -26,7 +26,7 @@ export async function GET() {
         startDate,
         endDate,
         status: "Active",
-        totalReduction: 0,
+        currentProgress: 0,
         targetReduction: 1000000, // 1 million tons as target
         signeesCount: 0,
         milestones: [
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       status: "Active",
-      totalReduction: 0,
+      currentProgress: 0,
       targetReduction,
       signeesCount: 0,
       milestones: [
@@ -149,7 +149,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const updatedTotalReduction = campaign.totalReduction + progress;
+    const updatedTotalReduction = campaign.currentProgress + progress;
 
     // Update totalReduction and milestones
     const updatedMilestones = campaign.milestones.map((milestone) => {
