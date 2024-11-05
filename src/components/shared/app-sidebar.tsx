@@ -115,7 +115,7 @@ const AppSidebar = React.memo(function AppSidebar() {
         <DropdownMenuGroup>
           <DropdownMenuItem
             className="flex cursor-pointer items-center gap-2 py-2 text-stone-400 hover:text-white"
-            onClick={() => console.log("Opening account settings...")}
+            onClick={() => router.push("/account")}
           >
             <BadgeCheck className="size-4" />
             Account

@@ -1,18 +1,26 @@
 "use client"; //treat this component as a Client Component
 
 import React, { useState, useEffect } from 'react';
-import { fetchUniqueYears, getMetricsData, EmissionData } from '../api/dashboards/api';
+import { fetchUniqueYears, getMetricsData, EmissionData, fetchMonthlyCarbonEmissions,  } from '../api/dashboards/api';
 import { MetricCard } from '@/components/shared/metric-card'; //Cards component
+import CarbonEmissionChart from '@/app/dashboards/charts/carbonEmissionChart';
+import AdditionalGraph from '@/app/dashboards/charts/additional-graph';
 
-const LineChart = () => <div className="bg-gray-200 h-full flex justify-center items-center">Line graph</div>;
+// Define the props interface for BarChart
+interface BarChartProps {
+  monthlyEmissions: number[];
+  averageAbsorbed: number | null;
+}
+//Components of the Bar Graph
+const BarChart: React.FC<BarChartProps> = ({ monthlyEmissions, averageAbsorbed }) => {
+  return (
+    <div className="bg-white-200 h-full flex justify-center items-center min-h-[350px]">
+        <CarbonEmissionChart monthlyEmissions={monthlyEmissions} averageAbsorbed={averageAbsorbed} />
+    </div>
+  );
+};
 
-/*Fake data for metrics and leaderboard
-const metricsData = [
-    { title: "Average Monthly Energy", value: "Loading...", unit: "kWh" },
-    { title: "Average Carbon Emissions", value: "Loading...", unit: "KG CO2" },
-    { title: "Average Net Emission", value: "Loading...", unit: "KG CO2" }
-];*/
-  
+
 const leaderboardData = [
     { name: "EcoFarm", score: 95 },
     { name: "EcoFarm", score: 95 },
@@ -23,27 +31,24 @@ const leaderboardData = [
     { name: "EcoFarm", score: 95 }
 ];
 
-
-const AdditionalGraph = () => (
-  <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"> 
-    <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Overall Pie Chart Graph</h3>
-    <div className="flex-1 flex flex-col">
-      <div className="bg-gray-300 flex-1 flex justify-center items-center pb-4">Your Graph Here</div>
-    </div>
-  </div>
-);
-  
 const DashboardPage = () => {
 
   const [yearFilter, setYearFilter] = useState<string>(''); //Year filter selection, holds the currently selected year from the dropdown. Initially set to an empty string
   const [yearOptions, setYearOptions] = useState<number[]>([]); //store Year options from API fetch, initialized as an empty array,
   const [selectedYear, setSelectedYear] = useState<number | null>(null); //Store selected year for subsequent API calls
+  //state for monthly emission
+  const [monthlyEmissions, setMonthlyEmissions] = useState<number[]>([]);
+  const [averageAbsorbed, setAverageAbsorbed] = useState<number | null>(null);
+
 
   const [metricsData, setMetricsData] = useState([ //var to store the data and display, initially predefined
   { title: "Average Energy Consumption", value: "Loading...", unit: "kWh" },
   { title: "Average Carbon Emissions", value: "Loading...", unit: "KG CO2" },
   { title: "Average Net Emission", value: "Loading...", unit: "KG CO2" }
   ]);
+
+  const currentTotal = 2000; // Example value, replace with actual data retrieval logic
+  const goal = 600; // Example goal, replace with goal from account settings
 
   //Fetch the avail list of years from the API
   useEffect(() => {
@@ -72,13 +77,23 @@ const DashboardPage = () => {
       if (selectedYear) {
         try {
           const companyId = '671cf9a6e994afba6c2f332d';
-          const data = await getMetricsData(companyId, selectedYear);
+          //Fetch both metrics data as well as emission bar chart data
+          const [data, emissionsData] = await Promise.all([
+                    getMetricsData(companyId, selectedYear),
+                    fetchMonthlyCarbonEmissions(companyId, selectedYear), // Fetch the monthly emissions data
+          ]);
+
           if (data) {
             setMetricsData([
               { title: "Average Energy Consumption", value: data["energyAverage in kWh"].toFixed(2), unit: "kWh" },
               { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
-              { title: "Average Net Emission", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
+              { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
             ]);
+          }
+
+          if (emissionsData) {
+            setMonthlyEmissions(emissionsData.monthlyEmissions); //Set the monthly emissions data
+            setAverageAbsorbed(emissionsData.averageAbsorb); //Set the average absorbed value
           }
         } catch (error) {
           console.error("Failed to fetch emission data:", error);
@@ -137,21 +152,19 @@ const DashboardPage = () => {
             ))}
           </div>
 
-          {/* Line Chart: */}
+          {/* Bar Chart: */}
           <div className="bg-white p-4 shadow-md rounded-lg">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">
-              Carbon Emission Trend/Energy Consumption Trend
+              Analysis of Net Zero Emission's Progress
             </h3>
-            <div className="h-96"> {/* Adjusted to occupy more space */}
-              <LineChart />
-            </div>
+              <BarChart monthlyEmissions={monthlyEmissions} averageAbsorbed={averageAbsorbed} />
           </div>
         </div>
 
         {/* Right Column: Leaderboard with Additional Graph */}
         <div className="flex flex-col space-y-6 ">
           {/* Increased Additional Graph */}
-          <AdditionalGraph />
+          <AdditionalGraph currentTotal={currentTotal} goal={goal} />
 
           {/* Leaderboard */}
           <div className="bg-white p-4 shadow-md rounded-lg">

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import connectToDatabase  from '@/../dbConfig'
+import { connectToDatabase } from '@/../dbConfig'
 const { ObjectId } = require('mongodb');
 
 //List of Collections that we would be using
@@ -11,84 +11,6 @@ const collections = [
     'EmissionRates',
     'Forest'
 ]
-
-//Method 1 for energy
-const CalculateEnergy = (equipmentData: Equipment[]) => {
-    let totalElectricityUsed = 0;
-    for (const equipment of equipmentData) {
-        totalElectricityUsed += (equipment.total_electricity_used_kWh)
-    }
-    const averageElectricityUsedPerMonth = totalElectricityUsed / equipmentData.length;
-    return averageElectricityUsedPerMonth;
-}
-
-//Method 2 for carbon emissions
-const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Livestock[], cropsData: Crop[], wasteData: Waste[], emissionData: EmissionsRate[]) =>{
-    let totalAvgCarbonEmission = 0;
-    //const monthlyEmissions: number[] = new Array(12).fill(0); //for bar chart monthly
-
-    //Emission of one category
-    let tempElect = 0;
-    for (const equipment of equipmentData) {
-        const electricEmit = equipment.total_electricity_used_kWh * emissionData[0].energy.electricity_emission;
-
-        // Get fuel emissions
-        //console.log(emissionData[0].fuel_emissions["biodiesel"]);
-        const fuelType = equipment.fuel_type.toLowerCase() as keyof EmissionsRate["fuel_emissions"] //ensure is valid key
-        const fuel_emit = equipment.fuel_consumed_l * emissionData[0].fuel_emissions[fuelType]; 
-        
-        // Calculate total emissions
-        tempElect += (electricEmit + fuel_emit);
-        //console.log(tempElect); //test code
-    }
-    console.log("Equipment: "+ tempElect);
-    totalAvgCarbonEmission += (tempElect / equipmentData.length);
-
-    let tempAnimal = 0;
-    for (const livestock of livestockData) {
-        //Get animal emissions
-        const animalType = livestock.species.toLowerCase() as keyof EmissionsRate["animal_emissions"];
-        const animal_emit = livestock.number_of_species * emissionData[0].animal_emissions[animalType];
-        tempAnimal += animal_emit;
-        //console.log(tempAnimal); test code
-    }
-    console.log("LiveStock"+ tempAnimal);
-    totalAvgCarbonEmission += (tempAnimal / livestockData.length);
-
-    let tempCrop = 0;
-    for (const crop of cropsData) {
-        //get crops emission
-        const fert_emit = crop.fertilizer_amt_used_kg * emissionData[0].crops_emissions["nitrogen_fertilizer"];
-        const soil_emit = crop.area_planted_ha * emissionData[0].crops_emissions["soil_emissions"];
-        tempCrop += (fert_emit + soil_emit);
-        //console.log(tempCrop); test code
-    }
-    //console.log("CROP"+ tempCrop);
-    totalAvgCarbonEmission += (tempCrop / cropsData.length);
-
-    let tempWaste = 0;
-    for (const waste of wasteData) {
-        //get waste emission
-        const wasteType = waste.waste_type.toLowerCase() as keyof EmissionsRate["waste_emissions"];
-        const waste_emit = waste.waste_quantity_kg * emissionData[0].waste_emissions[wasteType];
-        tempWaste += waste_emit;
-        //console.log(tempWaste);
-    }
-    //console.log("Waste"+ tempWaste);
-    totalAvgCarbonEmission += (tempWaste / wasteData.length);
-
-    return totalAvgCarbonEmission;
-}
-
-//Method 3, for net emission
-const CalculateNetEmission = (forestData: Forest[], carbonAvgValue: number , emissionData: EmissionsRate[] ) => {
-    const yearlyAbsorb = forestData[0].totalAreaInHectares * emissionData[0].absorption_rate_per_year_kg;
-    const averageAbsorb = (yearlyAbsorb /12);
-    console.log(averageAbsorb); //test
-    return (carbonAvgValue - averageAbsorb); //net calculation
-}
- 
-//encapsulate all collections
 //Type for EmissionRate
 type EmissionsRate = {
     _id: { $oid: string };
@@ -124,7 +46,7 @@ type Equipment = {
     fuel_type: string;
     fuel_consumed_l: number;
     total_electricity_used_kWh: number;
-    date: { $date: string };
+    date: string; //string for direct access
 };
 
 // Type for Crops
@@ -134,7 +56,7 @@ type Crop = {
     crop_type: string;
     area_planted_ha: number;
     fertilizer_amt_used_kg: number,
-    date: { $date: string };
+    date: string; //string for direct access
     yield_tons: number;
 };
 
@@ -144,7 +66,7 @@ type Livestock = {
     company_id: { $oid: string };
     species: string;
     number_of_species: number;
-    date: { $date: string };
+    date: string; //string for direct access
 };
 
 // Type for Equipment
@@ -153,7 +75,7 @@ type Waste = {
     company_id: { $oid: string };
     waste_type: string;
     waste_quantity_kg: number;
-    date: { $date: string };
+    date: string; //string for direct access
 };
 
 // Type for Forest
@@ -161,7 +83,7 @@ type Forest = {
     _id: { $oid: string };
     company_id: { $oid: string };
     totalAreaInHectares: number;
-    date: { $date: string };
+    date: string; //string for direct access
 };
 
 // Define the CollectionData type to encapsulate all collections
@@ -174,6 +96,67 @@ type CollectionData = {
     Forest: Forest[];              //Array of Forest objects
 };
 
+
+//Method 2 for carbon emissions
+const CalcluteMonthlyCarbonEmission = (equipmentData: Equipment[], livestockData: Livestock[], cropsData: Crop[], wasteData: Waste[], emissionData: EmissionsRate[], forestData: Forest[]) =>{
+    const monthlyEmissions: number[] = new Array(12).fill(0); //for bar chart monthly
+
+    //Emission of one category
+    for (const equipment of equipmentData) {
+        const electricEmit = equipment.total_electricity_used_kWh * emissionData[0].energy.electricity_emission;
+
+        // Get fuel emissions
+        //console.log(emissionData[0].fuel_emissions["biodiesel"]);
+        const fuelType = equipment.fuel_type.toLowerCase() as keyof EmissionsRate["fuel_emissions"] //ensure is valid key
+        const fuel_emit = equipment.fuel_consumed_l * emissionData[0].fuel_emissions[fuelType]; 
+        
+        // Extract month from the date, insert to respective month
+        console.log(equipment);
+        const month = new Date(equipment.date).getUTCMonth(); // Adjusted here
+        console.log(month);
+        monthlyEmissions[month] += (fuel_emit + electricEmit);    
+    }
+
+    for (const livestock of livestockData) {
+        //Get animal emissions
+        const animalType = livestock.species.toLowerCase() as keyof EmissionsRate["animal_emissions"];
+        const animal_emit = livestock.number_of_species * emissionData[0].animal_emissions[animalType];
+
+        // Extract month from the date, insert to respective month
+        const month = new Date(livestock.date).getUTCMonth(); // Adjusted here
+        monthlyEmissions[month] += (animal_emit);   
+    }
+
+    for (const crop of cropsData) {
+        //get crops emission
+        const fert_emit = crop.fertilizer_amt_used_kg * emissionData[0].crops_emissions["nitrogen_fertilizer"];
+        const soil_emit = crop.area_planted_ha * emissionData[0].crops_emissions["soil_emissions"];
+                
+        // Extract month from the date, insert to respective month
+        const month = new Date(crop.date).getUTCMonth(); // Adjusted here
+        monthlyEmissions[month] += (fert_emit + soil_emit);
+    }
+    
+    for (const waste of wasteData) {
+        //get waste emission
+        const wasteType = waste.waste_type.toLowerCase() as keyof EmissionsRate["waste_emissions"];
+        const waste_emit = waste.waste_quantity_kg * emissionData[0].waste_emissions[wasteType];
+
+        // Extract month from the date, insert to respective month
+        const month = new Date(waste.date).getUTCMonth(); // Adjusted here
+        monthlyEmissions[month] += (waste_emit);
+    }
+
+    //The threshold for graph, average absorption rate
+    const yearlyAbsorb = forestData[0].totalAreaInHectares * emissionData[0].absorption_rate_per_year_kg;
+    const averageAbsorb = (yearlyAbsorb /12);
+
+    return {
+        monthlyEmissions,
+        averageAbsorb,
+    }
+}
+
 //API route handler, for calculation of metrics for the 3 Cards
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try{
@@ -183,7 +166,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         //convert companyId to ObjectId
         const objectId = new ObjectId(companyId);
         //connect to MongoDB
-        const db  = await connectToDatabase.connectToDatabase();
+        const db  = await connectToDatabase();
         if (!db) {
             throw new Error("Database connection failed."); //If no db instances is defined
         }
@@ -251,19 +234,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         //Return results
         console.log(results); //test
 
-        //Calculate energy
-        const energyAverage = CalculateEnergy(results.Equipment)
-        const carbonEmissionAverage = CalcluteCarbonEmission(results.Equipment, results.Livestock, results.Crops, results.Waste, results.EmissionRates)
-        const netEmission = CalculateNetEmission(results.Forest, carbonEmissionAverage, results.EmissionRates);
-        const finalMetrics = {
-            "energyAverage in kWh": energyAverage,
-            "carbonAverage in CO2E": carbonEmissionAverage,
-            "netAverage in CO2E": netEmission,
-        }
+        const carbonEmissionAverage = CalcluteMonthlyCarbonEmission(results.Equipment, results.Livestock, results.Crops, results.Waste, results.EmissionRates, results.Forest)
+        return NextResponse.json(carbonEmissionAverage);
 
-        return NextResponse.json(finalMetrics);
-
-    } catch (error) {
+    } catch(error) {
         console.error("Error fetching data:", error);
         return NextResponse.json({ error: 'An error occurred while fetching data.' }, { status: 500 });
     }
