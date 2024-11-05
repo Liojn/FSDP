@@ -87,18 +87,26 @@ export default function Account() {
             <section>
                 <h2 className="text-xl font-semibold mb-4">Update Main Goals</h2>
                 <form onSubmit={handleGoalsUpdate} className="space-y-4">
-                    <div>
-                        <label htmlFor="mainGoals" className="block text-sm font-medium">Overall Carbon Emissions Goal (CO2e)</label>
-                        <input
-                            id="mainGoals"
-                            type="number"
-                            min="0"
-                            value={mainGoals}
-                            onChange={(e) => setMainGoals(e.target.value)}
-                            className="border border-gray-300 rounded p-2 w-full"
-                        />
-                    </div>
-                    <button type="submit" className="bg-blue-500 text-white py-2 px-4 rounded">Update Goals</button>
+                <div>
+                    <label htmlFor="mainGoals" className="block text-sm font-medium">
+                        Overall Carbon Emissions Goal (CO<sub>2</sub>e)
+                    </label>
+                    <input
+                        id="mainGoals"
+                        type="number"
+                        min="0"
+                        value={mainGoals}
+                        onChange={(e) => setMainGoals(e.target.value)}
+                        placeholder="Enter goal in CO2e"
+                        className="border border-gray-300 rounded p-2 w-full text-gray-700 focus:outline-none focus:ring focus:ring-blue-300"
+                    />
+                </div>
+                <button
+                    type="submit"
+                    className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 focus:outline-none focus:ring focus:ring-blue-300"
+                >
+                    Update Goals
+                </button>
                 </form>
             </section>
         </div>
