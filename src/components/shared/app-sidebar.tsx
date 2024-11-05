@@ -43,7 +43,7 @@ import { cn } from "@/lib/utils";
 const navigationItems = [
   { title: "Dashboard", url: "/dashboards", icon: LayoutDashboard },
   { title: "Statistics", url: "/statistics", icon: ChartColumn },
-  { title: "Leaderboard", url: "/leaderboard", icon: Medal },
+  { title: "Badges", url: "/badges", icon: Medal },
   { title: "Campaign", url: "/campaign", icon: PencilLine },
   { title: "Recommendations", url: "/recommendation", icon: Lightbulb },
 ];
