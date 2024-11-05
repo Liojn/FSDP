@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchUniqueYears, getMetricsData, EmissionData, fetchMonthlyCarbonEmissions,  } from '../api/dashboards/api';
 import { MetricCard } from '@/components/shared/metric-card'; //Cards component
 import CarbonEmissionChart from '@/app/dashboards/charts/carbonEmissionChart';
+import AdditionalGraph from '@/app/dashboards/charts/additional-graph';
 
 // Define the props interface for BarChart
 interface BarChartProps {
@@ -30,16 +31,6 @@ const leaderboardData = [
     { name: "EcoFarm", score: 95 }
 ];
 
-
-const AdditionalGraph = () => (
-  <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"> 
-    <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Overall Pie Chart Graph</h3>
-    <div className="flex-1 flex flex-col">
-      <div className="bg-gray-300 flex-1 flex justify-center items-center pb-4">Your Graph Here</div>
-    </div>
-  </div>
-);
-  
 const DashboardPage = () => {
 
   const [yearFilter, setYearFilter] = useState<string>(''); //Year filter selection, holds the currently selected year from the dropdown. Initially set to an empty string
@@ -55,6 +46,9 @@ const DashboardPage = () => {
   { title: "Average Carbon Emissions", value: "Loading...", unit: "KG CO2" },
   { title: "Average Net Emission", value: "Loading...", unit: "KG CO2" }
   ]);
+
+  const currentTotal = 2000; // Example value, replace with actual data retrieval logic
+  const goal = 600; // Example goal, replace with goal from account settings
 
   //Fetch the avail list of years from the API
   useEffect(() => {
@@ -170,7 +164,7 @@ const DashboardPage = () => {
         {/* Right Column: Leaderboard with Additional Graph */}
         <div className="flex flex-col space-y-6 ">
           {/* Increased Additional Graph */}
-          <AdditionalGraph />
+          <AdditionalGraph currentTotal={currentTotal} goal={goal} />
 
           {/* Leaderboard */}
           <div className="bg-white p-4 shadow-md rounded-lg">
