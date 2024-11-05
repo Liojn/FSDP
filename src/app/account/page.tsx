@@ -88,13 +88,14 @@ export default function Account() {
                 <h2 className="text-xl font-semibold mb-4">Update Main Goals</h2>
                 <form onSubmit={handleGoalsUpdate} className="space-y-4">
                     <div>
-                        <label htmlFor="mainGoals" className="block text-sm font-medium">Main Goals</label>
-                        <textarea
+                        <label htmlFor="mainGoals" className="block text-sm font-medium">Overall Carbon Emissions Goal (CO2e)</label>
+                        <input
                             id="mainGoals"
+                            type="number"
+                            min="0"
                             value={mainGoals}
                             onChange={(e) => setMainGoals(e.target.value)}
                             className="border border-gray-300 rounded p-2 w-full"
-                            rows={4}
                         />
                     </div>
                     <button type="submit" className="bg-blue-500 text-white py-2 px-4 rounded">Update Goals</button>
