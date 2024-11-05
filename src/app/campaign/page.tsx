@@ -3,10 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import {
-  CampaignData,
-  CompanyFormValues,
-} from "./types";
+import { CampaignData, CompanyFormValues } from "./types";
 import { PageHeader } from "@/components/shared/page-header";
 import { CampaignProgress } from "./components/CampaignProgress";
 import { CampaignMilestones } from "./components/CampaignMilestones";
@@ -27,47 +24,45 @@ export default function CampaignPage() {
   >(null);
   const [, setUserName] = useState<string>("");
 
-  useEffect(() => {
-    // Fetch campaign data and check user participation
-    const fetchData = async () => {
-      try {
-        const [campaignResponse, userResponse] = await Promise.all([
-          fetch("/api/campaign"),
-          fetch("/api/campaign/user/campaign-status", {
-            headers: {
-              "user-email": localStorage.getItem("userEmail") || "",
-            },
-          }),
-        ]);
+  // Function to fetch campaign data
+  const fetchCampaignData = async () => {
+    try {
+      const [campaignResponse, userResponse] = await Promise.all([
+        fetch("/api/campaign"),
+        fetch("/api/campaign/user/campaign-status", {
+          headers: {
+            "user-email": localStorage.getItem("userEmail") || "",
+          },
+        }),
+      ]);
 
-        if (!campaignResponse.ok) {
-          throw new Error("Failed to fetch campaign data");
-        }
-
-        const campaignData = await campaignResponse.json();
-        setCampaignData(campaignData);
-
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          if (userData.hasJoined) {
-            setHasJoined(true);
-            setUserCompany(userData.company);
-          }
-        }
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred";
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
+      if (!campaignResponse.ok) {
+        throw new Error("Failed to fetch campaign data");
       }
-    };
 
+      const campaignData = await campaignResponse.json();
+      setCampaignData(campaignData);
+
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        if (userData.hasJoined) {
+          setHasJoined(true);
+          setUserCompany(userData.company);
+        }
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected error occurred";
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     // Only run if we're in the browser
     if (typeof window !== "undefined") {
-      fetchData();
+      fetchCampaignData();
     }
 
     // Set up WebSocket connection for real-time updates
@@ -98,18 +93,13 @@ export default function CampaignPage() {
   }, []);
 
   useEffect(() => {
-    // Access localStorage inside useEffect
     const storedUserName = localStorage.getItem("userName");
     if (storedUserName) {
       setUserName(storedUserName);
-      // If you're using form.setValue, make sure to check if it's available
     }
   }, []);
 
-  const onSubmit = async (
-    companyValues: CompanyFormValues,
-    
-  ) => {
+  const onSubmit = async (companyValues: CompanyFormValues) => {
     setSubmitting(true);
     try {
       const response = await fetch("/api/campaign/join", {
@@ -128,25 +118,14 @@ export default function CampaignPage() {
         throw new Error(data.message || "Failed to join campaign");
       }
 
-      // Update campaign data with new participant
-      setCampaignData((prevData) => {
-        if (!prevData) return null;
-        return {
-          ...prevData,
-          campaign: {
-            ...prevData.campaign,
-    
-            signeesCount: prevData.campaign.signeesCount + 1,
-          },
-          participants: [
-            {
-              company: data.company,
-              participation: data.participation,
-            },
-            ...prevData.participants,
-          ],
-        };
-      });
+      // Update local state
+      setHasJoined(true);
+
+      // Refetch the campaign data to get updated information
+      await fetchCampaignData();
+
+      // Force a hard refresh of the page to ensure all components are updated
+      window.location.reload();
 
       toast({
         title: "Success",
@@ -197,7 +176,6 @@ export default function CampaignPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <Card className="p-6">
-            {" "}
             <CampaignProgress
               currentProgress={campaignData.campaign.currentProgress}
               targetReduction={campaignData.campaign.targetReduction}

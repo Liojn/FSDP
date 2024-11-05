@@ -1,8 +1,7 @@
-"use client";
-
+import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress"; // Assuming you have a Progress component in Shadcn
-import { ChevronsUpDown } from 'lucide-react'; // Import the icon from lucide-react
+import { Progress } from "@/components/ui/progress";
+import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -11,74 +10,75 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
-import {
-  ColumnDef,
-  SortingState,
-  Updater,
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
 
 interface Participant {
   company: {
     name: string;
   };
-  progress: number; // Track current progress as a percentage
+  progress: number;
 }
 
-interface ParticipantsTableProps {
+export const ParticipantsTable = ({
+  participants = [],
+}: {
   participants: Participant[];
-}
+}) => {
+  const [sortConfig, setSortConfig] = useState<{
+    key: string | null;
+    direction: string;
+  }>({
+    key: null,
+    direction: "ascending",
+  });
 
-// Update columns to show company name and progress with sorting icons
-const columns: ColumnDef<Participant>[] = [
-  {
-    accessorFn: (row) => row.company.name,
-    header: "Company Name",
-    cell: (info) => info.getValue(),
-  },
-  {
-    id: 'progress',
-    accessorFn: (row) => row.progress,
-    header: () => (
-      <div className="flex items-center">
-        Progress
-        <ChevronsUpDown className="ml-2 h-4 w-4 text-gray-500" />
-      </div>
-    ),
-    cell: (info) => (
-      <Progress value={info.getValue() as number} max={100} className="h-2" /> // Customize the width and height as needed
-    ),
-    sortingFn: 'basic',
-  }
-];
+  // Sorting function
+  const sortedParticipants = React.useMemo(() => {
+    if (!sortConfig.key) return participants;
 
-export function ParticipantsTable({ participants }: ParticipantsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
+    return [...participants].sort((a, b) => {
+      if (sortConfig.key === "company") {
+        const aValue = a.company.name.toLowerCase();
+        const bValue = b.company.name.toLowerCase();
+        if (aValue < bValue)
+          return sortConfig.direction === "ascending" ? -1 : 1;
+        if (aValue > bValue)
+          return sortConfig.direction === "ascending" ? 1 : -1;
+        return 0;
+      }
 
-  // Update sorting state to keep the most recent column sorted
-  const handleSortingChange = (updaterOrValue: Updater<SortingState>) => {
-    setSorting((old) => {
-      const newSorting =
-        typeof updaterOrValue === "function"
-          ? updaterOrValue(old)
-          : updaterOrValue;
-      return [newSorting[newSorting.length - 1]];
+      if (sortConfig.key === "progress") {
+        return sortConfig.direction === "ascending"
+          ? a.progress - b.progress
+          : b.progress - a.progress;
+      }
+      return 0;
+    });
+  }, [participants, sortConfig]);
+
+  // Handle sort
+  const requestSort = (key: string | null) => {
+    setSortConfig((current) => {
+      if (current.key === key && current.direction === "ascending") {
+        return { key, direction: "descending" };
+      }
+      if (current.key === key && current.direction === "descending") {
+        return { key: null, direction: "ascending" };
+      }
+      return { key, direction: "ascending" };
     });
   };
 
-  // Initialize the table with sorting functionality
-  const table = useReactTable({
-    data: participants,
-    columns,
-    state: { sorting },
-    onSortingChange: handleSortingChange,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
+  // Get sort direction icon
+  const getSortIcon = (columnKey: string | null) => {
+    if (sortConfig.key !== columnKey) {
+      return <ChevronsUpDown className="ml-2 h-4 w-4 text-gray-500" />;
+    }
+    return sortConfig.direction === "ascending" ? (
+      <ChevronUp className="ml-2 h-4 w-4 text-gray-900" />
+    ) : (
+      <ChevronDown className="ml-2 h-4 w-4 text-gray-900" />
+    );
+  };
 
   return (
     <div className="mt-12">
@@ -88,38 +88,60 @@ export function ParticipantsTable({ participants }: ParticipantsTableProps) {
       <Card>
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    onClick={header.column.getToggleSortingHandler()}
-                    className="cursor-pointer"
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
+            <TableRow>
+              <TableHead
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => requestSort("company")}
+              >
+                <div className="flex items-center">
+                  Company Name
+                  {getSortIcon("company")}
+                </div>
+              </TableHead>
+              <TableHead
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => requestSort("progress")}
+              >
+                <div className="flex items-center">
+                  Progress
+                  {getSortIcon("progress")}
+                </div>
+              </TableHead>
+            </TableRow>
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
+            {sortedParticipants.map((participant, index) => (
+              <TableRow key={index}>
+                <TableCell>{participant.company.name}</TableCell>
+                <TableCell className="w-64">
+                  <div className="flex items-center gap-2">
+                    <Progress
+                      value={participant.progress}
+                      max={100}
+                      className="h-2"
+                    />
+                    <span className="text-sm text-gray-500 w-12">
+                      {participant.progress}%
+                    </span>
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
+            {sortedParticipants.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={2}
+                  className="text-center py-4 text-gray-500"
+                >
+                  No participants found
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </Card>
     </div>
   );
-}
+};
+
+export default ParticipantsTable;
