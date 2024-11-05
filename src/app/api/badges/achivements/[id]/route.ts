@@ -29,6 +29,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       .limit(12)  // Limiting to 12 badges
       .toArray();
 
+      console.log(userBadges)
     return NextResponse.json(userBadges, { status: 200 });
   } catch (error) {
     console.error("Error fetching badges:", error);
