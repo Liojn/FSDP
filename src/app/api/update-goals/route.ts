@@ -3,12 +3,12 @@ import dbClient from "../../../../dbConfig";
 
 export async function POST(req: Request) {
     try {
-        const { mainGoals } = await req.json();
+        const { mainGoals, userId } = await req.json();
 
         // Update goals in the database
         const db = await dbClient.connectToDatabase();
         await db.collection("UserGoals").updateOne(
-            { userId: "user-id" }, // replace with actual user identification
+            { userId },
             { $set: { mainGoals } },
             { upsert: true } // create the document if it doesn't exist
         );
