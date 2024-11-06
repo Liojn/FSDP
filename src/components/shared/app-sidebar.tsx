@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -14,7 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
-} from "@/components/ui/sidebar";
+} from "../ui/sidebar";
 
 import {
   DropdownMenu,
@@ -24,7 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
+} from "../ui/dropdown-menu";
 
 import {
   BadgeCheck,
@@ -50,7 +50,7 @@ const navigationItems = [
 
 const appConfig = {
   name: "EcoFarm",
-  logo: "/path/to/your/logo.png",
+  logo: "",
 };
 
 // Memoize the entire component to prevent unnecessary re-renders
@@ -58,13 +58,17 @@ const AppSidebar = React.memo(function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [imageError, setImageError] = useState(false);
+  const [userData, setUserData] = useState({
+    name: "Placeholder Name",
+    email: "guest@example.com",
+  });
 
-  // Memoize userData to avoid frequent reads from localStorage
-  const userData = useMemo(() => {
-    return {
+  // Use useEffect to safely access localStorage on the client side
+  useEffect(() => {
+    setUserData({
       name: localStorage.getItem("userName") || "Placeholder Name",
       email: localStorage.getItem("userEmail") || "guest@example.com",
-    };
+    });
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -111,7 +115,7 @@ const AppSidebar = React.memo(function AppSidebar() {
         <DropdownMenuGroup>
           <DropdownMenuItem
             className="flex cursor-pointer items-center gap-2 py-2 text-stone-400 hover:text-white"
-            onClick={() => console.log("Opening account settings...")}
+            onClick={() => router.push("/account")}
           >
             <BadgeCheck className="size-4" />
             Account

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import  connectToDatabase  from '@/../dbConfig'
+import connectToDatabase  from '@/../dbConfig'
 const { ObjectId } = require('mongodb');
 
 //List of Collections that we would be using

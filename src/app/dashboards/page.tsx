@@ -41,11 +41,7 @@ const leaderboardData = [
     </div>
   </div>
 );*/
-interface GaugeChartProps {
-  currentYearEmissions: number | null 
-  previousYearEmissions: number | null 
-  targetGoal: number | null 
-}
+
   
 const DashboardPage = () => {
 
