@@ -2,6 +2,11 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert"; // Ensure this path is correct
 
 export default function SignUp() {
     const [name, setName] = useState('');
@@ -32,10 +37,9 @@ export default function SignUp() {
             setEmail(reset);
             setPassword(reset);
 
-            // Redirect to login page after a brief delay
-            setTimeout(() => {
+            
               router.push('/login');
-          }, 1000);
+           
         } else {
             setMessage(data.message);
         }
@@ -43,58 +47,65 @@ export default function SignUp() {
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen p-4">
-          <h1 className="text-2xl font-bold mb-4">Sign Up</h1>
-          {message && <p className="text-red-500 mb-4">{message}</p>} {/* Display message */}
-          <form onSubmit={handleSubmission} className="w-full max-w-sm">
-            <div className="mb-4">
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-                placeholder="Enter your name"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-                placeholder="Enter your email"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md p-2"
-                placeholder="Enter your password"
-                required
-              />
-            </div>
-            <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded">
-              Sign Up
-            </button>
-          </form>
-          <p className="mt-4 text-sm text-gray-600">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <h1 className="text-2xl font-bold text-center pb-4">Sign Up</h1>
+              {message && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertDescription>{message}</AlertDescription>
+                </Alert>
+              )}
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmission}>
+                <div className="space-y-4">
+                  <div className="">
+                    <Label htmlFor="name">Company Name</Label>
+                    <Input
+                      type="text"
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Enter company name"
+                      required
+                    />
+                  </div>
+
+                  <div className="">
+                    <Label htmlFor="email">Company Email</Label>
+                    <Input
+                      type="email"
+                      id="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter company email"
+                      required
+                    />
+                  </div>
+
+                  <div className="">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      type="password"
+                      id="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full">
+                    Sign Up
+                  </Button>
+                </div>
+              </form>
+                       <p className="mt-4 text-sm text-gray-600 text-center">
             Already have an account? <a href="/login" className="text-blue-500">Sign In</a>
           </p>
+            </CardContent>
+          </Card>
+ 
         </div>
       );
 }
