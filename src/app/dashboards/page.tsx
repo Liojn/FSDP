@@ -1,9 +1,11 @@
 "use client"; //treat this component as a Client Component
 
 import React, { useState, useEffect } from 'react';
-import { fetchUniqueYears, getMetricsData, EmissionData, fetchMonthlyCarbonEmissions,  } from '../api/dashboards/api';
+import { fetchUniqueYears, getMetricsData, EmissionData, fetchMonthlyCarbonEmissions, fetchEmissionTarget } from '../api/dashboards/api';
 import { MetricCard } from '@/components/shared/metric-card'; //Cards component
 import CarbonEmissionChart from '@/app/dashboards/charts/carbonEmissionChart';
+import GaugeChartComponent  from "@/app/dashboards/charts/gaugeGoal"; //Porgress Gauge Chart
+
 
 // Define the props interface for BarChart
 interface BarChartProps {
@@ -31,23 +33,29 @@ const leaderboardData = [
 ];
 
 
-const AdditionalGraph = () => (
+/*const GaugeChart = () => (
   <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"> 
-    <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Overall Pie Chart Graph</h3>
+    <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Progress towards Goal</h3>
     <div className="flex-1 flex flex-col">
       <div className="bg-gray-300 flex-1 flex justify-center items-center pb-4">Your Graph Here</div>
     </div>
   </div>
-);
+);*/
+
   
 const DashboardPage = () => {
 
   const [yearFilter, setYearFilter] = useState<string>(''); //Year filter selection, holds the currently selected year from the dropdown. Initially set to an empty string
   const [yearOptions, setYearOptions] = useState<number[]>([]); //store Year options from API fetch, initialized as an empty array,
   const [selectedYear, setSelectedYear] = useState<number | null>(null); //Store selected year for subsequent API calls
-  //state for monthly emission
+  //State for monthly emission
   const [monthlyEmissions, setMonthlyEmissions] = useState<number[]>([]);
   const [averageAbsorbed, setAverageAbsorbed] = useState<number | null>(null);
+
+  //Store the data for current and previous year emissions, GaugeChart
+  const [currentYearEmissions, setCurrentYearEmissions] = useState<number | null>(0);
+  const [previousYearEmissions, setPreviousYearEmissions] = useState<number | null>(0);
+  const [targetGoal, setTargetGoal] = useState<number>(10000); //default first
 
 
   const [metricsData, setMetricsData] = useState([ //var to store the data and display, initially predefined
@@ -83,24 +91,75 @@ const DashboardPage = () => {
       if (selectedYear) {
         try {
           const companyId = '671cf9a6e994afba6c2f332d';
-          //Fetch both metrics data as well as emission bar chart data
-          const [data, emissionsData] = await Promise.all([
-                    getMetricsData(companyId, selectedYear),
-                    fetchMonthlyCarbonEmissions(companyId, selectedYear), // Fetch the monthly emissions data
-          ]);
+          if (yearOptions.includes(selectedYear - 1)) { //range already defined in my options list
+              // If the previous year is available, fetch data for both the current and previous year
+              const [data, emissionsData, previousEmissionsData, targetGoal] = await Promise.all([
+                  getMetricsData(companyId, selectedYear),
+                  fetchMonthlyCarbonEmissions(companyId, selectedYear),
+                  fetchMonthlyCarbonEmissions(companyId, (selectedYear - 1)), // Fetch the emissions data for the previous year
+                  fetchEmissionTarget(companyId, selectedYear),
+                  console.log(selectedYear -1)
+              ]);
 
-          if (data) {
-            setMetricsData([
-              { title: "Average Energy Consumption", value: data["energyAverage in kWh"].toFixed(2), unit: "kWh" },
-              { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
-              { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
-            ]);
-          }
+              // Process data for both years
+              if (data) {
+                  setMetricsData([
+                      { title: "Average Energy Consumption", value: data["energyAverage in kWh"].toFixed(2), unit: "kWh" },
+                      { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
+                      { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
+                  ]);
+              }
 
-          if (emissionsData) {
-            setMonthlyEmissions(emissionsData.monthlyEmissions); //Set the monthly emissions data
-            setAverageAbsorbed(emissionsData.averageAbsorb); //Set the average absorbed value
+              if (emissionsData) {
+                  setMonthlyEmissions(emissionsData.monthlyEmissions); // Set the monthly emissions data for the current year
+                  setAverageAbsorbed(emissionsData.averageAbsorb); // Set the average absorbed value for the current year
+                  const sum = emissionsData.monthlyEmissions.reduce((accumulator, currentValue) => {
+                    return accumulator + currentValue;
+                  }, 0);
+                  setCurrentYearEmissions(sum); //give the current year admission
+              }
+
+              if (previousEmissionsData){
+                const sum = previousEmissionsData.monthlyEmissions.reduce((accumulator, currentValue) => {
+                  return accumulator + currentValue;
+                }, 0);
+                setPreviousYearEmissions(sum); //give the prev year emission
+              }
+
+              if (targetGoal) {
+                setTargetGoal(targetGoal); //set value
+              }
+          } else {
+              //If the previous year is not available, fetch data only for the current year
+              const [data, emissionsData, targetGoal] = await Promise.all([
+                  getMetricsData(companyId, selectedYear),
+                  fetchMonthlyCarbonEmissions(companyId, selectedYear),
+                  fetchEmissionTarget(companyId, selectedYear),
+              ]);
+
+              if (data) {
+                  setMetricsData([
+                      { title: "Average Energy Consumption", value: data["energyAverage in kWh"].toFixed(2), unit: "kWh" },
+                      { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
+                      { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
+                  ]);
+              }
+
+              if (emissionsData) {
+                  setMonthlyEmissions(emissionsData.monthlyEmissions); // Set the monthly emissions data
+                  setAverageAbsorbed(emissionsData.averageAbsorb); // Set the average absorbed value
+                  const sum = emissionsData.monthlyEmissions.reduce((accumulator, currentValue) => {
+                    return accumulator + currentValue;
+                  }, 0);
+                  setCurrentYearEmissions(sum); //give the current year admission
+              }
+              setPreviousYearEmissions(0); //no data for comparison
+
+              if (targetGoal) {
+                setTargetGoal(targetGoal); //set value
+              }
           }
+          
         } catch (error) {
           console.error("Failed to fetch emission data:", error);
         }
@@ -169,8 +228,23 @@ const DashboardPage = () => {
 
         {/* Right Column: Leaderboard with Additional Graph */}
         <div className="flex flex-col space-y-6 ">
-          {/* Increased Additional Graph */}
-          <AdditionalGraph />
+          {/* Additional Gauge Graph */}
+          <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"> 
+            <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Progress Towards Emission Limit</h3>
+            <div className="flex-1 flex flex-col">
+              <div className="bg-white flex-1 flex justify-center items-center pb-4">
+                {currentYearEmissions !== null && targetGoal !== null && previousYearEmissions !== null ? ( //prevent early display and disappear the needle
+                  <GaugeChartComponent
+                    currentYearEmissions={currentYearEmissions || 0}
+                    previousYearEmissions={previousYearEmissions || 0}
+                    targetGoal={targetGoal || 10000} //default, for now
+                  />
+                ) : (
+                  <div>Loading gauge data...</div>  // Optionally show a loading state
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Leaderboard */}
           <div className="bg-white p-4 shadow-md rounded-lg">

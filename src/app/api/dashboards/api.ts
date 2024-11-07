@@ -74,3 +74,33 @@ export const fetchMonthlyCarbonEmissions = async(companyId: string, year: number
         return null; // Return null on error or handle as needed
     }
 }
+
+//Function to get Users goal target set according to the year
+export const fetchEmissionTarget = async (companyId: string, year: number) => {
+  try {
+    //Fetch data from the API
+    const response = await fetch(`/api/dashboards/checkGoal/${companyId}?year=${year}`,{
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+    // Check if the response is successful
+    if (!response.ok) {
+      throw new Error(`Error fetching data: ${response.statusText}`);
+    }
+
+    //Parse the response JSON
+    const data = await response.json();
+
+    //Check if the target was returned
+    if (data.target !== undefined) {
+      return data.target;
+    } else {
+      throw new Error("Target data not found.");
+    }
+  } catch (error) {
+    console.error("Error fetching emission target:", error);
+    return null; // You can return a default value if needed
+  }
+};
