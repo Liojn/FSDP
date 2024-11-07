@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Account() {
     const [name, setName] = useState('');
@@ -8,6 +9,8 @@ export default function Account() {
     const [password, setPassword] = useState('');
     const [mainGoals, setMainGoals] = useState('');
     const [message, setMessage] = useState('');
+    const [logoutMessage, setLogoutMessage] = useState(false);
+    const router = useRouter();
 
     useEffect(() => {
         // Load the locally saved name and email when the component mounts
@@ -20,18 +23,21 @@ export default function Account() {
     const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage('');
+        setLogoutMessage(false);
 
         if (!name || !email || !password) {
             setMessage('All profile fields must be filled');
             return;
         }
+
+        const currentEmail = localStorage.getItem('userEmail'); // Retrieve the current email
         
         const response = await fetch('/api/update-profile', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ name, email, password }),
+            body: JSON.stringify({ name, email, password, currentEmail }),
         });
 
         const data = await response.json();
@@ -40,7 +46,14 @@ export default function Account() {
             localStorage.setItem('userName', name);
             localStorage.setItem('userEmail', email);
             setMessage('Profile updated successfully!');
-            window.location.reload();
+            setLogoutMessage(true);
+
+            // Wait for 3 seconds, clear storage, and redirect
+            setTimeout(() => {
+                localStorage.clear();
+                router.push('/login');
+            }, 3000);
+
         } else {
             setMessage(data.message || 'Failed to update profile');
         }
@@ -76,6 +89,11 @@ export default function Account() {
             <h1 className="text-2xl font-bold mb-6">Account</h1>
 
             {message && <p className="mb-4 text-green-500">{message}</p>}
+            {logoutMessage && (
+                <p className="mb-4 text-blue-500">
+                    Profile updated. You will be logged out shortly to reset your session.
+                </p>
+            )}
 
             <section className="mb-8">
                 <h2 className="text-xl font-semibold mb-4">Update Profile</h2>
