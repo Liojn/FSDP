@@ -8,6 +8,7 @@ import LivestockEmissionsGraphContainer from "./lineCharts/livestockLineChart";
 import EquipmentLineChart from "./lineCharts/equipmentLineChart";
 import { FunnelIcon } from "@heroicons/react/24/solid";
 import WasteEmissionGraphContainer from "./lineCharts/wasteLineChart";
+import { PageHeader } from "@/components/shared/page-header";
 
 interface Metric {
   title: string;
@@ -202,11 +203,7 @@ const StatisticsPage = () => {
   return (
     <div className="h-full w-full pl-3 pr-3 -mt-4 rounded-lg">
       {/* Header Section */}
-      <header className=" text-black">
-        <h1 className="text-2xl font-Helvetica font-bold">
-          Statistics Sustainability KPI
-        </h1>
-      </header>
+      <PageHeader title="Statistics Sustainabilty KPI"/>
 
       <div className="flex justify-start items-center text-sm font-bold space-x-6 mt-1 p-2 rounded">
         {/* Filter Icon */}
