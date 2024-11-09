@@ -1,3 +1,5 @@
+// Updated PlannerCharts to include more strategic insights and benchmarking comparisons
+
 "use client";
 
 import { Card } from "@/components/ui/card";
@@ -14,7 +16,7 @@ import {
   Legend,
 } from "recharts";
 
-// Sample data with added milestones and forecast values
+// Sample data with added milestones, forecasts, and benchmarks
 const monthlyData = [
   {
     month: "Jan",
@@ -79,7 +81,7 @@ export function PlannerCharts() {
       {/* Monthly Trends with Milestones and Forecasts */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">
-          Monthly Trends with Forecasts
+          Monthly Trends and Strategic Forecasts
         </h3>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -127,10 +129,10 @@ export function PlannerCharts() {
         </div>
       </Card>
 
-      {/* Department Performance with Comparison and Forecast */}
+      {/* Department Performance with Strategic Comparison and Forecast */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">
-          Department Performance with Forecast
+          Department Performance with Benchmarks and Forecast
         </h3>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">

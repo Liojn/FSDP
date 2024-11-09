@@ -1,9 +1,17 @@
+// Updated SustainabilityScorecard to focus on strategic metrics, historical analysis, and benchmarking
+
 "use client";
 
-import React from "react";
-import { Card } from "@/components/ui/card";
+import React, { useState } from "react";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { ChevronDown } from "lucide-react";
 
 interface KPI {
   name: string;
@@ -15,7 +23,6 @@ interface KPI {
   description: string;
 }
 
-// Rest of the interfaces remain the same...
 interface Goal {
   title: string;
   description: string;
@@ -38,7 +45,8 @@ interface Recommendation {
 }
 
 const SustainabilityScorecard = () => {
-  // Data arrays remain the same...
+  const [activeView, setActiveView] = useState("overview");
+
   const kpis: KPI[] = [
     {
       name: "Energy Efficiency",
@@ -113,23 +121,15 @@ const SustainabilityScorecard = () => {
     },
   ];
 
-  return (
-    <div className="w-full space-y-4">
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="analysis">Data Analysis</TabsTrigger>
-          <TabsTrigger value="planning">Strategic Planning</TabsTrigger>
-          <TabsTrigger value="benchmarks">Benchmarking</TabsTrigger>
-          <TabsTrigger value="insights">Insights</TabsTrigger>
-        </TabsList>
-        {/* Rest of the JSX remains exactly the same... */}
-        <TabsContent value="overview">
-          <Card className="p-6">
+  const renderContent = () => {
+    switch (activeView) {
+      case "overview":
+        return (
+          <div className="">
             <h3 className="text-lg font-semibold mb-4">Performance Overview</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {kpis.map((kpi, index) => (
-                <div key={index} className="bg-white p-4 rounded-lg shadow">
+                <div key={index} className="p-4 rounded-lg shadow bg-gray-50">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h4 className="font-medium text-gray-900">{kpi.name}</h4>
@@ -157,16 +157,17 @@ const SustainabilityScorecard = () => {
                 </div>
               ))}
             </div>
-          </Card>
-        </TabsContent>
-        <TabsContent value="analysis">
-          <Card className="p-6">
+          </div>
+        );
+
+      case "analysis":
+        return (
+          <div className="">
             <h3 className="text-lg font-semibold mb-4">Data Analysis</h3>
             <div className="space-y-4">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium mb-2">Historical Trends</h4>
                 <div className="h-64 bg-white rounded-lg border p-4">
-                  {/* Placeholder for charts */}
                   <p className="text-gray-500">
                     Time-series charts will be displayed here
                   </p>
@@ -175,27 +176,26 @@ const SustainabilityScorecard = () => {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium mb-2">Comparative Analysis</h4>
                 <div className="h-64 bg-white rounded-lg border p-4">
-                  {/* Placeholder for comparison charts */}
                   <p className="text-gray-500">
                     Comparison charts will be displayed here
                   </p>
                 </div>
               </div>
             </div>
-          </Card>
-        </TabsContent>
-        <TabsContent value="planning">
-          <Card className="p-6">
+          </div>
+        );
+
+      case "planning":
+        return (
+          <div className="">
             <h3 className="text-lg font-semibold mb-4">Strategic Planning</h3>
             <div className="space-y-6">
               {goals.map((goal, index) => (
-                <div key={index} className="bg-white p-4 rounded-lg shadow">
+                <div key={index} className="p-4 rounded-lg shadow bg-gray-50">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h4 className="font-medium">{goal.title}</h4>
-                      <p className="text-sm text-gray-500">
-                        {goal.description}
-                      </p>
+                      <p className="text-sm text-gray-500">{goal.description}</p>
                     </div>
                     <span
                       className={`text-sm px-2 py-1 rounded-full ${
@@ -222,25 +222,21 @@ const SustainabilityScorecard = () => {
                 </div>
               ))}
             </div>
-          </Card>
-        </TabsContent>
+          </div>
+        );
 
-        <TabsContent value="scenarios">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Scenario Planning</h3>
-            <p>Simulate changes in goals to see projected impact on KPIs.</p>
-            {/* Scenario input forms and results display */}
-          </Card>
-        </TabsContent>
-        <TabsContent value="benchmarks">
-          <Card className="p-6">
+      case "benchmarks":
+        return (
+          <div className="">
             <h3 className="text-lg font-semibold mb-4">Benchmarking</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Department Comparison</h4>
+                <h4 className="font-medium mb-2">
+                  Department Comparison
+                </h4>
                 <div className="space-y-4">
                   {kpis.map((kpi, index) => (
-                    <div key={index} className="bg-white p-3 rounded shadow">
+                    <div key={index} className="p-3 rounded shadow bg-white">
                       <div className="flex justify-between mb-1">
                         <span className="text-sm font-medium">{kpi.name}</span>
                         <span className="text-sm text-gray-500">
@@ -256,7 +252,7 @@ const SustainabilityScorecard = () => {
                 <h4 className="font-medium mb-2">Industry Benchmarks</h4>
                 <div className="space-y-4">
                   {kpis.map((kpi, index) => (
-                    <div key={index} className="bg-white p-3 rounded shadow">
+                    <div key={index} className="p-3 rounded shadow bg-white">
                       <div className="flex justify-between mb-1">
                         <span className="text-sm font-medium">{kpi.name}</span>
                         <span className="text-sm text-gray-500">
@@ -269,16 +265,18 @@ const SustainabilityScorecard = () => {
                 </div>
               </div>
             </div>
-          </Card>
-        </TabsContent>
-        <TabsContent value="insights">
-          <Card className="p-6">
+          </div>
+        );
+
+      case "insights":
+        return (
+          <div className="">
             <h3 className="text-lg font-semibold mb-4">
               Insights and Recommendations
             </h3>
             <div className="space-y-4">
               {recommendations.map((rec, index) => (
-                <div key={index} className="bg-white p-4 rounded-lg shadow">
+                <div key={index} className="p-4 rounded-lg shadow bg-gray-50">
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-medium">{rec.title}</h4>
@@ -326,9 +324,44 @@ const SustainabilityScorecard = () => {
                 </div>
               ))}
             </div>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="w-full space-y-4">
+      <div className="flex items-center justify-between mb-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-48 flex items-center justify-between">
+              {activeView.charAt(0).toUpperCase() + activeView.slice(1)}
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => setActiveView("overview")}>
+              Overview
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setActiveView("analysis")}>
+              Data Analysis
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setActiveView("planning")}>
+              Strategic Planning
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setActiveView("benchmarks")}>
+              Benchmarking
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setActiveView("insights")}>
+              Insights
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {renderContent()}
     </div>
   );
 };

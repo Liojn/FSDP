@@ -40,7 +40,7 @@ export default function StrategicGoalManager() {
       console.error("Goals fetch error:", error);
       toast({
         title: "Error",
-        description: "Unable to load goals",
+        description: "Unable to load strategic goals",
         variant: "destructive",
       });
     }
@@ -87,14 +87,14 @@ export default function StrategicGoalManager() {
 
       toast({
         title: "Goal Deleted",
-        description: "The goal has been successfully removed",
+        description: "The strategic goal has been successfully removed",
         variant: "default",
       });
     } catch (error) {
       console.error("Goal deletion error:", error);
       toast({
         title: "Error",
-        description: "Unable to delete goal",
+        description: "Unable to delete strategic goal",
         variant: "destructive",
       });
     }
@@ -117,7 +117,7 @@ export default function StrategicGoalManager() {
               setIsFormOpen(true);
             }}
           >
-            Create New Goal
+            Create New Strategic Goal
           </Button>
         </div>
       </CardHeader>
@@ -143,8 +143,7 @@ export default function StrategicGoalManager() {
                   <h3 className="text-lg font-semibold">{goal.title}</h3>
                   <p className="text-sm text-gray-500">{goal.description}</p>
                   <div className="mt-2 text-sm">
-                    <span className="font-medium">Department:</span>{" "}
-                    {goal.department}
+                    <span className="font-medium">Department:</span> {goal.department}
                   </div>
                 </div>
                 <div className="text-right">
@@ -164,19 +163,14 @@ export default function StrategicGoalManager() {
               <div className="mt-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium">Progress</span>
-                  <span className="text-sm text-gray-500">
-                    {goal.progress}%
-                  </span>
+                  <span className="text-sm text-gray-500">{goal.progress}%</span>
                 </div>
                 <Progress value={goal.progress} className="h-2" />
               </div>
               <div className="mt-4 flex justify-between items-center">
                 <div>
                   <span className="text-xs text-gray-500">
-                    Target Date:{" "}
-                    {goal.targetDate
-                      ? new Date(goal.targetDate).toLocaleDateString()
-                      : "Not set"}
+                    Target Date: {goal.targetDate ? new Date(goal.targetDate).toLocaleDateString() : "Not set"}
                   </span>
                 </div>
                 <div className="space-x-2">

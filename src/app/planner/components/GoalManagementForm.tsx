@@ -96,7 +96,7 @@ export function GoalManagementForm({
 
       toast({
         title: "Goal Saved",
-        description: `Goal "${savedGoal.title}" has been successfully ${
+        description: `Strategic Goal "${savedGoal.title}" has been successfully ${
           method === "POST" ? "created" : "updated"
         }`,
         variant: "default",
@@ -133,12 +133,12 @@ export function GoalManagementForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="title">Goal Title</Label>
+        <Label htmlFor="title">Strategic Goal Title</Label>
         <Input
           id="title"
           value={goal.title}
           onChange={(e) => setGoal({ ...goal, title: e.target.value })}
-          placeholder="Enter goal title"
+          placeholder="Enter strategic goal title"
         />
       </div>
 
@@ -148,7 +148,7 @@ export function GoalManagementForm({
           id="description"
           value={goal.description}
           onChange={(e) => setGoal({ ...goal, description: e.target.value })}
-          placeholder="Provide a detailed description of the goal"
+          placeholder="Provide a detailed description of the strategic goal"
         />
       </div>
 
@@ -218,7 +218,7 @@ export function GoalManagementForm({
       </div>
 
       <Button type="submit" className="w-full">
-        {initialGoal._id ? "Update Goal" : "Create Goal"}
+        {initialGoal._id ? "Update Strategic Goal" : "Create Strategic Goal"}
       </Button>
 
       {errors.length > 0 && (
