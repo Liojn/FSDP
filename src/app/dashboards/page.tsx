@@ -6,6 +6,7 @@ import { MetricCard } from '@/components/shared/metric-card'; //Cards component
 import CarbonEmissionChart from '@/app/dashboards/charts/carbonEmissionChart';
 import GaugeChartComponent  from "@/app/dashboards/charts/gaugeGoal"; //Porgress Gauge Chart
 import EmissionCategoryChart from '@/app/dashboards/charts/emissionCategory';
+import { PageHeader } from '@/components/shared/page-header';
 
 /* Define the props interface for BarChart
 interface BarChartProps {
@@ -178,7 +179,7 @@ const DashboardPage = () => {
     <div className="pt-0 p-4 space-y-6">
       {/* Dashboard Header */}
       <div className="pt-0 flex justify-between items-center mb-4">
-        <div className="text-2xl font-bold">Dashboard</div>
+        <PageHeader title='Dashboard' />
         <div> {/*Dropdown menu */}
         <span className="font-semibold">Year: </span>
         <select
