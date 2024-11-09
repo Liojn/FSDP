@@ -104,3 +104,28 @@ export const fetchEmissionTarget = async (companyId: string, year: number) => {
     return null; // You can return a default value if needed
   }
 };
+
+//Function to get drilldown of carbon emissions, hence returning the category json breakdown
+export const fetchEmissionCategory = async (companyId: string, year: number, month: number | string) => {
+  try {
+    //Fetch data from the API
+    const response = await fetch(`/api/dashboards/drilldownCat/${companyId}?year=${year}&month=${month}`,{
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+    // Check if the response is successful
+    if (!response.ok) {
+      throw new Error(`Error fetching data: ${response.statusText}`);
+    }
+
+    //Parse the response JSON
+    const data = await response.json();
+    return data;
+
+  } catch (error) {
+    console.error("Error fetching category breakdown for carbon emission:", error);
+    return null; // You can return a default value if needed
+  }
+};

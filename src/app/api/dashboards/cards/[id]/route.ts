@@ -24,7 +24,7 @@ const CalculateEnergy = (equipmentData: Equipment[]) => {
 
 //Method 2 for carbon emissions
 const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Livestock[], cropsData: Crop[], wasteData: Waste[], emissionData: EmissionsRate[]) =>{
-    let totalAvgCarbonEmission = 0;
+    let totalCarbonEmission = 0;
     //const monthlyEmissions: number[] = new Array(12).fill(0); //for bar chart monthly
 
     //Emission of one category
@@ -42,7 +42,7 @@ const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Lives
         //console.log(tempElect); //test code
     }
     console.log("Equipment: "+ tempElect);
-    totalAvgCarbonEmission += (tempElect / equipmentData.length);
+    totalCarbonEmission += tempElect 
 
     let tempAnimal = 0;
     for (const livestock of livestockData) {
@@ -53,7 +53,7 @@ const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Lives
         //console.log(tempAnimal); test code
     }
     console.log("LiveStock"+ tempAnimal);
-    totalAvgCarbonEmission += (tempAnimal / livestockData.length);
+    totalCarbonEmission += tempAnimal 
 
     let tempCrop = 0;
     for (const crop of cropsData) {
@@ -64,7 +64,7 @@ const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Lives
         //console.log(tempCrop); test code
     }
     //console.log("CROP"+ tempCrop);
-    totalAvgCarbonEmission += (tempCrop / cropsData.length);
+    totalCarbonEmission += tempCrop 
 
     let tempWaste = 0;
     for (const waste of wasteData) {
@@ -75,17 +75,19 @@ const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Lives
         //console.log(tempWaste);
     }
     //console.log("Waste"+ tempWaste);
-    totalAvgCarbonEmission += (tempWaste / wasteData.length);
+    totalCarbonEmission += tempWaste
 
-    return totalAvgCarbonEmission;
+    return totalCarbonEmission;
 }
 
 //Method 3, for net emission
 const CalculateNetEmission = (forestData: Forest[], carbonAvgValue: number , emissionData: EmissionsRate[] ) => {
     const yearlyAbsorb = forestData[0].totalAreaInHectares * emissionData[0].absorption_rate_per_year_kg;
-    const averageAbsorb = (yearlyAbsorb /12);
-    console.log(averageAbsorb); //test
-    return (carbonAvgValue - averageAbsorb); //net calculation
+    console.log(yearlyAbsorb); //test
+    if ((carbonAvgValue - yearlyAbsorb) < 0){
+        return 0;
+    }
+    return (carbonAvgValue - yearlyAbsorb); //net calculation
 }
  
 //encapsulate all collections
