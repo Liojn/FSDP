@@ -8,12 +8,17 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointEleme
 type CarbonEmissionChartProps = {
   monthlyEmissions: number[];
   averageAbsorbed: number | null;
+  onMonthClick: (month: string | number) => void; // Prop to handle month selection
+
 };
 
 //React.FC specify the type of props for a component
-const CarbonEmissionChart: React.FC<CarbonEmissionChartProps> = ({ monthlyEmissions, averageAbsorbed }) => {
+const EmissionCategoryChart: React.FC<CarbonEmissionChartProps> = ({ monthlyEmissions, averageAbsorbed, onMonthClick }) => {
 // Example data for monthly emissions and labels
   const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  //Track which bar was clicked
+  const [clickedIndex, setClickedIndex] = React.useState<number | null>(null);
 
   // Chart.js data object
   const data: ChartData<"bar" | "line", number[], string> = {
@@ -22,20 +27,25 @@ const CarbonEmissionChart: React.FC<CarbonEmissionChartProps> = ({ monthlyEmissi
       {
         label: 'Total Carbon Emission (kg CO2E)',
         data: monthlyEmissions, //Array of emissions per month
-        backgroundColor: 'rgba(192, 245, 143, 0.6)', //'rgba(75, 192, 192, 0.6)',
+        backgroundColor: monthlyEmissions.map((_, index) => {
+          if (index === clickedIndex) {
+            return 'rgba(143, 192, 75, 0.8)'; //darker shade
+          }
+          return 'rgba(192, 245, 143, 0.6)'; //original color
+        }),
         borderColor:  'rgba(180, 225, 125, 0/6)', //'rgba(75, 192, 192, 1)',
         borderWidth: 1,
         type : 'bar',
       },
-      {
-        label: 'Average Carbon Absorbed',
+      /*{ //Delete the straight line threshold for now
+        label: 'Total Carbon Absorbed',
         data: Array(12).fill(averageAbsorbed), //Creates a flat line across all months, threshold
         type: 'line', //specify the dataset as a line type
         borderColor: 'rgba(255, 99, 132, 1)',
         borderWidth: 2,
         fill: false,
         pointRadius: 0, //Hides the data points for the line
-      },
+      },*/
     ],
   };
 
@@ -46,18 +56,28 @@ const CarbonEmissionChart: React.FC<CarbonEmissionChartProps> = ({ monthlyEmissi
       legend: {
         position: 'top',
       },
-      title: {
-        display: true,
-        text: 'Monthly Carbon Emission and Average Absorption Line',
-      },
     },
     scales: {
       y: { beginAtZero: true, title: { display: true, text: 'kg CO2E',} },
       x: { title: { display: true, text: 'Month'} },
+    },
+    onClick: (event: any) => { //EVENT TRIGGER
+      const activePoints = event.chart.getElementsAtEventForMode(event.native, 'nearest', { intersect: true }, false);
+      if (activePoints.length > 0) {
+        const clickedMonthIndex = activePoints[0].index;
+        setClickedIndex(clickedMonthIndex); //store it
+        onMonthClick(clickedMonthIndex);
+        // Toggle the clicked bar color: if it's clicked again, reset
+        if (clickedIndex === clickedMonthIndex) {
+          setClickedIndex(null); // Reset if the same bar is clicked
+        } else {
+          setClickedIndex(clickedMonthIndex); // Set new clicked index
+        }
+      }
     },
   };
 
   return <Chart type="bar" data={data} options={options} />;
 };
 
-export default CarbonEmissionChart;
+export default EmissionCategoryChart;

@@ -1,46 +1,19 @@
 "use client"; //treat this component as a Client Component
 
 import React, { useState, useEffect } from 'react';
-import { fetchUniqueYears, getMetricsData, EmissionData, fetchMonthlyCarbonEmissions, fetchEmissionTarget } from '../api/dashboards/api';
+import { fetchUniqueYears, getMetricsData, EmissionData, fetchMonthlyCarbonEmissions, fetchEmissionTarget, fetchEmissionCategory } from '../api/dashboards/api';
 import { MetricCard } from '@/components/shared/metric-card'; //Cards component
 import CarbonEmissionChart from '@/app/dashboards/charts/carbonEmissionChart';
 import GaugeChartComponent  from "@/app/dashboards/charts/gaugeGoal"; //Porgress Gauge Chart
+import EmissionCategoryChart from '@/app/dashboards/charts/emissionCategory';
 
-
-// Define the props interface for BarChart
+/* Define the props interface for BarChart
 interface BarChartProps {
   monthlyEmissions: number[];
   averageAbsorbed: number | null;
-}
-//Components of the Bar Graph
-const BarChart: React.FC<BarChartProps> = ({ monthlyEmissions, averageAbsorbed }) => {
-  return (
-    <div className="bg-white-200 h-full flex justify-center items-center min-h-[350px]">
-        <CarbonEmissionChart monthlyEmissions={monthlyEmissions} averageAbsorbed={averageAbsorbed} />
-    </div>
-  );
-};
+  handleMonthClick: (month: string | number) => void; // Prop to handle month click
 
-
-const leaderboardData = [
-    { name: "EcoFarm", score: 95 },
-    { name: "EcoFarm", score: 95 },
-    { name: "EcoFarm", score: 95 },
-    { name: "EcoFarm", score: 95 },
-    { name: "EcoFarm", score: 95 },
-    { name: "EcoFarm", score: 95 },
-    { name: "EcoFarm", score: 95 }
-];
-
-
-/*const GaugeChart = () => (
-  <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"> 
-    <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Progress towards Goal</h3>
-    <div className="flex-1 flex flex-col">
-      <div className="bg-gray-300 flex-1 flex justify-center items-center pb-4">Your Graph Here</div>
-    </div>
-  </div>
-);*/
+}*/
 
   
 const DashboardPage = () => {
@@ -57,11 +30,15 @@ const DashboardPage = () => {
   const [previousYearEmissions, setPreviousYearEmissions] = useState<number | null>(0);
   const [targetGoal, setTargetGoal] = useState<number>(10000); //default first
 
+  // State for storing carbon emissions data for DONUT CHART
+  const [CategoryEmissionsData, setCategoryEmissionsData] = useState<any>(null); 
+  const [selectedMonth, setSelectedMonth] = useState<number | string>(''); // Track selected month
+
 
   const [metricsData, setMetricsData] = useState([ //var to store the data and display, initially predefined
-  { title: "Average Energy Consumption", value: "Loading...", unit: "kWh" },
-  { title: "Average Carbon Emissions", value: "Loading...", unit: "KG CO2" },
-  { title: "Average Net Emission", value: "Loading...", unit: "KG CO2" }
+  { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
+  { title: "Total Carbon Emissions", value: "Loading...", unit: "KG CO2" },
+  { title: "Total Net Emission", value: "Loading...", unit: "KG CO2" }
   ]);
 
   //Fetch the avail list of years from the API
@@ -91,22 +68,23 @@ const DashboardPage = () => {
       if (selectedYear) {
         try {
           const companyId = '671cf9a6e994afba6c2f332d';
-          if (yearOptions.includes(selectedYear - 1)) { //range already defined in my options list
+          if (yearOptions.includes(selectedYear - 1)) { //range already defined in my options list, this is particularly for gauge
               // If the previous year is available, fetch data for both the current and previous year
-              const [data, emissionsData, previousEmissionsData, targetGoal] = await Promise.all([
+              const [data, emissionsData, previousEmissionsData, targetGoal, emissionCategoryData] = await Promise.all([
                   getMetricsData(companyId, selectedYear),
                   fetchMonthlyCarbonEmissions(companyId, selectedYear),
                   fetchMonthlyCarbonEmissions(companyId, (selectedYear - 1)), // Fetch the emissions data for the previous year
                   fetchEmissionTarget(companyId, selectedYear),
+                  fetchEmissionCategory(companyId, selectedYear, selectedMonth),
                   console.log(selectedYear -1)
               ]);
 
               // Process data for both years
               if (data) {
                   setMetricsData([
-                      { title: "Average Energy Consumption", value: data["energyAverage in kWh"].toFixed(2), unit: "kWh" },
-                      { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
-                      { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
+                      { title: "Total Energy Consumption", value: data["energyAverage in kWh"].toFixed(2), unit: "kWh" },
+                      { title: "Total Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
+                      { title: "Total Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
                   ]);
               }
 
@@ -129,12 +107,17 @@ const DashboardPage = () => {
               if (targetGoal) {
                 setTargetGoal(targetGoal); //set value
               }
+              // Set emission category data (this will be used for charts)
+              if (emissionCategoryData) {
+                setCategoryEmissionsData(emissionCategoryData); // This is the data you need for the chart
+              }
           } else {
               //If the previous year is not available, fetch data only for the current year
-              const [data, emissionsData, targetGoal] = await Promise.all([
+              const [data, emissionsData, targetGoal, emissionCategoryData] = await Promise.all([
                   getMetricsData(companyId, selectedYear),
                   fetchMonthlyCarbonEmissions(companyId, selectedYear),
                   fetchEmissionTarget(companyId, selectedYear),
+                  fetchEmissionCategory(companyId, selectedYear, selectedMonth)
               ]);
 
               if (data) {
@@ -158,6 +141,10 @@ const DashboardPage = () => {
               if (targetGoal) {
                 setTargetGoal(targetGoal); //set value
               }
+              // Set emission category data (this will be used for charts)
+              if (emissionCategoryData) {
+                setCategoryEmissionsData(emissionCategoryData); // This is the data you need for the chart
+              }
           }
           
         } catch (error) {
@@ -167,14 +154,23 @@ const DashboardPage = () => {
     };
 
     fetchMetricsData();
-  }, [selectedYear]);
+  }, [selectedYear, selectedMonth]);
 
   //Handle year filter change
   const handleYearFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const year = parseInt(event.target.value, 10);
     setYearFilter(event.target.value); //retrieves the selected year, which is then stored in yearFilter
     setSelectedYear(year);
+    setSelectedMonth(''); //means all years
+  };
 
+  // Handler to toggle month selection
+  const handleMonthClick = (month: string | number) => {
+    if (selectedMonth === month) {
+      setSelectedMonth(''); // If clicked again, clear the selection
+    } else {
+      setSelectedMonth(month); // Set the selected month
+    }
   };
 
   
@@ -220,17 +216,19 @@ const DashboardPage = () => {
           {/* Bar Chart: */}
           <div className="bg-white p-4 shadow-md rounded-lg">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">
-              Analysis of Net Zero Emission's Progress
+              Yearly Carbon Emission's Progress
             </h3>
-              <BarChart monthlyEmissions={monthlyEmissions} averageAbsorbed={averageAbsorbed} />
+              <div className="bg-white-200 h-full flex justify-center items-center min-h-[350px]">
+                <CarbonEmissionChart monthlyEmissions={monthlyEmissions} averageAbsorbed={averageAbsorbed} onMonthClick={handleMonthClick} />
+              </div>
           </div>
         </div>
 
-        {/* Right Column: Leaderboard with Additional Graph */}
+        {/* Right Column: Goal target indicator and by category */}
         <div className="flex flex-col space-y-6 ">
           {/* Additional Gauge Graph */}
           <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"> 
-            <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Progress Towards Emission Limit</h3>
+            <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Net Emission Limit Indicator</h3>
             <div className="flex-1 flex flex-col">
               <div className="bg-white flex-1 flex justify-center items-center pb-4">
                 {currentYearEmissions !== null && targetGoal !== null && previousYearEmissions !== null ? ( //prevent early display and disappear the needle
@@ -246,23 +244,14 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Leaderboard */}
-          <div className="bg-white p-4 shadow-md rounded-lg">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-700">Leaderboard</h3>
-            <a href="#" className="text-blue-600 hover:text-blue-800 text-sm">View All</a>
+          {/* Emission Drilldown */}
+          <div className="bg-white p-4 shadow-md rounded-lg pb-0">
+          <div className="flex justify-between items-center mb-4 pb-0">
+            <h3 className="text-lg font-semibold text-gray-700 flex-shrink-0">Emissions By Category</h3>
           </div>
-            <ul className="space-y-4">
-              {leaderboardData.map((entry, index) => (
-                <li key={index} className="flex justify-between items-center">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
-                    <span className="font-medium text-gray-600">{entry.name}</span>
-                  </div>
-                  <span className="text-gray-600">Score: {entry.score}%</span>
-                </li>
-              ))}
-            </ul>
+            <EmissionCategoryChart 
+              categoryData={CategoryEmissionsData} month={selectedMonth}
+            />
           </div>
         </div>
       </div>
