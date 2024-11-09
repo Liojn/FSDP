@@ -19,6 +19,15 @@ export default function StrategicGoalManager() {
     fetchGoals();
   }, []);
 
+  useEffect(() => {
+    const fetchRealTimeUpdates = async () => {
+      const updates = await fetch("/api/realtime-updates");
+      const data = await updates.json();
+      setGoals(data.goals); // Update goals with real-time insights
+    };
+    fetchRealTimeUpdates();
+  }, []);
+
   const fetchGoals = async () => {
     try {
       const response = await fetch("/api/goals");

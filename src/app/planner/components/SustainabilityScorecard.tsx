@@ -123,7 +123,6 @@ const SustainabilityScorecard = () => {
           <TabsTrigger value="benchmarks">Benchmarking</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
         </TabsList>
-
         {/* Rest of the JSX remains exactly the same... */}
         <TabsContent value="overview">
           <Card className="p-6">
@@ -160,7 +159,6 @@ const SustainabilityScorecard = () => {
             </div>
           </Card>
         </TabsContent>
-
         <TabsContent value="analysis">
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4">Data Analysis</h3>
@@ -227,6 +225,13 @@ const SustainabilityScorecard = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="scenarios">
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Scenario Planning</h3>
+            <p>Simulate changes in goals to see projected impact on KPIs.</p>
+            {/* Scenario input forms and results display */}
+          </Card>
+        </TabsContent>
         <TabsContent value="benchmarks">
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4">Benchmarking</h3>
@@ -266,7 +271,6 @@ const SustainabilityScorecard = () => {
             </div>
           </Card>
         </TabsContent>
-
         <TabsContent value="insights">
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,6 +36,24 @@ export function GoalManagementForm({
   });
 
   const [errors, setErrors] = useState<string[]>([]);
+
+  const recommendGoalBenchmarks = useCallback(async () => {
+    const recommendations = await fetch("/api/ai-recommendations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentGoal: goal }),
+    });
+    const data = await recommendations.json();
+    setGoal((prevGoal) => ({
+      ...prevGoal,
+      targetDate: data.targetDate,
+      progress: data.suggestedProgress,
+    }));
+  }, [goal]);
+
+  useEffect(() => {
+    recommendGoalBenchmarks(); // Trigger recommendations on load or on goal change
+  }, [goal, recommendGoalBenchmarks]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
