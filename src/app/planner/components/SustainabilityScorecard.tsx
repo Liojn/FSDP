@@ -1,369 +1,97 @@
-// Updated SustainabilityScorecard to focus on strategic metrics, historical analysis, and benchmarking
-
 "use client";
 
-import React, { useState } from "react";
-import { Progress } from "@/components/ui/progress";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { ChevronDown } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import type { DepartmentBenchmark } from "@/types/strategic";
 
-interface KPI {
-  name: string;
-  current: number;
-  target: number;
-  unit: string;
-  progress: number;
-  trend: "up" | "down";
-  description: string;
+interface SustainabilityScorecardProps {
+  data: DepartmentBenchmark;
 }
 
-interface Goal {
-  title: string;
-  description: string;
-  target: number;
-  current: number;
-  dueDate: string;
-  status: "not-started" | "in-progress" | "completed";
-  assignee: string;
-  progress: number;
-}
+export function SustainabilityScorecard({ data }: SustainabilityScorecardProps) {
+  const getPerformanceStatus = (value: number, target: number) => {
+    const ratio = value / target;
+    if (ratio >= 1) return "Excellent";
+    if (ratio >= 0.8) return "Good";
+    if (ratio >= 0.6) return "Fair";
+    return "Needs Improvement";
+  };
 
-interface Recommendation {
-  title: string;
-  description: string;
-  impact: string;
-  difficulty: "Easy" | "Medium" | "Hard";
-  roi: string;
-  priority: "High" | "Medium" | "Low";
-  status: "new" | "accepted" | "deferred" | "dismissed";
-}
-
-const SustainabilityScorecard = () => {
-  const [activeView, setActiveView] = useState("overview");
-
-  const kpis: KPI[] = [
-    {
-      name: "Energy Efficiency",
-      current: 75,
-      target: 100,
-      unit: "kWh/unit",
-      progress: 75,
-      trend: "up",
-      description: "Overall energy efficiency across operations",
-    },
-    {
-      name: "Waste Reduction",
-      current: 60,
-      target: 80,
-      unit: "kg/month",
-      progress: 75,
-      trend: "down",
-      description: "Total waste generated per month",
-    },
-    {
-      name: "Emissions Intensity",
-      current: 45,
-      target: 50,
-      unit: "CO2e/unit",
-      progress: 90,
-      trend: "down",
-      description: "Carbon emissions per unit of production",
-    },
-  ];
-
-  const goals: Goal[] = [
-    {
-      title: "Solar Panel Installation",
-      description: "Install solar panels to reduce energy consumption",
-      target: 100,
-      current: 60,
-      dueDate: "2024-12-31",
-      status: "in-progress",
-      assignee: "Energy Team",
-      progress: 60,
-    },
-    {
-      title: "Zero Waste Program",
-      description: "Implement comprehensive recycling system",
-      target: 100,
-      current: 30,
-      dueDate: "2024-09-30",
-      status: "not-started",
-      assignee: "Facilities Team",
-      progress: 30,
-    },
-  ];
-
-  const recommendations: Recommendation[] = [
-    {
-      title: "Energy Efficiency Upgrade",
-      description: "Upgrade to LED lighting across all facilities",
-      impact: "Reduce energy consumption by 15%",
-      difficulty: "Easy",
-      roi: "24 months",
-      priority: "High",
-      status: "new",
-    },
-    {
-      title: "Waste Reduction Program",
-      description: "Implement recycling program in all departments",
-      impact: "Reduce waste by 30%",
-      difficulty: "Medium",
-      roi: "14 months",
-      priority: "Medium",
-      status: "accepted",
-    },
-  ];
-
-  const renderContent = () => {
-    switch (activeView) {
-      case "overview":
-        return (
-          <div className="">
-            <h3 className="text-lg font-semibold mb-4">Performance Overview</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {kpis.map((kpi, index) => (
-                <div key={index} className="p-4 rounded-lg shadow bg-gray-50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-medium text-gray-900">{kpi.name}</h4>
-                      <p className="text-sm text-gray-500">{kpi.description}</p>
-                    </div>
-                    <span
-                      className={`text-sm ${
-                        kpi.trend === "up" ? "text-green-500" : "text-red-500"
-                      }`}
-                    >
-                      {kpi.trend === "up" ? "↑" : "↓"}
-                    </span>
-                  </div>
-                  <div className="mt-2">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>
-                        {kpi.current} {kpi.unit}
-                      </span>
-                      <span className="text-gray-500">
-                        Target: {kpi.target} {kpi.unit}
-                      </span>
-                    </div>
-                    <Progress value={kpi.progress} className="h-2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case "analysis":
-        return (
-          <div className="">
-            <h3 className="text-lg font-semibold mb-4">Data Analysis</h3>
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Historical Trends</h4>
-                <div className="h-64 bg-white rounded-lg border p-4">
-                  <p className="text-gray-500">
-                    Time-series charts will be displayed here
-                  </p>
-                </div>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Comparative Analysis</h4>
-                <div className="h-64 bg-white rounded-lg border p-4">
-                  <p className="text-gray-500">
-                    Comparison charts will be displayed here
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case "planning":
-        return (
-          <div className="">
-            <h3 className="text-lg font-semibold mb-4">Strategic Planning</h3>
-            <div className="space-y-6">
-              {goals.map((goal, index) => (
-                <div key={index} className="p-4 rounded-lg shadow bg-gray-50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-medium">{goal.title}</h4>
-                      <p className="text-sm text-gray-500">{goal.description}</p>
-                    </div>
-                    <span
-                      className={`text-sm px-2 py-1 rounded-full ${
-                        goal.status === "completed"
-                          ? "bg-green-100 text-green-800"
-                          : goal.status === "in-progress"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {goal.status}
-                    </span>
-                  </div>
-                  <div className="mt-2">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Progress: {goal.current}%</span>
-                      <span>Due: {goal.dueDate}</span>
-                    </div>
-                    <Progress value={goal.progress} className="h-2" />
-                  </div>
-                  <div className="mt-2 text-sm text-gray-500">
-                    Assigned to: {goal.assignee}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      case "benchmarks":
-        return (
-          <div className="">
-            <h3 className="text-lg font-semibold mb-4">Benchmarking</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">
-                  Department Comparison
-                </h4>
-                <div className="space-y-4">
-                  {kpis.map((kpi, index) => (
-                    <div key={index} className="p-3 rounded shadow bg-white">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium">{kpi.name}</span>
-                        <span className="text-sm text-gray-500">
-                          Your rank: 2/5
-                        </span>
-                      </div>
-                      <Progress value={75} className="h-2" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Industry Benchmarks</h4>
-                <div className="space-y-4">
-                  {kpis.map((kpi, index) => (
-                    <div key={index} className="p-3 rounded shadow bg-white">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium">{kpi.name}</span>
-                        <span className="text-sm text-gray-500">
-                          Industry avg: {kpi.target} {kpi.unit}
-                        </span>
-                      </div>
-                      <Progress value={85} className="h-2" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case "insights":
-        return (
-          <div className="">
-            <h3 className="text-lg font-semibold mb-4">
-              Insights and Recommendations
-            </h3>
-            <div className="space-y-4">
-              {recommendations.map((rec, index) => (
-                <div key={index} className="p-4 rounded-lg shadow bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-medium">{rec.title}</h4>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {rec.description}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-sm px-2 py-1 rounded-full ${
-                        rec.priority === "High"
-                          ? "bg-red-100 text-red-800"
-                          : rec.priority === "Medium"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
-                    >
-                      {rec.priority} Priority
-                    </span>
-                  </div>
-                  <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Impact:</span>
-                      <p>{rec.impact}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Difficulty:</span>
-                      <p>{rec.difficulty}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">ROI:</span>
-                      <p>{rec.roi}</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex justify-end space-x-2">
-                    <button className="px-3 py-1 text-sm bg-green-50 text-green-700 rounded hover:bg-green-100">
-                      Accept
-                    </button>
-                    <button className="px-3 py-1 text-sm bg-gray-50 text-gray-700 rounded hover:bg-gray-100">
-                      Defer
-                    </button>
-                    <button className="px-3 py-1 text-sm bg-red-50 text-red-700 rounded hover:bg-red-100">
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Excellent":
+        return "bg-green-100 text-green-800";
+      case "Good":
+        return "bg-blue-100 text-blue-800";
+      case "Fair":
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return null;
+        return "bg-red-100 text-red-800";
     }
   };
 
   return (
-    <div className="w-full space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-48 flex items-center justify-between">
-              {activeView.charAt(0).toUpperCase() + activeView.slice(1)}
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => setActiveView("overview")}>
-              Overview
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setActiveView("analysis")}>
-              Data Analysis
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setActiveView("planning")}>
-              Strategic Planning
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setActiveView("benchmarks")}>
-              Benchmarking
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setActiveView("insights")}>
-              Insights
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      {renderContent()}
+    <div className="space-y-6">
+      <Card className="p-4">
+        <h3 className="text-lg font-medium mb-4">Department Performance</h3>
+        <div className="space-y-4">
+          {data.metrics.map((metric) => {
+            const status = getPerformanceStatus(metric.value, metric.target);
+            return (
+              <div key={metric.id} className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">{metric.name}</span>
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
+                      status
+                    )}`}
+                  >
+                    {status}
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full">
+                  <div
+                    className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                    style={{ width: `${(metric.value / metric.target) * 100}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Current: {metric.value} {metric.unit}</span>
+                  <span>Target: {metric.target} {metric.unit}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className="p-4">
+        <h3 className="text-lg font-medium mb-4">Industry Comparison</h3>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+            <span>Industry Average</span>
+            <span className="font-medium">{data.industryAverage}</span>
+          </div>
+          <div className="flex justify-between items-center p-2 bg-blue-50 rounded">
+            <span>Top Performer</span>
+            <span className="font-medium">{data.topPerformer}</span>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="p-4">
+        <h3 className="text-lg font-medium mb-4">Recommendations</h3>
+        <ul className="space-y-2">
+          {data.recommendations.map((recommendation, index) => (
+            <li
+              key={index}
+              className="flex items-start space-x-2 text-sm text-gray-600"
+            >
+              <span className="mt-1 block h-1.5 w-1.5 rounded-full bg-blue-600" />
+              <span>{recommendation}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
     </div>
   );
-};
-
-export default SustainabilityScorecard;
+}

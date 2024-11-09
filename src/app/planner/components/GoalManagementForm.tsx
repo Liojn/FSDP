@@ -1,233 +1,149 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { validateGoal } from "@/lib/validation";
-import { StrategicGoal } from "@/app/api/goals/route";
-import { useToast } from "@/hooks/use-toast";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { StrategicGoal } from "@/types/strategic";
 
 interface GoalManagementFormProps {
-  onGoalCreated?: (goal: StrategicGoal) => void;
   initialGoal?: Partial<StrategicGoal>;
+  onGoalCreated: (goal: StrategicGoal) => void;
+  onCancel: () => void;
 }
 
 export function GoalManagementForm({
+  initialGoal,
   onGoalCreated,
-  initialGoal = {},
+  onCancel,
 }: GoalManagementFormProps) {
-  const { toast } = useToast();
-  const [goal, setGoal] = useState<Partial<StrategicGoal>>({
-    title: initialGoal.title || "",
-    description: initialGoal.description || "",
-    department: initialGoal.department || "",
-    targetDate: initialGoal.targetDate || "",
-    progress: initialGoal.progress ?? 0,
-    status: initialGoal.status || "Not Started",
+  const [formData, setFormData] = useState<Partial<StrategicGoal>>({
+    title: "",
+    description: "",
+    department: "",
+    status: "Not Started",
+    progress: 0,
+    targetDate: "",
+    metrics: [],
+    ...initialGoal,
   });
 
-  const [errors, setErrors] = useState<string[]>([]);
-
-  const recommendGoalBenchmarks = useCallback(async () => {
-    const recommendations = await fetch("/api/ai-recommendations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentGoal: goal }),
-    });
-    const data = await recommendations.json();
-    setGoal((prevGoal) => ({
-      ...prevGoal,
-      targetDate: data.targetDate,
-      progress: data.suggestedProgress,
-    }));
-  }, [goal]);
-
-  useEffect(() => {
-    recommendGoalBenchmarks(); // Trigger recommendations on load or on goal change
-  }, [goal, recommendGoalBenchmarks]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const newGoal: StrategicGoal = {
+      id: initialGoal?.id || Date.now().toString(),
+      title: formData.title || "",
+      description: formData.description || "",
+      department: formData.department || "",
+      status: formData.status as StrategicGoal["status"] || "Not Started",
+      progress: formData.progress || 0,
+      targetDate: formData.targetDate || new Date().toISOString(),
+      metrics: formData.metrics || []
+    };
 
-    // Validate the goal
-    const validationResult = validateGoal(goal);
+    onGoalCreated(newGoal);
+  };
 
-    if (!validationResult.isValid) {
-      setErrors(validationResult.errors);
-      toast({
-        title: "Validation Error",
-        description: validationResult.errors.join(", "),
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Determine if we're creating or updating
-      const endpoint = initialGoal._id
-        ? `/api/goals?id=${initialGoal._id}`
-        : "/api/goals";
-
-      const method = initialGoal._id ? "PUT" : "POST";
-
-      const response = await fetch(endpoint, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(goal),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save goal");
-      }
-
-      const savedGoal = await response.json();
-
-      toast({
-        title: "Goal Saved",
-        description: `Strategic Goal "${savedGoal.title}" has been successfully ${
-          method === "POST" ? "created" : "updated"
-        }`,
-        variant: "default",
-      });
-
-      // Reset form or call callback
-      if (onGoalCreated) {
-        onGoalCreated(savedGoal);
-      }
-
-      // Reset form
-      setGoal({
-        title: "",
-        description: "",
-        department: "",
-        targetDate: "",
-        progress: 0,
-        status: "Not Started",
-      });
-      setErrors([]);
-    } catch (error) {
-      console.error("Error saving goal:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
+  const handleChange = (
+    field: keyof StrategicGoal,
+    value: string | number | string[]
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="title">Strategic Goal Title</Label>
+        <label className="block text-sm font-medium mb-1">Title</label>
         <Input
-          id="title"
-          value={goal.title}
-          onChange={(e) => setGoal({ ...goal, title: e.target.value })}
-          placeholder="Enter strategic goal title"
+          value={formData.title || ""}
+          onChange={(e) => handleChange("title", e.target.value)}
+          placeholder="Enter goal title"
+          required
         />
       </div>
 
       <div>
-        <Label htmlFor="description">Description</Label>
+        <label className="block text-sm font-medium mb-1">Description</label>
         <Textarea
-          id="description"
-          value={goal.description}
-          onChange={(e) => setGoal({ ...goal, description: e.target.value })}
-          placeholder="Provide a detailed description of the strategic goal"
+          value={formData.description || ""}
+          onChange={(e) => handleChange("description", e.target.value)}
+          placeholder="Enter goal description"
+          required
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="department">Department</Label>
-          <Select
-            value={goal.department}
-            onValueChange={(value) => setGoal({ ...goal, department: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Department" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Sustainability">Sustainability</SelectItem>
-              <SelectItem value="Operations">Operations</SelectItem>
-              <SelectItem value="Facilities">Facilities</SelectItem>
-              <SelectItem value="Energy">Energy</SelectItem>
-              <SelectItem value="Finance">Finance</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="status">Status</Label>
-          <Select
-            value={goal.status}
-            onValueChange={(value) => setGoal({ ...goal, status: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Not Started">Not Started</SelectItem>
-              <SelectItem value="In Progress">In Progress</SelectItem>
-              <SelectItem value="Completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">Department</label>
+        <Select
+          value={formData.department}
+          onValueChange={(value) => handleChange("department", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select department" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Operations">Operations</SelectItem>
+            <SelectItem value="Facilities">Facilities</SelectItem>
+            <SelectItem value="Supply Chain">Supply Chain</SelectItem>
+            <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="targetDate">Target Date</Label>
-          <Input
-            id="targetDate"
-            type="date"
-            value={goal.targetDate}
-            onChange={(e) => setGoal({ ...goal, targetDate: e.target.value })}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="progress">Progress (%)</Label>
-          <Input
-            id="progress"
-            type="number"
-            min="0"
-            max="100"
-            value={goal.progress}
-            onChange={(e) =>
-              setGoal({ ...goal, progress: Number(e.target.value) })
-            }
-            placeholder="Enter progress percentage"
-          />
-        </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">Status</label>
+        <Select
+          value={formData.status}
+          onValueChange={(value) => handleChange("status", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Not Started">Not Started</SelectItem>
+            <SelectItem value="In Progress">In Progress</SelectItem>
+            <SelectItem value="Completed">Completed</SelectItem>
+            <SelectItem value="At Risk">At Risk</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <Button type="submit" className="w-full">
-        {initialGoal._id ? "Update Strategic Goal" : "Create Strategic Goal"}
-      </Button>
+      <div>
+        <label className="block text-sm font-medium mb-1">Progress (%)</label>
+        <Input
+          type="number"
+          min="0"
+          max="100"
+          value={formData.progress || 0}
+          onChange={(e) => handleChange("progress", parseInt(e.target.value, 10))}
+          required
+        />
+      </div>
 
-      {errors.length > 0 && (
-        <div className="text-red-500 text-sm mt-2">
-          {errors.map((error, index) => (
-            <p key={index}>{error}</p>
-          ))}
-        </div>
-      )}
+      <div>
+        <label className="block text-sm font-medium mb-1">Target Date</label>
+        <Input
+          type="date"
+          value={formData.targetDate ? new Date(formData.targetDate).toISOString().split('T')[0] : ""}
+          onChange={(e) => handleChange("targetDate", new Date(e.target.value).toISOString())}
+          required
+        />
+      </div>
+
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">
+          {initialGoal ? "Update Goal" : "Create Goal"}
+        </Button>
+      </div>
     </form>
   );
 }
