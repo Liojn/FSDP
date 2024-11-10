@@ -74,7 +74,7 @@ const DashboardPage = () => {
               const [data, emissionsData, previousEmissionsData, targetGoal, emissionCategoryData] = await Promise.all([
                   getMetricsData(companyId, selectedYear),
                   fetchMonthlyCarbonEmissions(companyId, selectedYear),
-                  fetchMonthlyCarbonEmissions(companyId, (selectedYear - 1)), // Fetch the emissions data for the previous year
+                  getMetricsData(companyId, (selectedYear - 1)), // Fetch the emissions data for the previous year, use the net emission from the cards
                   fetchEmissionTarget(companyId, selectedYear),
                   fetchEmissionCategory(companyId, selectedYear, selectedMonth),
                   console.log(selectedYear -1)
@@ -87,22 +87,16 @@ const DashboardPage = () => {
                       { title: "Total Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
                       { title: "Total Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
                   ]);
+                  setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
               }
 
               if (emissionsData) {
                   setMonthlyEmissions(emissionsData.monthlyEmissions); // Set the monthly emissions data for the current year
                   setAverageAbsorbed(emissionsData.averageAbsorb); // Set the average absorbed value for the current year
-                  const sum = emissionsData.monthlyEmissions.reduce((accumulator, currentValue) => {
-                    return accumulator + currentValue;
-                  }, 0);
-                  setCurrentYearEmissions(sum); //give the current year admission
               }
 
               if (previousEmissionsData){
-                const sum = previousEmissionsData.monthlyEmissions.reduce((accumulator, currentValue) => {
-                  return accumulator + currentValue;
-                }, 0);
-                setPreviousYearEmissions(sum); //give the prev year emission
+                setPreviousYearEmissions(previousEmissionsData["netAverage in CO2E"]); //give the prev year emission
               }
 
               if (targetGoal) {
@@ -127,15 +121,12 @@ const DashboardPage = () => {
                       { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
                       { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
                   ]);
+                  setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
               }
 
               if (emissionsData) {
                   setMonthlyEmissions(emissionsData.monthlyEmissions); // Set the monthly emissions data
                   setAverageAbsorbed(emissionsData.averageAbsorb); // Set the average absorbed value
-                  const sum = emissionsData.monthlyEmissions.reduce((accumulator, currentValue) => {
-                    return accumulator + currentValue;
-                  }, 0);
-                  setCurrentYearEmissions(sum); //give the current year admission
               }
               setPreviousYearEmissions(0); //no data for comparison
 
@@ -250,9 +241,11 @@ const DashboardPage = () => {
           <div className="flex justify-between items-center mb-4 pb-0">
             <h3 className="text-lg font-semibold text-gray-700 flex-shrink-0">Emissions By Category</h3>
           </div>
+          <div className='flex-1 flex justify-center items-center'>
             <EmissionCategoryChart 
               categoryData={CategoryEmissionsData} month={selectedMonth}
             />
+          </div>
           </div>
         </div>
       </div>

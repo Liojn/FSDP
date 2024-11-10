@@ -65,17 +65,17 @@ const EmissionCategoryChart: React.FC<EmissionsChartProps> = ({
             const emission = tooltipItem.raw || 0; // Tooltip value (emission value)
 
              // Ensure emission is a number before calculation
-            const emissionValue = Number(emission); // Convert to number if needed
+            const emissionValue = Number(emission).toFixed(0); // Convert to number if needed
 
             // Calculate percentage for the current category
-            const percentage = totalEmission > 0 ? ((emissionValue / totalEmission) * 100).toFixed(0) : '0.00';
+            //const percentage = totalEmission > 0 ? ((emissionValue / totalEmission) * 100).toFixed(0) : '0.00';
 
             // Only show additional info if the month is selected (not null or empty)
             const additionalInfo = month
               ? `Details:\n${getCategoryDetails(category)}`
               : '';
 
-            return `${percentage}% ${additionalInfo}`;
+            return `${emissionValue}kg CO2E ${additionalInfo}`;
           },
         },
         // Customize the appearance of the tooltip
@@ -105,15 +105,15 @@ const EmissionCategoryChart: React.FC<EmissionsChartProps> = ({
     const details = categoryInfo.details;
     switch (category.toLowerCase()) {
       case 'fuel':
-        return `Fuel Type: ${details.fuelType}, Amount Used: ${details.amountUsed.toFixed(1)}`;
+        return `Type: ${details.fuelType}, Amount Used: ${details.amountUsed.toFixed(1)}`;
       case 'electricity':
         return `Amount Used: ${details.amountUsed.toFixed(1)} kWh`;
       case 'crops':
-        return `Crop Type: ${details.cropType}, Fertilizer Used: ${details.fertilizerUsed.toFixed(1)} kg`;
+        return `Type: ${details.cropType}, Fertilizer Used: ${details.fertilizerUsed.toFixed(1)} kg`;
       case 'waste':
-        return `Waste Type: ${details.wasteType}, Amount: ${details.amount.toFixed(1)} kg`;
+        return `Type: ${details.wasteType}, Amount: ${details.amount.toFixed(1)} kg`;
       case 'livestock':
-        return `Animal Type: ${details.animalType}, Amount: ${details.amount.toFixed(1)} units`;
+        return `Type: ${details.animalType}, Amount: ${details.amount.toFixed(1)} units`;
       default:
         return 'No additional details available';
     }
