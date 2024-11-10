@@ -9,11 +9,13 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 interface EmissionsChartProps {
   categoryData: any; // The category data passed from the parent
   month: number | string; // The selected month (if not selected, it will be null or undefined)
+  onCategoryClick: (category: string, details: string) => void;
 }
 
 const EmissionCategoryChart: React.FC<EmissionsChartProps> = ({
   categoryData,
   month,
+  onCategoryClick,
 }) => {
   // If the data is null or undefined, render loading state
   if (!categoryData) {
@@ -91,6 +93,14 @@ const EmissionCategoryChart: React.FC<EmissionsChartProps> = ({
         // Customize how tooltips are positioned (left, right, top, bottom)
         position: 'nearest',
       },
+    },
+    onClick: (event, elements) => {
+      if (elements.length > 0) {
+        const index = elements[0].index;
+        const category = data.labels ? (data.labels[index] as string) : '';
+        const details = getCategoryDetails(category);
+        onCategoryClick(category, details); // Pass the category and details to the parent
+      }
     },
   };
 
