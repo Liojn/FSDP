@@ -29,11 +29,11 @@ const EmissionCategoryChart: React.FC<CarbonEmissionChartProps> = ({ monthlyEmis
         data: monthlyEmissions, //Array of emissions per month
         backgroundColor: monthlyEmissions.map((_, index) => {
           if (index === clickedIndex) {
-            return 'rgba(143, 192, 75, 0.8)'; //darker shade
+            return '#4BA387'; //darker shade
           }
-          return 'rgba(192, 245, 143, 0.6)'; //original color
+          return '#66CDAA' //'rgba(192, 245, 143, 0.6)'; //original color
         }),
-        borderColor:  'rgba(180, 225, 125, 0/6)', //'rgba(75, 192, 192, 1)',
+        borderColor: '#55B698', //'rgba(180, 225, 125, 0/6)',
         borderWidth: 1,
         type : 'bar',
       },
