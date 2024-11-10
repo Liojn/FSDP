@@ -2,8 +2,39 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
-const AchievementCard = ({ achievement }) => (
+interface Achievement {
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  progress: number;
+  isUnlocked: boolean;
+  dateUnlocked: string | null;
+  badge_id: string; // Added for deduplication
+}
+
+interface AchievementsData {
+  userBadges: {
+    _id: string;
+    user_id: string;
+    badge_id: string;
+    progress: number;
+    isUnlocked: boolean;
+    dateUnlocked: string | null;
+  }[];
+  collections: {
+    EmissionRates: any[];
+    Equipment: any[];
+    Crops: any[];
+    Livestock: any[];
+    Waste: any[];
+    Forest: any[];
+  };
+}
+
+const AchievementCard = ({ achievement }: { achievement: Achievement }) => (
   <Card className={`relative p-6 rounded-xl border ${
     achievement.isUnlocked 
       ? 'bg-white border-lime-400' 
@@ -11,12 +42,11 @@ const AchievementCard = ({ achievement }) => (
   }`}>
     <div className="flex items-center justify-between mb-4">
       <div className="w-12 h-12 rounded-full bg-lime-300 flex items-center justify-center">
-        {/* Default icon placeholder */}
         <div className="w-6 h-6 bg-lime-600 rounded-full"></div>
       </div>
       {achievement.isUnlocked && (
         <span className="text-xs font-medium text-lime-600">
-          Unlocked {new Date(achievement.dateUnlocked).toLocaleDateString()}
+          Unlocked {new Date(achievement.dateUnlocked!).toLocaleDateString()}
         </span>
       )}
     </div>
@@ -52,56 +82,91 @@ const AchievementCard = ({ achievement }) => (
 );
 
 const AchievementsPage = () => {
-  const [achievements, setAchievements] = useState([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [filter, setFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+  const [lastCalculated, setLastCalculated] = useState<Date | null>(null);
 
+  const FETCH_INTERVAL = 10000; // 10 seconds
+  const CALCULATION_INTERVAL = 300000; // 5 minutes
+  
   const categories = ["ALL", "Energy", "Waste", "Carbon", "Equipment", "Crop", "Livestock"];
 
-  const fetchAndCombineData = async () => {
+  const calculateBadges = async () => {
     try {
-      setLoading(true);
       const userId = localStorage.getItem("userId");
       
       if (!userId) {
         throw new Error("No user ID found in local storage");
       }
 
-      // Fetch all badges first
-      const badgesResponse = await fetch('/api/badges');
-      if (!badgesResponse.ok) {
-        throw new Error(`HTTP error fetching badges! status: ${badgesResponse.status}`);
-      }
-      const badgesData = await badgesResponse.json();
-
-      // Fetch user's achievement progress
-      const achievementsResponse = await fetch(`/api/badges/achivements/${userId}`);
-      if (!achievementsResponse.ok) {
-        throw new Error(`HTTP error fetching achievements! status: ${achievementsResponse.status}`);
-      }
-      const achievementsData = await achievementsResponse.json();
-
-      // Combine the data
-      const combinedAchievements = achievementsData.map(achievement => {
-        // Find the corresponding badge details
-        const badgeDetails = badgesData.find(badge => 
-          badge._id.toString() === achievement.badge_id.toString()
-        );
-        
-        return {
-          ...achievement,
-          title: badgeDetails?.title || 'Unknown Badge',
-          description: badgeDetails?.description || 'No description available',
-          category: badgeDetails?.category || 'Uncategorized',
-          progress: achievement.progress || 0,
-          isUnlocked: achievement.isUnlocked || false,
-          dateUnlocked: achievement.dateUnlocked || null
-        };
+      const response = await fetch('/api/badges/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
       });
 
-      setAchievements(combinedAchievements);
-    } catch (err) {
+      if (!response.ok) {
+        throw new Error(`Failed to calculate badges: ${response.statusText}`);
+      }
+
+      setLastCalculated(new Date());
+    } catch (err: any) {
+      console.error("Error calculating badges:", err);
+      setError(err.message);
+    }
+  };
+
+  const fetchAndCombineData = async () => {
+    try {
+      const userId = localStorage.getItem("userId");
+      
+      if (!userId) {
+        throw new Error("No user ID found in local storage");
+      }
+
+      const [badgesResponse, achievementsResponse] = await Promise.all([
+        fetch('/api/badges'),
+        fetch(`/api/badges/achivements/${userId}`)
+      ]);
+
+      if (!badgesResponse.ok || !achievementsResponse.ok) {
+        throw new Error("Failed to fetch data");
+      }
+
+      const [badgesData, achievementsData] = await Promise.all([
+        badgesResponse.json(),
+        achievementsResponse.json()
+      ]);
+
+      // Create a Map to store unique badges by badge_id
+      const badgeMap = new Map();
+
+      achievementsData.userBadges.forEach((userBadge: any) => {
+        const badgeDetails = badgesData.find((badge: any) => badge._id === userBadge.badge_id);
+        
+        if (badgeDetails && !badgeMap.has(userBadge.badge_id)) {
+          badgeMap.set(userBadge.badge_id, {
+            ...userBadge,
+            title: badgeDetails.title || 'Unknown Badge',
+            description: badgeDetails.description || 'No description available',
+            category: badgeDetails.category || 'Uncategorized',
+            progress: userBadge.progress || 0,
+            isUnlocked: userBadge.isUnlocked || false,
+            dateUnlocked: userBadge.dateUnlocked || null
+          });
+        }
+      });
+
+      // Convert Map values back to array
+      const uniqueAchievements = Array.from(badgeMap.values());
+      
+      setAchievements(uniqueAchievements);
+      setError(null);
+    } catch (err: any) {
       console.error("Error fetching data:", err);
       setError(err.message);
     } finally {
@@ -110,7 +175,23 @@ const AchievementsPage = () => {
   };
 
   useEffect(() => {
-    fetchAndCombineData();
+    // Initial fetch and calculate
+    const init = async () => {
+      await calculateBadges();
+      await fetchAndCombineData();
+    };
+    init();
+
+    // Set up periodic fetching
+    const fetchInterval = setInterval(fetchAndCombineData, FETCH_INTERVAL);
+    
+    // Set up periodic calculation
+    const calculationInterval = setInterval(calculateBadges, CALCULATION_INTERVAL);
+
+    return () => {
+      clearInterval(fetchInterval);
+      clearInterval(calculationInterval);
+    };
   }, []);
 
   const filteredAchievements = achievements.filter(
@@ -135,51 +216,50 @@ const AchievementsPage = () => {
 
   return (
     <div className="p-4 h-screen flex flex-col space-y-6">
-      {/* Header Section */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-lime-900">Achievements</h2>
-        <div className="flex items-center space-x-2">
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="bg-white border border-lime-500 rounded-md p-2 text-lime-700"
-          >
-            {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
+        <div>
+          <h2 className="text-2xl font-bold text-lime-900">Achievements</h2>
+          {lastCalculated && (
+            <p className="text-sm text-gray-500">
+              Last calculated: {lastCalculated.toLocaleTimeString()}
+            </p>
+          )}
         </div>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="bg-white border border-lime-500 rounded-md p-2 text-lime-700"
+        >
+          {categories.map(category => (
+            <option key={category} value={category}>{category}</option>
+          ))}
+        </select>
       </div>
 
-      {/* Stats Summary */}
       <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Total Badges", value: achievements.length },
-          { label: "Unlocked", value: achievements.filter(a => a.isUnlocked).length },
-          { label: "In Progress", value: achievements.filter(a => !a.isUnlocked).length }
-        ].map((stat, index) => (
-          <div key={index} className="bg-white p-4 rounded-lg border border-lime-200">
-            <div className="text-sm text-lime-600">{stat.label}</div>
-            <div className="text-2xl font-bold text-lime-900">{stat.value}</div>
-          </div>
-        ))}
+        {[{
+            label: "Total Badges", 
+            value: achievements.length
+          }, {
+            label: "Unlocked", 
+            value: achievements.filter(a => a.isUnlocked).length
+          }, {
+            label: "In Progress", 
+            value: achievements.filter(a => !a.isUnlocked).length
+          }].map((stat, index) => (
+            <div key={index} className="bg-white p-4 rounded-lg border border-lime-200">
+              <div className="text-sm text-lime-600">{stat.label}</div>
+              <div className="text-2xl font-bold text-lime-900">{stat.value}</div>
+            </div>
+          ))
+        }
       </div>
 
-      {/* Achievements Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto pb-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredAchievements.map(achievement => (
-          <AchievementCard 
-            key={achievement._id} 
-            achievement={achievement} 
-          />
+          <AchievementCard key={achievement._id} achievement={achievement} />
         ))}
       </div>
-
-      {filteredAchievements.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No achievements found for this category.</p>
-        </div>
-      )}
     </div>
   );
 };
