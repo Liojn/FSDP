@@ -88,7 +88,7 @@ const DashboardPage = () => {
     const fetchMetricsData = async () => {
       if (selectedYear) {
         try {
-          const companyId = '671cf9a6e994afba6c2f332d';
+          const companyId = localStorage.getItem("userId") || ''; //'671cf9a6e994afba6c2f332d';
           if (yearOptions.includes(selectedYear - 1)) { //range already defined in my options list, this is particularly for gauge
               // If the previous year is available, fetch data for both the current and previous year
               const [data, emissionsData, previousEmissionsData, targetGoal, emissionCategoryData] = await Promise.all([
@@ -103,9 +103,9 @@ const DashboardPage = () => {
               // Process data for both years
               if (data) {
                   setMetricsData([
-                      { title: "Total Energy Consumption", value: data["energyAverage in kWh"].toFixed(2), unit: "kWh" },
-                      { title: "Total Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
-                      { title: "Total Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
+                      { title: "Total Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
+                      { title: "Total Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
+                      { title: "Total Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
                   ]);
                   setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
               }
@@ -137,9 +137,9 @@ const DashboardPage = () => {
 
               if (data) {
                   setMetricsData([
-                      { title: "Average Energy Consumption", value: data["energyAverage in kWh"].toFixed(2), unit: "kWh" },
-                      { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
-                      { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
+                      { title: "Average Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
+                      { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
+                      { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
                   ]);
                   setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
               }
@@ -211,7 +211,7 @@ const DashboardPage = () => {
   return (
     <div className="pt-0 p-4 space-y-6">
       {/* Dashboard Header */}
-      <div className="pt-0 flex justify-between items-center mb-4">
+      <div className="pt-0 flex justify-between items-center">
         <PageHeader title='Dashboard' />
         <div> {/*Dropdown menu */}
         <span className="font-semibold">Year: </span>
@@ -231,7 +231,7 @@ const DashboardPage = () => {
       </div>
 
       {/* Dashboard Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Column: Metrics and Charts */}
         <div className="md:col-span-2 space-y-6">
           {/* Dashboard Cards for Metrics */}
@@ -240,7 +240,7 @@ const DashboardPage = () => {
               <MetricCard
                 key={index}
                 title={metric.title}
-                value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value)} // condition ? valueIfTrue : valueIfFalse
+                value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value).toFixed(0)} // condition ? valueIfTrue : valueIfFalse
                 unit={metric.unit}
                 className="bg-white p-4 shadow-md rounded-lg"
               />
@@ -280,7 +280,7 @@ const DashboardPage = () => {
 
           {/* Emission Drilldown */}
           <div className="bg-white p-4 shadow-md rounded-lg pb-0">
-          <div className="flex justify-between items-center mb-4 pb-0">
+          <div className="flex justify-between items-center pb-0">
             <h3 className="text-lg font-semibold text-gray-700 flex-shrink-0">Emissions By Category</h3>
           </div>
           <div className='flex-1 flex justify-center items-center'>

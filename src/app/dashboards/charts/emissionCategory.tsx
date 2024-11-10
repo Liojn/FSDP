@@ -37,7 +37,7 @@ const EmissionCategoryChart: React.FC<EmissionsChartProps> = ({
     labels: ['Fuel', 'Electricity', 'Livestock', 'Waste', 'Crops'],
     datasets: [
       {
-        label: 'Carbon Emissions (%)',
+        label: 'Carbon Emissions (KGCO2)',
         data: [
           emissions.fuel?.emission || 0,
           emissions.electricity?.emission || 0,
@@ -45,8 +45,8 @@ const EmissionCategoryChart: React.FC<EmissionsChartProps> = ({
           emissions.waste?.emission || 0,
           emissions.crops?.emission || 0,
         ],
-        backgroundColor: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'],
-        hoverBackgroundColor: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0', '#9966ff'],
+        backgroundColor: [ '#4B9A8D', '#C0F58F', '#2BAEAB', '#A7D8B8', '#F2D9A0'],
+        hoverBackgroundColor: [ '#4B9A8D', '#C0F58F', '#2BAEAB', '#A7D8B8', '#F2D9A0'],
         borderColor: '#ffffff',
         borderWidth: 1,
       },
@@ -69,15 +69,9 @@ const EmissionCategoryChart: React.FC<EmissionsChartProps> = ({
              // Ensure emission is a number before calculation
             const emissionValue = Number(emission).toFixed(0); // Convert to number if needed
 
-            // Calculate percentage for the current category
-            //const percentage = totalEmission > 0 ? ((emissionValue / totalEmission) * 100).toFixed(0) : '0.00';
 
-            // Only show additional info if the month is selected (not null or empty)
-            const additionalInfo = month
-              ? `Details:\n${getCategoryDetails(category)}`
-              : '';
-
-            return `${emissionValue}kg CO2E ${additionalInfo}`;
+            // Show hover msg if the month is selected (not null or empty)
+            return `${emissionValue}kg CO2E. Click for in depth breakdown`;
           },
         },
         // Customize the appearance of the tooltip
