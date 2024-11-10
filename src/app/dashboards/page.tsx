@@ -7,6 +7,8 @@ import CarbonEmissionChart from '@/app/dashboards/charts/carbonEmissionChart';
 import GaugeChartComponent  from "@/app/dashboards/charts/gaugeGoal"; //Porgress Gauge Chart
 import EmissionCategoryChart from '@/app/dashboards/charts/emissionCategory';
 import { PageHeader } from '@/components/shared/page-header';
+import Modal from './popup/modal';
+import { Loader2 } from 'lucide-react';
 
 /* Define the props interface for BarChart
 interface BarChartProps {
@@ -19,9 +21,21 @@ interface BarChartProps {
   
 const DashboardPage = () => {
 
+  const [loading, setLoading] = useState(true); // for loading page - nicole
+
   const [yearFilter, setYearFilter] = useState<string>(''); //Year filter selection, holds the currently selected year from the dropdown. Initially set to an empty string
   const [yearOptions, setYearOptions] = useState<number[]>([]); //store Year options from API fetch, initialized as an empty array,
   const [selectedYear, setSelectedYear] = useState<number | null>(null); //Store selected year for subsequent API calls
+
+
+  //popup
+  const [showModal, setShowModal] = useState(false); // Modal visibility
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categoryDetails, setCategoryDetails] = useState<string | null>(null);
+  
+  //companyID
+  const [userId, setUserId] = useState<string | null>(null);
+
   //State for monthly emission
   const [monthlyEmissions, setMonthlyEmissions] = useState<number[]>([]);
   const [averageAbsorbed, setAverageAbsorbed] = useState<number | null>(null);
@@ -46,7 +60,12 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchYears = async () => {
       try {
-        const companyId = '671cf9a6e994afba6c2f332d'; //Assigned now for simplicity
+        //const companyId = '671cf9a6e994afba6c2f332d'; //Assigned now for simplicity
+        const companyId = localStorage.getItem("userId") || '';
+        const storedUserId = localStorage.getItem("userId");
+        if (storedUserId) {
+          setUserId(storedUserId);
+        }
         const years = await fetchUniqueYears(companyId);
         setYearOptions(years); //Update the year options state, call the function
 
@@ -56,6 +75,7 @@ const DashboardPage = () => {
           setSelectedYear(years[0]); // Store the selected year
         }
       } catch (error) {
+        setLoading(false);
         console.error('Failed to fetch years:', error);
       }
     };
@@ -147,7 +167,7 @@ const DashboardPage = () => {
                 setCategoryEmissionsData(emissionCategoryData); // This is the data you need for the chart
               }
           }
-          
+          setLoading(false);
         } catch (error) {
           console.error("Failed to fetch emission data:", error);
         }
@@ -174,6 +194,28 @@ const DashboardPage = () => {
     }
   };
 
+    if (loading) {
+    // Show spinner in the center of the screen while loading (animation)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
+      </div>
+    );
+  }
+
+    // Handle category click from the chart
+  const handleCategoryClick = (category: string, details: string) => {
+    setSelectedCategory(category);
+    setCategoryDetails(details);
+    setShowModal(true);
+  };
+
+  // Close modal handler
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedCategory(null);
+    setCategoryDetails(null);
+  };
   
   return (
     <div className="pt-0 p-4 space-y-6">
@@ -251,7 +293,16 @@ const DashboardPage = () => {
             <h3 className="text-lg font-semibold text-gray-700 flex-shrink-0">Emissions By Category</h3>
           </div>
             <EmissionCategoryChart 
-              categoryData={CategoryEmissionsData} month={selectedMonth}
+              categoryData={CategoryEmissionsData} month={selectedMonth} onCategoryClick={handleCategoryClick}
+            />
+                      {/* Modal Component */}
+            <Modal
+              isVisible={showModal}
+              category={selectedCategory}
+              userId={userId || ''} //empty string if userId is null
+              month={selectedMonth !== undefined && selectedMonth !== null ? Number(selectedMonth) : undefined} // setting month to null so they can use the endpoint for yr data
+              year={selectedYear ?? new Date().getFullYear()} // Fallback to the current year if year is null
+              onClose={closeModal}
             />
           </div>
         </div>

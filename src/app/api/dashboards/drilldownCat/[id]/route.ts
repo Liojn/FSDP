@@ -250,7 +250,7 @@ const CalculateNormal = (equipmentData: Equipment[], livestockData: Livestock[],
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try{
         const companyId = params.id; //obtain companyId
-        console.log(companyId.length); //test wheteher objectId is correct 24 hexa'\
+        //console.log(companyId.length); //test wheteher objectId is correct 24 hexa'\
         
         //convert companyId to ObjectId
         const objectId = new ObjectId(companyId);
@@ -330,7 +330,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
                     break;
             }        }
         //Return results
-        console.log(results); //test
+        //console.log(results); //test
         let EmissionCategoryData;
         if (month === null) {
             EmissionCategoryData = CalculateNormal(results.Equipment, results.Livestock, results.Crops, results.Waste, results.EmissionRates)
