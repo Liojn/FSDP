@@ -40,7 +40,7 @@ const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Lives
         tempElect += (electricEmit + fuel_emit);
         //console.log(tempElect); //test code
     }
-    console.log("Equipment: "+ tempElect);
+    //console.log("Equipment: "+ tempElect);
     totalCarbonEmission += tempElect 
 
     let tempAnimal = 0;
@@ -51,7 +51,7 @@ const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Lives
         tempAnimal += animal_emit;
         //console.log(tempAnimal); test code
     }
-    console.log("LiveStock"+ tempAnimal);
+    //console.log("LiveStock"+ tempAnimal);
     totalCarbonEmission += tempAnimal 
 
     let tempCrop = 0;
@@ -180,7 +180,7 @@ type CollectionData = {
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try{
         const companyId = params.id; //obtain companyId
-        console.log(companyId.length); //test wheteher objectId is correct 24 hexa'\
+        //console.log(companyId.length); //test wheteher objectId is correct 24 hexa'\
         
         //convert companyId to ObjectId
         const objectId = new ObjectId(companyId);
@@ -251,7 +251,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
                     break;
             }        }
         //Return results
-        console.log(results); //test
+        //console.log(results); //test
 
         //Calculate energy
         const energyAverage = CalculateEnergy(results.Equipment)
