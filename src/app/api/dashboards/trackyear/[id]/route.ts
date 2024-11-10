@@ -7,7 +7,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   
   try {
     const companyId = params.id;
-    console.log(companyId.length); //test wheteher objectId is correct 24 hexa'
+    // console.log(companyId.length); //test wheteher objectId is correct 24 hexa'
 
     //convert companyId to ObjectId
     const objectId = new ObjectId(companyId);
@@ -20,14 +20,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const collection = db.collection("Equipment"); //Use Equipment, monitors the usage of electricity
 
-    console.log("Company ID:", objectId); //test
+    // console.log("Company ID:", objectId); //test
 
     const equipmentData = await collection.find(
       { company_id: objectId }, 
       { projection: { date: 1 } } //extract the _id and the date corresponding to the company_id
     ).toArray();
 
-    console.log("Equipment Data:", equipmentData); //test purposes
+    // console.log("Equipment Data:", equipmentData); //test purposes
 
     //Extract unique years from the date field
     const yearsSet = new Set<number>(); //Set allows only adding of unique value
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       
     //Convert the Set back to an array and sort it
     const uniqueYears = Array.from(yearsSet).sort((a, b) => b - a); // Sort in descending order to get latest on top
-    console.log(uniqueYears) //test
+    // console.log(uniqueYears) //test
     // Return unique years as JSON
     return NextResponse.json(uniqueYears);
 
