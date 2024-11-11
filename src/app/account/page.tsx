@@ -9,10 +9,23 @@ export default function Account() {
     const [mainGoals, setMainGoals] = useState('');
     const [message, setMessage] = useState('');
 
+    useEffect(() => {
+        // Load the locally saved name and email when the component mounts
+        const storedName = localStorage.getItem('userName');
+        const storedEmail = localStorage.getItem('userEmail');
+        if (storedName) setName(storedName);
+        if (storedEmail) setEmail(storedEmail);
+    }, []);
+
     const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage('');
 
+        if (!name || !email || !password) {
+            setMessage('All profile fields must be filled');
+            return;
+        }
+        
         const response = await fetch('/api/update-profile', {
             method: 'POST',
             headers: {
@@ -22,12 +35,25 @@ export default function Account() {
         });
 
         const data = await response.json();
-        setMessage(response.ok ? 'Profile updated successfully!' : data.message);
+        if (response.ok) {
+            // Update local storage with the new name and email
+            localStorage.setItem('userName', name);
+            localStorage.setItem('userEmail', email);
+            setMessage('Profile updated successfully!');
+            window.location.reload();
+        } else {
+            setMessage(data.message || 'Failed to update profile');
+        }
     };
 
     const handleGoalsUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage('');
+
+        if (!mainGoals) {
+            setMessage('The main goals field must be filled');
+            return;
+        }
 
         const response = await fetch('/api/update-goals', {
             method: 'POST',
@@ -38,7 +64,11 @@ export default function Account() {
         });
 
         const data = await response.json();
-        setMessage(response.ok ? 'Goals updated successfully!' : data.message);
+        if (response.ok) {
+            setMessage('Goals updated successfully!');
+        } else {
+            setMessage(data.message || 'Failed to update goals');
+        }
     };
 
     return (
