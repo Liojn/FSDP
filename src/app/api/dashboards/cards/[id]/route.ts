@@ -18,13 +18,12 @@ const CalculateEnergy = (equipmentData: Equipment[]) => {
     for (const equipment of equipmentData) {
         totalElectricityUsed += (equipment.total_electricity_used_kWh)
     }
-    const averageElectricityUsedPerMonth = totalElectricityUsed / equipmentData.length;
-    return averageElectricityUsedPerMonth;
+    return totalElectricityUsed;
 }
 
 //Method 2 for carbon emissions
 const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Livestock[], cropsData: Crop[], wasteData: Waste[], emissionData: EmissionsRate[]) =>{
-    let totalAvgCarbonEmission = 0;
+    let totalCarbonEmission = 0;
     //const monthlyEmissions: number[] = new Array(12).fill(0); //for bar chart monthly
 
     //Emission of one category
@@ -41,8 +40,8 @@ const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Lives
         tempElect += (electricEmit + fuel_emit);
         //console.log(tempElect); //test code
     }
-    console.log("Equipment: "+ tempElect);
-    totalAvgCarbonEmission += (tempElect / equipmentData.length);
+    //console.log("Equipment: "+ tempElect);
+    totalCarbonEmission += tempElect 
 
     let tempAnimal = 0;
     for (const livestock of livestockData) {
@@ -52,8 +51,8 @@ const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Lives
         tempAnimal += animal_emit;
         //console.log(tempAnimal); test code
     }
-    console.log("LiveStock"+ tempAnimal);
-    totalAvgCarbonEmission += (tempAnimal / livestockData.length);
+    //console.log("LiveStock"+ tempAnimal);
+    totalCarbonEmission += tempAnimal 
 
     let tempCrop = 0;
     for (const crop of cropsData) {
@@ -64,7 +63,7 @@ const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Lives
         //console.log(tempCrop); test code
     }
     //console.log("CROP"+ tempCrop);
-    totalAvgCarbonEmission += (tempCrop / cropsData.length);
+    totalCarbonEmission += tempCrop 
 
     let tempWaste = 0;
     for (const waste of wasteData) {
@@ -75,17 +74,20 @@ const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Lives
         //console.log(tempWaste);
     }
     //console.log("Waste"+ tempWaste);
-    totalAvgCarbonEmission += (tempWaste / wasteData.length);
+    totalCarbonEmission += tempWaste
 
-    return totalAvgCarbonEmission;
+    return totalCarbonEmission;
 }
 
 //Method 3, for net emission
-const CalculateNetEmission = (forestData: Forest[], carbonAvgValue: number , emissionData: EmissionsRate[] ) => {
+const CalculateNetEmission = (forestData: Forest[], carbonAvgValue: number , emissionData: EmissionsRate[], equipmentData: Equipment[] ) => {
     const yearlyAbsorb = forestData[0].totalAreaInHectares * emissionData[0].absorption_rate_per_year_kg;
-    const averageAbsorb = (yearlyAbsorb /12);
-    console.log(averageAbsorb); //test
-    return (carbonAvgValue - averageAbsorb); //net calculation
+    console.log(yearlyAbsorb); //test
+    const currentAbsorb = (yearlyAbsorb / 12 * equipmentData.length);
+    if ((carbonAvgValue - currentAbsorb) < 0){
+        return 0;
+    }
+    return (carbonAvgValue - currentAbsorb); //net calculation
 }
  
 //encapsulate all collections
@@ -178,7 +180,7 @@ type CollectionData = {
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try{
         const companyId = params.id; //obtain companyId
-        console.log(companyId.length); //test wheteher objectId is correct 24 hexa'\
+        //console.log(companyId.length); //test wheteher objectId is correct 24 hexa'\
         
         //convert companyId to ObjectId
         const objectId = new ObjectId(companyId);
@@ -249,12 +251,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
                     break;
             }        }
         //Return results
-        console.log(results); //test
+        //console.log(results); //test
 
         //Calculate energy
         const energyAverage = CalculateEnergy(results.Equipment)
         const carbonEmissionAverage = CalcluteCarbonEmission(results.Equipment, results.Livestock, results.Crops, results.Waste, results.EmissionRates)
-        const netEmission = CalculateNetEmission(results.Forest, carbonEmissionAverage, results.EmissionRates);
+        const netEmission = CalculateNetEmission(results.Forest, carbonEmissionAverage, results.EmissionRates, results.Equipment);
         const finalMetrics = {
             "energyAverage in kWh": energyAverage,
             "carbonAverage in CO2E": carbonEmissionAverage,

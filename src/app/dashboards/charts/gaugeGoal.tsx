@@ -1,3 +1,4 @@
+//Component Gauge Chart for Dashboard
 import React from 'react';
 import GaugeChart from 'react-gauge-chart';
 
@@ -50,7 +51,7 @@ const GaugeChartComponent: React.FC<GaugeChartProps> = ({
         id="gauge-chart"
         nrOfLevels={100}  
         arcsLength={[0.6, 0.3, 0.1]}  // Green, Yellow, Red
-        colors={['#A0CD78', '#ffcc00', '#dc3545']} //Green for below target, Yellow for warning, Red for exceeding target
+        colors={['#A1E36A', '#ffcc00', '#dc3545']} //#A0CD78Green for below target, Yellow for warning, Red for exceeding target
         percent={gaugeValue / max} // Set the percentage based on current year emissions vs target
         arcWidth={0.2} // Set the width of the gauge arc
         textColor="#000000" // Color of the text

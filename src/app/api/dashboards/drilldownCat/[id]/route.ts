@@ -9,7 +9,7 @@ const collections = [
     'Equipment',
     'Waste',
     'EmissionRates',
-    'Forest'
+
 ]
 //Type for EmissionRate
 type EmissionsRate = {
@@ -78,13 +78,6 @@ type Waste = {
     date: string; //string for direct access
 };
 
-// Type for Forest
-type Forest = {
-    _id: { $oid: string };
-    company_id: { $oid: string };
-    totalAreaInHectares: number;
-    date: string; //string for direct access
-};
 
 // Define the CollectionData type to encapsulate all collections
 type CollectionData = {
@@ -93,67 +86,163 @@ type CollectionData = {
     Crops: Crop[];                 //Array of Crop objects
     Livestock: Livestock[];        //Array of Livestock objects
     Waste: Waste[];                //Array of Waste objects
-    Forest: Forest[];              //Array of Forest objects
 };
 
+//Handle all logic from here
+const CalcluteEmissionsMonth = (equipmentData: Equipment[], livestockData: Livestock[], cropsData: Crop[], wasteData: Waste[], emissionData: EmissionsRate[], givenMonth: number | null) => {
+    let fuelType;
+    let fuelAmount;
+    let fuel_emit;
+    let electricEmit;
+    let eletric_amt;
+    for (const equipment of equipmentData) {
+        const month = new Date(equipment.date).getUTCMonth(); // Adjusted here
+        if (month == givenMonth) {
+            electricEmit = equipment.total_electricity_used_kWh * emissionData[0].energy.electricity_emission;
+            eletric_amt = equipment.total_electricity_used_kWh;
+            // Get fuel emissions
+            fuelAmount = equipment.fuel_consumed_l;
+            //console.log(emissionData[0].fuel_emissions["biodiesel"]);
+            fuelType = equipment.fuel_type.toLowerCase() as keyof EmissionsRate["fuel_emissions"] //ensure is valid key
+            fuel_emit = equipment.fuel_consumed_l * emissionData[0].fuel_emissions[fuelType];    
+        }
+    }
 
-//Method 2 for carbon emissions
-const CalcluteMonthlyCarbonEmission = (equipmentData: Equipment[], livestockData: Livestock[], cropsData: Crop[], wasteData: Waste[], emissionData: EmissionsRate[], forestData: Forest[]) =>{
-    const monthlyEmissions: number[] = new Array(12).fill(0); //for bar chart monthly
+    let animalType;
+    let animal_emit;
+    let animal_amt;
+    for (const livestock of livestockData) {
+        const month = new Date(livestock.date).getUTCMonth(); // Adjusted here
+        if (month == givenMonth) {
+            //Get animal emissions
+            animalType = livestock.species.toLowerCase() as keyof EmissionsRate["animal_emissions"];
+            animal_emit = livestock.number_of_species * emissionData[0].animal_emissions[animalType];
+            animal_amt = livestock.number_of_species;
+        } 
+    }
 
-    //Emission of one category
+    let totalcrop_emit;
+    let fert_amt;
+    let crop_type;
+    for (const crop of cropsData) {
+        const month = new Date(crop.date).getUTCMonth(); // Adjusted here
+        if (month == givenMonth) {
+            const fert_emit = crop.fertilizer_amt_used_kg * emissionData[0].crops_emissions["nitrogen_fertilizer"];
+            const soil_emit = crop.area_planted_ha * emissionData[0].crops_emissions["soil_emissions"];    
+            totalcrop_emit = (fert_emit + soil_emit);
+            fert_amt = crop.fertilizer_amt_used_kg;
+            crop_type = crop.crop_type;
+        }
+    }
+
+    let waste_emit;
+    let waste_amt;
+    let wasteType;
+    for (const waste of wasteData) {
+        const month = new Date(waste.date).getUTCMonth(); // Adjusted here
+        if (month == givenMonth) {
+            wasteType = waste.waste_type.toLowerCase() as keyof EmissionsRate["waste_emissions"];
+            waste_emit = waste.waste_quantity_kg * emissionData[0].waste_emissions[wasteType];
+            waste_amt = waste.waste_quantity_kg;
+        } 
+    }
+
+    return {
+         "carbonEmissions": {
+            "fuel": {
+            "emission": fuel_emit, 
+            "details": {
+                "fuelType": fuelType,  // Type of fuel
+                "amountUsed": fuelAmount  // Amount of fuel used
+            }
+            },
+            "electricity": {
+            "emission": electricEmit,
+            "details": {
+                "amountUsed": eletric_amt  // Amount of electricity used
+            }
+            },
+            "crops": {
+            "emission": totalcrop_emit,
+            "details": {
+                "cropType": crop_type,  // Crop type
+                "fertilizerUsed": fert_amt  // Fertilizer used for crops
+            }
+            },
+            "waste": {
+            "emission": waste_emit,
+            "details": {
+                "wasteType": wasteType,  // Type of waste
+                "amount": waste_amt  // Amount of waste generated
+            }
+            },
+            "livestock": {
+            "emission": animal_emit,
+            "details": {
+                "animalType": animalType,  // Animal type
+                "amount": animal_amt  // Number of animals
+            }
+            }
+        }
+    }
+}
+
+const CalculateNormal = (equipmentData: Equipment[], livestockData: Livestock[], cropsData: Crop[], wasteData: Waste[], emissionData: EmissionsRate[]) => {
+    let total_fuel_emit = 0;
+    let total_electricEmit = 0;
     for (const equipment of equipmentData) {
         const electricEmit = equipment.total_electricity_used_kWh * emissionData[0].energy.electricity_emission;
 
         // Get fuel emissions
         //console.log(emissionData[0].fuel_emissions["biodiesel"]);
         const fuelType = equipment.fuel_type.toLowerCase() as keyof EmissionsRate["fuel_emissions"] //ensure is valid key
-        const fuel_emit = equipment.fuel_consumed_l * emissionData[0].fuel_emissions[fuelType]; 
-        
-        // Extract month from the date, insert to respective month
-        //console.log(equipment);
-        const month = new Date(equipment.date).getUTCMonth(); // Adjusted here
-        //console.log(month);
-        monthlyEmissions[month] += (fuel_emit + electricEmit);    
+        const fuel_emit = equipment.fuel_consumed_l * emissionData[0].fuel_emissions[fuelType];  
+        total_fuel_emit += (fuel_emit);
+        total_electricEmit += (electricEmit);
     }
 
+    let total_animal_emit = 0;
     for (const livestock of livestockData) {
         //Get animal emissions
         const animalType = livestock.species.toLowerCase() as keyof EmissionsRate["animal_emissions"];
-        const animal_emit = livestock.number_of_species * emissionData[0].animal_emissions[animalType];
-
-        // Extract month from the date, insert to respective month
-        const month = new Date(livestock.date).getUTCMonth(); // Adjusted here
-        monthlyEmissions[month] += (animal_emit);   
+        const animal_emit = livestock.number_of_species * emissionData[0].animal_emissions[animalType]; 
+        total_animal_emit += animal_emit;
     }
 
+    let total_crop_emit = 0;
     for (const crop of cropsData) {
         //get crops emission
         const fert_emit = crop.fertilizer_amt_used_kg * emissionData[0].crops_emissions["nitrogen_fertilizer"];
         const soil_emit = crop.area_planted_ha * emissionData[0].crops_emissions["soil_emissions"];
-                
-        // Extract month from the date, insert to respective month
-        const month = new Date(crop.date).getUTCMonth(); // Adjusted here
-        monthlyEmissions[month] += (fert_emit + soil_emit);
+        total_crop_emit += (fert_emit + soil_emit);
     }
     
+    let total_waste_emit = 0;
     for (const waste of wasteData) {
         //get waste emission
         const wasteType = waste.waste_type.toLowerCase() as keyof EmissionsRate["waste_emissions"];
         const waste_emit = waste.waste_quantity_kg * emissionData[0].waste_emissions[wasteType];
-
-        // Extract month from the date, insert to respective month
-        const month = new Date(waste.date).getUTCMonth(); // Adjusted here
-        monthlyEmissions[month] += (waste_emit);
+        total_waste_emit += waste_emit;
     }
-
-    //The threshold for graph, average absorption rate
-    const yearlyAbsorb = forestData[0].totalAreaInHectares * emissionData[0].absorption_rate_per_year_kg;
-    const averageAbsorb = (yearlyAbsorb /12);
-
+    console.log("WORKING");
     return {
-        monthlyEmissions,
-        averageAbsorb,
+        "carbonEmissions": {
+            "fuel": {
+            "emission": total_fuel_emit, 
+            },
+            "electricity": {
+            "emission": total_electricEmit,
+            },
+            "crops": {
+            "emission": total_crop_emit,
+            },
+            "waste": {
+            "emission": total_waste_emit,
+            },
+            "livestock": {
+            "emission": total_animal_emit,
+            }
+        }
     }
 }
 
@@ -161,7 +250,7 @@ const CalcluteMonthlyCarbonEmission = (equipmentData: Equipment[], livestockData
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try{
         const companyId = params.id; //obtain companyId
-        console.log(companyId.length); //test wheteher objectId is correct 24 hexa'\
+        //console.log(companyId.length); //test wheteher objectId is correct 24 hexa'\
         
         //convert companyId to ObjectId
         const objectId = new ObjectId(companyId);
@@ -174,6 +263,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         //obtain year from query
         const url = new URL(request.url);
         const yearParam = url.searchParams.get('year');
+        const monthParam = url.searchParams.get('month');
         //error handling for year
         if (!yearParam) {
             throw new Error("Year parameter is required.");
@@ -183,6 +273,18 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             throw new Error("Invalid year parameter.");
         }
 
+        // Handle month parameter
+        let month;
+        if (monthParam) {
+        month = parseInt(monthParam, 10);
+        if (isNaN(month) || month < 0 || month > 11) {
+            throw new Error("Invalid month parameter. Must be between 0 and 11.");
+        }
+        } else {
+        //default to full year (all 12 months)
+        month = null;
+        }
+
         //Initialize results object
         const results: CollectionData = {
             EmissionRates: [],  // Initialize as an empty array
@@ -190,7 +292,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             Crops: [],
             Livestock: [],
             Waste: [],
-            Forest: [],
         };
 
         //Loop through each collection to get data
@@ -225,17 +326,18 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
                 case 'Waste':
                     results[collectionName] = documents as Waste[]; //Cast to Waste[]
                     break;
-                case 'Forest':
-                    results[collectionName] = documents as Forest[]; //Cast to Forest[]
-                    break;
                 default:
                     break;
             }        }
         //Return results
         //console.log(results); //test
-
-        const carbonEmissionAverage = CalcluteMonthlyCarbonEmission(results.Equipment, results.Livestock, results.Crops, results.Waste, results.EmissionRates, results.Forest)
-        return NextResponse.json(carbonEmissionAverage);
+        let EmissionCategoryData;
+        if (month === null) {
+            EmissionCategoryData = CalculateNormal(results.Equipment, results.Livestock, results.Crops, results.Waste, results.EmissionRates)
+        } else {
+            EmissionCategoryData = CalcluteEmissionsMonth(results.Equipment, results.Livestock, results.Crops, results.Waste, results.EmissionRates, month)
+        }
+        return NextResponse.json(EmissionCategoryData);
 
     } catch(error) {
         console.error("Error fetching data:", error);
