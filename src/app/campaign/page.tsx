@@ -9,7 +9,6 @@ import { CampaignProgress } from "./components/CampaignProgress";
 import { CampaignMilestones } from "./components/CampaignMilestones";
 import { JoinCampaignForm } from "./components/JoinCampaignForm";
 import { CompanyParticipation } from "./components/CompanyParticipation";
-import { ParticipantsTable } from "./components/ParticipantsTable";
 import { CompanyParticipationProps } from "./components/CompanyParticipation";
 import { Card } from "@/components/ui/card";
 
@@ -199,19 +198,6 @@ export default function CampaignPage() {
           <JoinCampaignForm onSubmit={onSubmit} submitting={submitting} />
         )}
       </div>
-
-      <ParticipantsTable
-        participants={campaignData.participants.map((participant) => ({
-          company: participant.company,
-          progress: participant.participation.currentProgress,
-          participation: {
-            ...participant.participation,
-            joinedAt: new Date(
-              participant.participation.joinedAt
-            ).toISOString(),
-          },
-        }))}
-      />
     </div>
   );
 }
