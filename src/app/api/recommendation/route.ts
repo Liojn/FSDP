@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { CategoryType, Recommendation, RecommendationRequest } from "@/types/";
-import Anthropic from '@anthropic-ai/sdk';
+import { CategoryType, Recommendation, RecommendationRequest } from "@/types";
+import Anthropic from "@anthropic-ai/sdk";
 
 // Initialize the Claude client with the provided API key
 const anthropic = new Anthropic({
@@ -61,20 +61,71 @@ interface Metrics {
   };
 }
 
+// Function to check if any thresholds are exceeded
+async function getExceededThresholds(metrics: Metrics) {
+  try {
+    const response = await fetch("http://localhost:3000/api/thresholds");
+    const data = await response.json();
+    const thresholds = data.thresholds;
+    const exceededThresholds = [];
+
+    for (const threshold of thresholds) {
+      let currentValue = 0;
+      switch (threshold.category) {
+        case "energy":
+          currentValue = metrics.energy.consumption;
+          break;
+        case "emissions":
+          currentValue = metrics.emissions.total;
+          break;
+        case "waste":
+          currentValue = metrics.waste.quantity;
+          break;
+        case "fuel":
+          currentValue = metrics.livestock.emissions; // Using livestock emissions as proxy
+          break;
+      }
+
+      if (currentValue > threshold.value) {
+        exceededThresholds.push({
+          category: threshold.category,
+          metric: threshold.metric,
+          currentValue,
+          thresholdValue: threshold.value,
+          unit: threshold.unit,
+        });
+      }
+    }
+
+    return exceededThresholds;
+  } catch {
+    return []; // Return empty array if thresholds can't be fetched
+  }
+}
+
 // Function to generate a prompt for the AI based on the category and metrics
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const generatePrompt = (category: CategoryType, metrics: Metrics, _timeframe: string) => {
+const generatePrompt = async (category: CategoryType, metrics: Metrics, timeframe: string) => {
+  const exceededThresholds = await getExceededThresholds(metrics);
   const systemContext = `You are a JSON-only response system specialized in farm management recommendations. Only output valid JSON objects with no additional text.`;
   
+  let thresholdContext = "";
+  if (exceededThresholds.length > 0) {
+    thresholdContext = `\nThe following thresholds have been exceeded:
+${exceededThresholds.map(t => `- ${t.metric}: Current ${t.currentValue} ${t.unit} exceeds threshold of ${t.thresholdValue} ${t.unit}`).join('\n')}
+
+Prioritize recommendations that will help bring these metrics back within their thresholds within the ${timeframe} timeframe.`;
+  }
+
   const prompt = `${systemContext}
 
-Generate exactly 3 practical recommendations for the ${category} category based on the following metrics:
+Generate exactly 3 practical recommendations for the ${category} category based on the following metrics over a ${timeframe} period:
 
 Energy: ${metrics.energy.consumption}kWh (${metrics.energy.previousYearComparison}% vs last year)
 Emissions: ${metrics.emissions.total} tons CO2e
 Waste: ${metrics.waste.quantity} tons
 Crops: ${metrics.crops.area} hectares, ${metrics.crops.fertilizer} tons fertilizer
 Livestock: ${metrics.livestock.count} animals, ${metrics.livestock.emissions} tons CO2e emissions
+${thresholdContext}
 
 Return ONLY a JSON object in this exact format with no additional text:
 {
@@ -110,7 +161,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const prompt = generatePrompt(category, metrics, timeframe);
+    const prompt = await generatePrompt(category, metrics, timeframe);
 
     const message = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",

@@ -14,6 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChartsSkeleton from "./components/ChartsSkeleton";
 import RecommendationCard from "./components/RecommendationCard";
 import RecommendationSkeleton from "./components/RecommendationSkeleton";
+import ThresholdSettings from "./components/ThresholdSettings";
+import ThresholdAlert from "./components/ThresholdAlert";
 import { useToast } from "@/hooks/use-toast";
 import {
   CategoryType,
@@ -23,7 +25,7 @@ import {
   MetricData,
 } from "@/types";
 
-// Dynamic imports remain the same
+// Dynamic imports for charts
 const YearlyComparison = dynamic(
   () => import("./components/YearlyComparison"),
   {
@@ -108,6 +110,7 @@ export default function RecommendationClient({
     useState<CategoryType>(initialCategory);
   const [metrics] = useState<MetricData>(initialMetrics);
   const [shouldFetch, setShouldFetch] = useState(false);
+  const [showThresholdSettings, setShowThresholdSettings] = useState(false);
 
   // Store fetched recommendations in state to prevent refetching
   const [fetchedCategories, setFetchedCategories] = useState<Set<CategoryType>>(
@@ -136,7 +139,6 @@ export default function RecommendationClient({
       : null,
     async (key) => {
       const result = await recommendationFetcher(key);
-      // Store the fetched recommendations
       setRecommendationsByCategory((prev) => ({
         ...prev,
         [activeCategory]: result.recommendations,
@@ -185,11 +187,34 @@ export default function RecommendationClient({
     setShouldFetch(true);
   }, []);
 
+  const handleViewRecommendations = useCallback((category: string) => {
+    const categoryType = category as CategoryType;
+    setActiveCategory(categoryType);
+    setShouldFetch(true);
+  }, []);
+
   return (
     <div className="space-y-6">
-      <div className="text-xl font-semibold text-green-600">
-        Potential Savings: ${totalSavings.toLocaleString()}
+      <div className="flex justify-between items-center">
+        <div className="text-xl font-semibold text-green-600">
+          Potential Savings: ${totalSavings.toLocaleString()}
+        </div>
+        <button
+          onClick={() => setShowThresholdSettings(!showThresholdSettings)}
+          className="text-sm text-blue-600 hover:text-blue-800"
+        >
+          {showThresholdSettings ? "Hide" : "Show"} Threshold Settings
+        </button>
       </div>
+
+      {/* Threshold Alert */}
+      <ThresholdAlert
+        metrics={metrics}
+        onViewRecommendations={handleViewRecommendations}
+      />
+
+      {/* Threshold Settings */}
+      {showThresholdSettings && <ThresholdSettings />}
 
       {metrics && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
