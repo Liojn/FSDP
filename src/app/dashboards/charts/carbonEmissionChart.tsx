@@ -75,6 +75,7 @@ const EmissionCategoryChart: React.FC<CarbonEmissionChartProps> = ({ monthlyEmis
         }
       }
     },
+
   };
 
   return <Chart type="bar" data={data} options={options} />;
