@@ -1,17 +1,15 @@
-import { NextResponse } from "next/server";
-import dbConfig from "../../../../dbConfig";
+import { NextRequest, NextResponse } from "next/server";
+import dbConfig from "dbConfig";
 
-interface ScopeThreshold {
-  id: string;
-  scope: "Scope 1" | "Scope 2" | "Scope 3";
-  description: string;
-  value: number;
-  unit: string;
-  createdAt: Date;
-  updatedAt: Date;
+// Correctly define the HTTP method handlers using function declarations
+
+// Add OPTIONS handler for CORS support
+export async function OPTIONS() {
+  return NextResponse.json({}, { status: 200 });
 }
 
 export async function GET() {
+  console.log("GET request received");
   try {
     const db = await dbConfig.connectToDatabase();
     const thresholds = await db.collection("thresholds").find().toArray();
@@ -25,7 +23,8 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  console.log("POST request received");
   try {
     const body = await req.json();
     const { scope, description, value, unit } = body;
@@ -37,15 +36,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validate scope
-    if (!["Scope 1", "Scope 2", "Scope 3"].includes(scope)) {
-      return NextResponse.json(
-        { error: "Invalid scope. Must be 'Scope 1', 'Scope 2', or 'Scope 3'" },
-        { status: 400 }
-      );
-    }
-
-    const newThreshold: ScopeThreshold = {
+    const newThreshold = {
       id: Math.random().toString(36).substring(7),
       scope,
       description: description || getDefaultDescription(scope),
@@ -68,9 +59,12 @@ export async function POST(req: Request) {
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
+  console.log("PUT request received");
   try {
     const body = await req.json();
+    console.log("Request body:", body);
+
     const { id, value, unit } = body;
 
     if (!id) {
@@ -81,6 +75,17 @@ export async function PUT(req: Request) {
     }
 
     const db = await dbConfig.connectToDatabase();
+
+    // First check if the document exists
+    const existingThreshold = await db.collection("thresholds").findOne({ id });
+
+    if (!existingThreshold) {
+      return NextResponse.json(
+        { error: "Threshold not found" },
+        { status: 404 }
+      );
+    }
+
     const result = await db.collection("thresholds").findOneAndUpdate(
       { id },
       {
@@ -93,14 +98,7 @@ export async function PUT(req: Request) {
       { returnDocument: "after" }
     );
 
-    if (!result) {
-      return NextResponse.json(
-        { error: "Threshold not found" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ threshold: result });
+    return NextResponse.json({ threshold: result.value });
   } catch (error: unknown) {
     console.error("Failed to update threshold:", error);
     return NextResponse.json(
@@ -110,7 +108,8 @@ export async function PUT(req: Request) {
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
+  console.log("DELETE request received");
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
@@ -142,6 +141,7 @@ export async function DELETE(req: Request) {
   }
 }
 
+// Helper function remains the same
 function getDefaultDescription(scope: string): string {
   switch (scope) {
     case "Scope 1":

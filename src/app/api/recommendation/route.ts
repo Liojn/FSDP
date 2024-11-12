@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { CategoryType, Recommendation, RecommendationRequest } from "@/types";
 import Anthropic from "@anthropic-ai/sdk";
 
+
+
 // Initialize the Claude client with the provided API key
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY // Use environment variable
@@ -100,7 +102,7 @@ function calculateScopeEmissions(metrics: Metrics) {
 // Function to check if any thresholds are exceeded
 async function getExceededThresholds(metrics: Metrics) {
   try {
-    const response = await fetch("http://localhost:3000/api/thresholds");
+    const response = await fetch("/api/thresholds");
     const data = await response.json();
     const thresholds = data.thresholds;
     const scopeEmissions = calculateScopeEmissions(metrics);

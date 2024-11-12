@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import {
   fetchUniqueYears,
   getMetricsData,
-  EmissionData,
   fetchMonthlyCarbonEmissions,
   fetchEmissionTarget,
   fetchEmissionCategory,
@@ -25,14 +24,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/* Define the props interface for BarChart
-interface BarChartProps {
-  monthlyEmissions: number[];
-  averageAbsorbed: number | null;
-  handleMonthClick: (month: string | number) => void; // Prop to handle month click
-
-}*/
-
 const DashboardPage = () => {
   const [loading, setLoading] = useState(true); // for loading page - nicole
 
@@ -43,7 +34,7 @@ const DashboardPage = () => {
   //popup
   const [showModal, setShowModal] = useState(false); // Modal visibility
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [categoryDetails, setCategoryDetails] = useState<string | null>(null);
+  const [, setCategoryDetails] = useState<string | null>(null);
 
   //companyID
   const [userId, setUserId] = useState<string | null>(null);
@@ -62,7 +53,14 @@ const DashboardPage = () => {
   const [targetGoal, setTargetGoal] = useState<number>(10000); //default first
 
   // State for storing carbon emissions data for DONUT CHART
-  const [CategoryEmissionsData, setCategoryEmissionsData] = useState<any>(null);
+  interface EmissionCategoryData {
+    category: string;
+    value: number;
+  }
+
+  const [CategoryEmissionsData, setCategoryEmissionsData] = useState<
+    EmissionCategoryData[] | null
+  >(null);
   const [selectedMonth, setSelectedMonth] = useState<number | string>(""); // Track selected month
 
   const [metricsData, setMetricsData] = useState([
@@ -267,8 +265,7 @@ const DashboardPage = () => {
           {" "}
           {/*Dropdown menu */}
           {/* Threshold Settings */}
-          
-          <div className="flex items-center gap-2"> 
+          <div className="flex items-center gap-2">
             <ThresholdSettings />
             <span className="font-semibold">Year: </span>
             <Select value={yearFilter} onValueChange={handleYearFilterChange}>
@@ -311,7 +308,7 @@ const DashboardPage = () => {
           {/* Bar Chart: */}
           <div className="bg-white p-4 shadow-md rounded-lg">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">
-              Yearly Carbon Emission's Progress
+              Yearly Carbon Emission&apos;s Progress
             </h3>
             <div className="bg-white-200 h-full flex justify-center items-center min-h-[350px]">
               <CarbonEmissionChart
