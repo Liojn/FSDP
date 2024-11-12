@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,54 +30,100 @@ const defaultDescriptions = {
   "Scope 3": "All other indirect emissions in the value chain",
 };
 
-const userId = localStorage.getItem("userId");
-console.log(userId);
-// default values
-export default function ThresholdSettings() {
-  const [thresholds, setThresholds] = useState<ScopeThreshold[]>([
-    {
-      id: "scope1",
-      scope: "Scope 1",
-      value: 500,
-      unit: "tons CO₂e",
-      description: defaultDescriptions["Scope 1"],
-    },
-    {
-      id: "scope2",
-      scope: "Scope 2",
-      value: 1000,
-      unit: "tons CO₂e",
-      description: defaultDescriptions["Scope 2"],
-    },
-    {
-      id: "scope3",
-      scope: "Scope 3",
-      value: 1500,
-      unit: "tons CO₂e",
-      description: defaultDescriptions["Scope 3"],
-    },
-  ]);
+const defaultThresholds: ScopeThreshold[] = [
+  {
+    id: "scope1",
+    scope: "Scope 1",
+    value: 500,
+    unit: "tons CO₂e",
+    description: defaultDescriptions["Scope 1"],
+  },
+  {
+    id: "scope2",
+    scope: "Scope 2",
+    value: 1000,
+    unit: "tons CO₂e",
+    description: defaultDescriptions["Scope 2"],
+  },
+  {
+    id: "scope3",
+    scope: "Scope 3",
+    value: 1500,
+    unit: "tons CO₂e",
+    description: defaultDescriptions["Scope 3"],
+  },
+];
 
+export default function ThresholdSettings() {
+  const [thresholds, setThresholds] =
+    useState<ScopeThreshold[]>(defaultThresholds);
   const { toast } = useToast();
 
-  // Update local state without making API calls
+  useEffect(() => {
+    const userId = localStorage.getItem("userId");
+
+    // Only fetch if userId exists
+    if (!userId) {
+      console.warn("No userId found. Skipping threshold fetch.");
+      return;
+    }
+
+    const fetchUserThresholds = async () => {
+      try {
+        const response = await fetch(`/api/thresholds?userId=${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+
+          // If user has defined thresholds, completely replace defaults
+          if (data.thresholds && data.thresholds.length > 0) {
+            const userDefinedThresholds = data.thresholds.map(
+              (threshold: ScopeThreshold) => ({
+                ...threshold,
+                id: `scope${threshold.scope.slice(-1)}`,
+                description:
+                  defaultDescriptions[
+                    threshold.scope as keyof typeof defaultDescriptions
+                  ],
+              })
+            );
+
+            setThresholds(userDefinedThresholds);
+          }
+        } else {
+          console.error("Failed to fetch user thresholds");
+        }
+      } catch (error) {
+        console.error("Error fetching user thresholds:", error);
+      }
+    };
+
+    fetchUserThresholds();
+  }, []);
+
   const handleThresholdChange = (
     index: number,
     updates: Partial<ScopeThreshold>
   ) => {
     const updatedThresholds = [...thresholds];
-
-    // Ensure that if the value is cleared, it does not default to 0
     if (updates.value !== undefined) {
       updates.value = updates.value === 0 ? undefined : updates.value;
     }
-
     updatedThresholds[index] = { ...updatedThresholds[index], ...updates };
     setThresholds(updatedThresholds);
   };
 
-  // Save all changes at once
   const handleSaveChanges = async () => {
+    const userId = localStorage.getItem("userId");
+
+    if (!userId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "User not authenticated. Please log in.",
+      });
+      return;
+    }
+
     try {
       const updatePromises = thresholds.map((threshold) =>
         fetch("/api/thresholds", {
@@ -86,8 +132,8 @@ export default function ThresholdSettings() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            userId, // Retrieved from localStorage or a variable
-            scope: threshold.scope, // Change 'id' to 'scope' here
+            userId,
+            scope: threshold.scope,
             value: threshold.value,
             unit: threshold.unit,
           }),
@@ -156,8 +202,8 @@ export default function ThresholdSettings() {
                         handleThresholdChange(index, { value });
                       }}
                       placeholder="Enter threshold value"
-                      min={1} // This will prevent typing 0 but still allow backspacing
-                      className="flex-grow" // Ensure the input takes up available space
+                      min={1}
+                      className="flex-grow"
                     />
                     <span className="text-gray-700 font-semibold">kg CO₂e</span>
                   </div>
