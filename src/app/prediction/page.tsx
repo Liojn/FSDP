@@ -1,149 +1,331 @@
-// pages/page.tsx
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import PredictionGraph from './predictionComponents/predictionGraph';
+import { useState, useEffect } from 'react';
+import EmissionsChart from './predictionComponents/predictionGraph';
+import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/shared/page-header';
-import { Loader2 } from 'lucide-react';
+import { 
+  Target, 
+  Leaf,
+  TrendingDown,
+  AlertTriangle
+} from 'lucide-react';
 
-const Page: React.FC = () => {
-    const [yearlyData, setYearlyData] = useState<any[]>([]);
-    const [metrics, setMetrics] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+interface MonthlyData {
+  equipment: number[];
+  livestock: number[];
+  crops: number[];
+  waste: number[];
+  totalMonthlyEmissions: number[];
+  totalMonthlyAbsorption: number[];
+  netMonthlyEmissions: number[];
+}
 
-    // Set an example emission goal (can be dynamic if needed)
-    const emissionGoal = 10000; // Adjust this annual goal as needed
+interface PredictionResponse {
+  monthlyData: MonthlyData;
+}
 
-    // Helper function to calculate sustainability metrics for each year
-    const calculateSustainabilityMetrics = (yearData: { netMonthlyEmissions: number[] }, annualGoal: number) => {
-        const totalNetEmissions = yearData.netMonthlyEmissions.reduce((a, b) => a + b, 0);
-        const differenceFromGoal = (100 - ((annualGoal - totalNetEmissions) / annualGoal) * 100);
+interface UserGoals {
+  annualEmissionsTarget: number;
+  targetYear: number;
+  percentageReduction: number;
+}
 
-        // Calculate when net zero will be reached within the year
-        let cumulativeEmissions = 0;
-        let monthReached = -1;
-        for (let i = 0; i < yearData.netMonthlyEmissions.length; i++) {
-            cumulativeEmissions += yearData.netMonthlyEmissions[i];
-            if (cumulativeEmissions <= 0) {
-                monthReached = i;
-                break;
-            }
-        }
+interface EmissionsStats {
+  netReductionRate: number;
+  peakEmissionsYear: {
+    year: number;
+    amount: number;
+  };
+  totalNetEmissionsYTD: number;
+  cumulativeEmissions: number;
+  emissionsBySource: {
+    equipment: number;
+    livestock: number;
+    crops: number;
+    waste: number;
+  };
+  monthlyAverages: {
+    emissions: number;
+    absorption: number;
+    net: number;
+  };
+  trends: {
+    isIncreasing: boolean;
+    monthsToTarget: number;
+    percentageToTarget: number;
+  };
+}
 
-        const startYear = new Date().getFullYear();
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        let netZeroDate = "N/A";
+interface YearlyDataPoint {
+  year: number;
+  totalEmissions: number;
+  absorption: number;
+  netEmissions: number;
+  cumulativeYTDNetEmissions: number;
+  isProjected: boolean;
+  monthsPresent: number;
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export default function PredictionPage() {
+  const [data, setData] = useState<PredictionResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [emissionsStats, setEmissionsStats] = useState<EmissionsStats | null>(null);
+  const [userGoals, setUserGoals] = useState<UserGoals>({
+    annualEmissionsTarget: 10000,
+    targetYear: 2030,
+    percentageReduction: 50
+  });
+
+  const prepareYearlyData = (data: MonthlyData): YearlyDataPoint[] => {
+    const currentYear = new Date().getFullYear();
+    let cumulativeNetEmissions = 0;
+    const yearlyData: YearlyDataPoint[] = [];
+    
+    // Process data year by year
+    for (let i = 0; i < data.totalMonthlyEmissions.length; i += 12) {
+      const yearSlice = data.totalMonthlyEmissions.slice(i, i + 12);
+      if (yearSlice.length === 0) break;
+      
+      const projectionYear: number = currentYear - (Math.floor(data.totalMonthlyEmissions.length / 12) - Math.floor(i / 12) - 1);
+      const validMonths = yearSlice.filter(val => val !== null && val !== undefined && val > 0);
+      
+      if (validMonths.length === 0) continue;
+
+      const totalEmissions = validMonths.reduce((sum, val) => sum + (val || 0), 0);
+      const totalAbsorption = data.totalMonthlyAbsorption
+        .slice(i, i + validMonths.length)
+        .reduce((sum, val) => sum + (val || 0), 0);
+
+      const netEmissions = totalEmissions - totalAbsorption;
+      cumulativeNetEmissions += netEmissions;
+
+      yearlyData.push({
+        year: projectionYear,
+        totalEmissions,
+        absorption: totalAbsorption,
+        netEmissions,
+        cumulativeYTDNetEmissions: cumulativeNetEmissions,
+        isProjected: false,
+        monthsPresent: validMonths.length
+      });
+    }
+
+    return yearlyData;
+  };
+
+  useEffect(() => {
+    const fetchHistoricalData = async () => {
+      const userName = localStorage.getItem('userName');
+      try {
+        const endYear = new Date().getFullYear();
+        const startYear = endYear - 4;
         
-        if (monthReached !== -1) {
-            const month = monthNames[monthReached % 12];
-            const year = startYear;
-            netZeroDate = `${month} ${year}`;
-        } else {
-            const avgMonthlyReduction = yearData.netMonthlyEmissions.reduce((a, b) => a + b, 0) / yearData.netMonthlyEmissions.length;
-            if (avgMonthlyReduction < 0) {
-                const monthsToNetZero = Math.ceil(cumulativeEmissions / Math.abs(avgMonthlyReduction));
-                const futureMonth = (yearData.netMonthlyEmissions.length + monthsToNetZero) % 12;
-                const futureYear = startYear + Math.floor((yearData.netMonthlyEmissions.length + monthsToNetZero) / 12);
-                netZeroDate = `${monthNames[futureMonth]} ${futureYear}`;
-            }
-        }
+        const promises = Array.from({ length: 5 }, (_, i) => {
+          return fetch('/api/prediction', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'userName': userName || ''
+            },
+            body: JSON.stringify({
+              endYear: startYear + i,
+              dataType: 'carbon-emissions'
+            })
+          }).then(res => res.json());
+        });
 
-        return {
-            emissionReductionGoal: `maximum ${annualGoal} kg CO₂/year`,
-            actualTotalNetEmissions: totalNetEmissions,
-            differenceFromGoal: differenceFromGoal.toFixed(1), // rounded to 1 decimal place
-            netZeroDate,
-        };
-    };
-
-    // Helper function to check if all data in monthlyData is zero
-    const isDataZero = (data: any) => {
-        return (
-            data.equipment.every((val: number) => val === 0) &&
-            data.livestock.every((val: number) => val === 0) &&
-            data.crops.every((val: number) => val === 0) &&
-            data.waste.every((val: number) => val === 0) &&
-            data.totalMonthlyEmissions.every((val: number) => val === 0) &&
-            data.totalMonthlyAbsorption.every((val: number) => val === 0) &&
-            data.netMonthlyEmissions.every((val: number) => val === 0)
-        );
-    };
-
-    // Fetch data for multiple years
-    useEffect(() => {
-        const fetchYearlyData = async () => {
-            const currentYear = new Date().getFullYear();
-            let dataCollection: any[] = [];
-            let fetchComplete = false;
-
-            for (let i = 0; i < 10; i++) {
-                const year = currentYear - i;
-                const response = await fetch('/api/prediction', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'userName': localStorage.getItem('userName') || 'userName',
-                    },
-                    body: JSON.stringify({ endYear: year, dataType: 'carbon-emissions' }),
-                });
-
-                const data = await response.json();
-
-                if (data.monthlyData && isDataZero(data.monthlyData)) {
-                    fetchComplete = true;
-                    break;
-                }
-
-                // Calculate and set metrics for each year
-                const calculatedMetrics = calculateSustainabilityMetrics(data.monthlyData, emissionGoal);
-                setMetrics(calculatedMetrics);
-
-                // Add the data for this year to the collection
-                dataCollection.push({ year, ...data.monthlyData });
-            }
-
-            setYearlyData(dataCollection);
-            setLoading(false);
+        const results = await Promise.all(promises);
+        
+        const combinedData: MonthlyData = {
+          equipment: [],
+          livestock: [],
+          crops: [],
+          waste: [],
+          totalMonthlyEmissions: [],
+          totalMonthlyAbsorption: [],
+          netMonthlyEmissions: []
         };
 
-        fetchYearlyData();
-    }, []);
+        results.forEach(result => {
+          Object.keys(result.monthlyData).forEach(key => {
+            combinedData[key as keyof MonthlyData] = [...combinedData[key as keyof MonthlyData], ...result.monthlyData[key as keyof MonthlyData]];
+          });
+        });
 
-    return (
-        <div className="min-h-screen w-full">
-            <PageHeader title="Net Zero Predictions" />
+        const yearlyData = prepareYearlyData(combinedData);
+        const stats = calculateEmissionsStats(combinedData, yearlyData);
+        setEmissionsStats(stats);
+        setData({ monthlyData: combinedData });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-            {loading ? (
-                <div className="flex items-center justify-center min-h-screen">
-                    <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
+    fetchHistoricalData();
+  }, []);
+
+  const calculateEmissionsStats = (data: MonthlyData, yearlyData: YearlyDataPoint[]): EmissionsStats => {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const startOfYear = new Date(currentYear, 0, 1);
+    const ytdMonths = Math.floor((currentDate.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24 * 30));
+
+    // Find year with highest net emissions
+    const peakEmissionsYear = yearlyData.reduce((max, current) => {
+      return current.netEmissions > max.amount 
+        ? { year: current.year, amount: current.netEmissions }
+        : max;
+    }, { year: yearlyData[0].year, amount: yearlyData[0].netEmissions });
+
+    // YTD and cumulative calculations
+    const ytdNetEmissions = data.netMonthlyEmissions.slice(-ytdMonths).reduce((a, b) => a + b, 0);
+    const cumulativeEmissions = data.netMonthlyEmissions.reduce((a, b) => a + b, 0);
+
+    // Last 12 months emissions by source
+    const last12Months = {
+      equipment: data.equipment.slice(-12).reduce((a, b) => a + b, 0),
+      livestock: data.livestock.slice(-12).reduce((a, b) => a + b, 0),
+      crops: data.crops.slice(-12).reduce((a, b) => a + b, 0),
+      waste: data.waste.slice(-12).reduce((a, b) => a + b, 0)
+    };
+
+    // Monthly averages
+    const last6MonthsEmissions = data.totalMonthlyEmissions.slice(-6);
+    const last6MonthsAbsorption = data.totalMonthlyAbsorption.slice(-6);
+    const last6MonthsNet = data.netMonthlyEmissions.slice(-6);
+
+    const monthlyAverages = {
+      emissions: last6MonthsEmissions.reduce((a, b) => a + b, 0) / 6,
+      absorption: last6MonthsAbsorption.reduce((a, b) => a + b, 0) / 6,
+      net: last6MonthsNet.reduce((a, b) => a + b, 0) / 6
+    };
+
+    // Calculate trends
+    const thisYearNet = data.netMonthlyEmissions.slice(-12).reduce((a, b) => a + b, 0);
+    const lastYearNet = data.netMonthlyEmissions.slice(-24, -12).reduce((a, b) => a + b, 0);
+    const netReductionRate = ((lastYearNet - thisYearNet) / Math.abs(lastYearNet)) * 100;
+
+    // Trend analysis
+    const last3MonthsAvg = data.netMonthlyEmissions.slice(-3).reduce((a, b) => a + b, 0) / 3;
+    const previous3MonthsAvg = data.netMonthlyEmissions.slice(-6, -3).reduce((a, b) => a + b, 0) / 3;
+    const isIncreasing = last3MonthsAvg > previous3MonthsAvg;
+
+    // Calculate months to target and percentage
+    const monthsToTarget = Math.ceil((monthlyAverages.net - userGoals.annualEmissionsTarget) / (monthlyAverages.net * 0.05));
+    const percentageToTarget = ((userGoals.annualEmissionsTarget - monthlyAverages.net) / userGoals.annualEmissionsTarget) * 100;
+
+    return {
+      netReductionRate,
+      peakEmissionsYear,
+      totalNetEmissionsYTD: ytdNetEmissions,
+      cumulativeEmissions,
+      emissionsBySource: last12Months,
+      monthlyAverages,
+      trends: {
+        isIncreasing,
+        monthsToTarget,
+        percentageToTarget
+      }
+    };
+  };
+
+  const formatNumber = (num: number): string => {
+    if (Math.abs(num) >= 1000000) {
+      return `${(num / 1000000).toFixed(1)}M`;
+    } else if (Math.abs(num) >= 1000) {
+      return `${(num / 1000).toFixed(1)}k`;
+    }
+    return num.toFixed(1);
+  };
+
+  return (
+    <div className="container mx-auto p-4 space-y-6">
+      {/* Dashboard Header */}
+      <div className="pt-0 flex justify-between items-center mb-4">
+        <PageHeader title='NET ZERO Prediction' />
+      </div>
+      <EmissionsChart data={data?.monthlyData} isLoading={isLoading} />
+
+      {!isLoading && emissionsStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Emission Goals Card */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Emissions Goal</p>
+                  <p className="text-2xl font-bold">
+                    {formatNumber(userGoals.annualEmissionsTarget)} kg
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Target by {userGoals.targetYear} ({userGoals.percentageReduction}% reduction)
+                  </p>
                 </div>
-            ) : (
-                <div className="flex flex-col gap-6 bg-white p-6 rounded-lg shadow-lg w-full mx-auto">
-                    {/* Graph Section */}
-                    <div className="w-[70%]">
-                        <PredictionGraph yearlyData={yearlyData} />
-                    </div>
+                <Target className="w-8 h-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
 
-                    {/* Emission Goal Display */}
-                    <div className="w-full text-center md:text-left">
-                        <h2 className="text-2xl font-semibold text-gray-800">Emission Goal</h2>
-                        <p className="text-gray-600 text-xl">Our goal for the year:</p>
-                        <p className="text-xl font-bold text-green-600">{emissionGoal} kg CO₂</p>
-                    </div>
-
-                    {/* Metrics Display Below the Graph and Goal */}
-                    {metrics && (
-                        <div className="w-full mt-4">
-                            <h2 className="text-xl font-semibold text-gray-800">Sustainability Performance</h2>
-                            <p className="text-xl mt-2"><strong>Emission Reduction Goal:</strong> {metrics.emissionReductionGoal}</p>
-                            <p><strong>Actual Total Net Emissions:</strong> {metrics.actualTotalNetEmissions} kg CO₂ ({metrics.differenceFromGoal}% to limit)</p>
-                            <p><strong>Estimated Net Zero Emission Date:</strong> {metrics.netZeroDate}</p>
-                        </div>
-                    )}
+          {/* Livestock Emissions Card */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Livestock Emissions</p>
+                  <p className="text-2xl font-bold">
+                    {formatNumber(emissionsStats.emissionsBySource.livestock)} kg
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">annual livestock impact</p>
                 </div>
-            )}
+                <Leaf className="w-8 h-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Emission Reduction Rate Card */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Annual Reduction</p>
+                  <div className="flex items-baseline space-x-2">
+                    <p className="text-2xl font-bold">
+                      {Math.abs(emissionsStats.netReductionRate).toFixed(1)}%
+                    </p>
+                    <span className={`text-sm ${emissionsStats.netReductionRate > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {emissionsStats.netReductionRate > 0 ? '↓' : '↑'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">year-over-year change</p>
+                </div>
+                <TrendingDown className="w-8 h-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Peak Emissions Year Card */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Peak Emissions Year</p>
+                  <p className="text-2xl font-bold">
+                    {formatNumber(emissionsStats.peakEmissionsYear.amount)} kg
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">highest in {emissionsStats.peakEmissionsYear.year}</p>
+                </div>
+                <AlertTriangle className="w-8 h-8 text-yellow-500" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
-    );
-};
-
-export default Page;
+      )}
+    </div>
+  );
+}
