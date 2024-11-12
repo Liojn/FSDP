@@ -29,33 +29,37 @@ export default function Account() {
             setMessage('All profile fields must be filled');
             return;
         }
-
-        const currentEmail = localStorage.getItem('userEmail'); // Retrieve the current email
         
-        const response = await fetch('/api/update-profile', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ name, email, password, currentEmail }),
-        });
+        const currentEmail = localStorage.getItem('userEmail'); // Retrieve the current email
 
-        const data = await response.json();
-        if (response.ok) {
-            // Update local storage with the new name and email
-            localStorage.setItem('userName', name);
-            localStorage.setItem('userEmail', email);
-            setMessage('Profile updated successfully!');
-            setLogoutMessage(true);
+        try {
+            const response = await fetch('/api/update-profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, email, password, currentEmail }),
+            });
 
-            // Wait for 3 seconds, clear storage, and redirect
-            setTimeout(() => {
-                localStorage.clear();
-                router.push('/login');
-            }, 3000);
+            const data = await response.json();
+            if (response.ok) {
+                // Update local storage with the new name and email
+                localStorage.setItem('userName', name);
+                localStorage.setItem('userEmail', email);
+                setMessage('Profile updated successfully!');
+                setLogoutMessage(true);
 
-        } else {
-            setMessage(data.message || 'Failed to update profile');
+                // Wait for 3 seconds, clear storage, and redirect
+                setTimeout(() => {
+                    localStorage.clear();
+                    router.push('/login');
+                }, 3000);
+            } else {
+                setMessage(data.message || 'Failed to update profile');
+            }
+        } catch (error) {
+            console.error(error);
+            setMessage('An error occurred while updating the profile.');
         }
     };
 
@@ -63,24 +67,35 @@ export default function Account() {
         e.preventDefault();
         setMessage('');
 
-        if (!mainGoals) {
-            setMessage('The main goals field must be filled');
-            return;
+        const userId = localStorage.getItem('userId'); // Use the stored _id
+
+        // Ensure the mainGoals is a valid number (float)
+        const parsedMainGoals = parseFloat(mainGoals);
+
+        if (isNaN(parsedMainGoals)) {
+        setMessage('Please enter a valid number for the main goal');
+        return;
         }
 
-        const response = await fetch('/api/update-goals', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ mainGoals }),
-        });
+        try {
+            const response = await fetch('/api/update-goals', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ mainGoals: parsedMainGoals, userId }),
+            });
 
-        const data = await response.json();
-        if (response.ok) {
-            setMessage('Goals updated successfully!');
-        } else {
-            setMessage(data.message || 'Failed to update goals');
+            const data = await response.json();
+            if (response.ok) {
+                setMessage('Goals updated successfully!');
+                router.refresh(); // Refresh the page to show updated goals
+            } else {
+                setMessage(data.message || 'Failed to update goals');
+            }
+        } catch (error) {
+            console.error(error);
+            setMessage('An error occurred while updating the goals.');
         }
     };
 
@@ -88,7 +103,7 @@ export default function Account() {
         <div className="container mx-auto p-6">
             <h1 className="text-2xl font-bold mb-6">Account</h1>
 
-            {message && <p className="mb-4 text-green-500">{message}</p>}
+            {message && <p className={`mb-4 ${logoutMessage ? 'text-blue-500' : 'text-green-500'}`}>{message}</p>}
             {logoutMessage && (
                 <p className="mb-4 text-blue-500">
                     Profile updated. You will be logged out shortly to reset your session.
@@ -143,6 +158,7 @@ export default function Account() {
                         id="mainGoals"
                         type="number"
                         min="0"
+                        step="0.01" // Increment by 0.01
                         value={mainGoals}
                         onChange={(e) => setMainGoals(e.target.value)}
                         placeholder="Enter goal in CO2e"
