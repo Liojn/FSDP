@@ -9,6 +9,7 @@ import EmissionCategoryChart from '@/app/dashboards/charts/emissionCategory';
 import { PageHeader } from '@/components/shared/page-header';
 import Modal from './popup/modal';
 import { Loader2 } from 'lucide-react';
+import ScopeModal from './popup/scopeModal';
 
 /* Define the props interface for BarChart
 interface BarChartProps {
@@ -33,6 +34,9 @@ const DashboardPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categoryDetails, setCategoryDetails] = useState<string | null>(null);
   
+  //scope popup
+  const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
+
   //companyID
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -88,13 +92,13 @@ const DashboardPage = () => {
     const fetchMetricsData = async () => {
       if (selectedYear) {
         try {
-          const companyId = '671cf9a6e994afba6c2f332d';
+          const companyId = localStorage.getItem("userId") || ''; //'671cf9a6e994afba6c2f332d';
           if (yearOptions.includes(selectedYear - 1)) { //range already defined in my options list, this is particularly for gauge
               // If the previous year is available, fetch data for both the current and previous year
               const [data, emissionsData, previousEmissionsData, targetGoal, emissionCategoryData] = await Promise.all([
                   getMetricsData(companyId, selectedYear),
                   fetchMonthlyCarbonEmissions(companyId, selectedYear),
-                  fetchMonthlyCarbonEmissions(companyId, (selectedYear - 1)), // Fetch the emissions data for the previous year
+                  getMetricsData(companyId, (selectedYear - 1)), // Fetch the emissions data for the previous year, use the net emission from the cards
                   fetchEmissionTarget(companyId, selectedYear),
                   fetchEmissionCategory(companyId, selectedYear, selectedMonth),
                   console.log(selectedYear -1)
@@ -103,26 +107,20 @@ const DashboardPage = () => {
               // Process data for both years
               if (data) {
                   setMetricsData([
-                      { title: "Total Energy Consumption", value: data["energyAverage in kWh"].toFixed(2), unit: "kWh" },
-                      { title: "Total Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
-                      { title: "Total Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
+                      { title: "Total Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
+                      { title: "Total Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
+                      { title: "Total Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
                   ]);
+                  setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
               }
 
               if (emissionsData) {
                   setMonthlyEmissions(emissionsData.monthlyEmissions); // Set the monthly emissions data for the current year
                   setAverageAbsorbed(emissionsData.averageAbsorb); // Set the average absorbed value for the current year
-                  const sum = emissionsData.monthlyEmissions.reduce((accumulator, currentValue) => {
-                    return accumulator + currentValue;
-                  }, 0);
-                  setCurrentYearEmissions(sum); //give the current year admission
               }
 
               if (previousEmissionsData){
-                const sum = previousEmissionsData.monthlyEmissions.reduce((accumulator, currentValue) => {
-                  return accumulator + currentValue;
-                }, 0);
-                setPreviousYearEmissions(sum); //give the prev year emission
+                setPreviousYearEmissions(previousEmissionsData["netAverage in CO2E"]); //give the prev year emission
               }
 
               if (targetGoal) {
@@ -143,19 +141,16 @@ const DashboardPage = () => {
 
               if (data) {
                   setMetricsData([
-                      { title: "Average Energy Consumption", value: data["energyAverage in kWh"].toFixed(2), unit: "kWh" },
-                      { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(2), unit: "KG CO2" },
-                      { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(2), unit: "KG CO2" }
+                      { title: "Average Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
+                      { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
+                      { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
                   ]);
+                  setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
               }
 
               if (emissionsData) {
                   setMonthlyEmissions(emissionsData.monthlyEmissions); // Set the monthly emissions data
                   setAverageAbsorbed(emissionsData.averageAbsorb); // Set the average absorbed value
-                  const sum = emissionsData.monthlyEmissions.reduce((accumulator, currentValue) => {
-                    return accumulator + currentValue;
-                  }, 0);
-                  setCurrentYearEmissions(sum); //give the current year admission
               }
               setPreviousYearEmissions(0); //no data for comparison
 
@@ -220,7 +215,7 @@ const DashboardPage = () => {
   return (
     <div className="pt-0 p-4 space-y-6">
       {/* Dashboard Header */}
-      <div className="pt-0 flex justify-between items-center mb-4">
+      <div className="pt-0 flex justify-between items-center">
         <PageHeader title='Dashboard' />
         <div> {/*Dropdown menu */}
         <span className="font-semibold">Year: </span>
@@ -240,19 +235,36 @@ const DashboardPage = () => {
       </div>
 
       {/* Dashboard Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Column: Metrics and Charts */}
         <div className="md:col-span-2 space-y-6">
           {/* Dashboard Cards for Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
-              <MetricCard
-                key={index}
-                title={metric.title}
-                value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value)} // condition ? valueIfTrue : valueIfFalse
-                unit={metric.unit}
-                className="bg-white p-4 shadow-md rounded-lg"
-              />
+              <div 
+                key={index} 
+                onClick={() => {
+                  if (metric.title === "Total Carbon Emissions") {
+                    setIsScopeModalOpen(true);
+                  }
+                }}
+                className="cursor-pointer"
+              >
+                <MetricCard
+                  title={metric.title}
+                  value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value).toFixed(0)}
+                  unit={metric.unit}
+                  className="bg-white p-4 shadow-md rounded-lg hover:shadow-lg transition-shadow"
+                />
+                      {/* ScopeModal */}
+                <ScopeModal
+                  isOpen={isScopeModalOpen}
+                  onClose={() => setIsScopeModalOpen(false)}
+                  year={selectedYear || new Date().getFullYear()}
+                  month={selectedMonth ? Number(selectedMonth) : undefined}
+                  userId={userId || ''}
+                />
+              </div>
             ))}
           </div>
 
@@ -289,9 +301,10 @@ const DashboardPage = () => {
 
           {/* Emission Drilldown */}
           <div className="bg-white p-4 shadow-md rounded-lg pb-0">
-          <div className="flex justify-between items-center mb-4 pb-0">
+          <div className="flex justify-between items-center pb-0">
             <h3 className="text-lg font-semibold text-gray-700 flex-shrink-0">Emissions By Category</h3>
           </div>
+          <div className='flex-1 flex justify-center items-center'>
             <EmissionCategoryChart 
               categoryData={CategoryEmissionsData} month={selectedMonth} onCategoryClick={handleCategoryClick}
             />
@@ -304,6 +317,7 @@ const DashboardPage = () => {
               year={selectedYear ?? new Date().getFullYear()} // Fallback to the current year if year is null
               onClose={closeModal}
             />
+          </div>
           </div>
         </div>
       </div>
