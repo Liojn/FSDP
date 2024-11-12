@@ -25,6 +25,7 @@ export interface MetricData {
 export type EmissionScope = "Scope 1" | "Scope 2" | "Scope 3";
 
 export interface Recommendation {
+  impact: ReactNode;
   id: string;
   title: string;
   description: string;
@@ -50,6 +51,12 @@ export interface Recommendation {
   // Visualization and Tracking
   relatedMetrics?: string[];
   dashboardLink?: string;
+}
+
+export interface RecommendationCardProps {
+  rec: Recommendation;
+  isImplemented: boolean;
+  toggleRecommendation: (title: string) => void;
 }
 
 export enum CategoryType {

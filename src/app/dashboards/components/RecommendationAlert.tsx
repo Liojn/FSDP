@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 interface RecommendationAlertProps {
   exceedingScopes: string[];
-  onViewRecommendations: () => void;
+  onViewRecommendations: (scopes: string[]) => void;
 }
 
 const RecommendationAlert: React.FC<RecommendationAlertProps> = ({
@@ -30,7 +30,7 @@ const RecommendationAlert: React.FC<RecommendationAlertProps> = ({
           </ul>
         </div>
         <Button
-          onClick={onViewRecommendations}
+          onClick={() => onViewRecommendations(exceedingScopes)}
           className="bg-red-600 hover:bg-red-700 text-white"
         >
           View Recommendations

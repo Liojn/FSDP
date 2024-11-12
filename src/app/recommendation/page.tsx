@@ -9,23 +9,27 @@ export const revalidate = 3600; // Revalidate every hour
 async function RecommendationPage({
   searchParams,
 }: {
-  searchParams?: { scope?: string };
+  searchParams?: { scopes?: string | string[] };
 }) {
   // Fetch initial metrics on the server
   const metrics = await getMetrics();
 
-  // Determine initial scope based on query parameter
-  const initialScope = searchParams?.scope || "All Scopes";
+  // Handle scopes from query parameters
+  const scopesParam = searchParams?.scopes;
+  const scopes = Array.isArray(scopesParam)
+    ? scopesParam
+    : scopesParam
+    ? [scopesParam]
+    : [];
 
   return (
     <div className="p-4 px-10">
       <PageHeader title="AI-Curated Farm Management Recommendations" />
-
       {/* Pass server fetched data to client components */}
       <RecommendationClient
         initialMetrics={metrics}
         initialCategory={CategoryType.OVERALL}
-        initialScope={initialScope}
+        initialScopes={scopes}
       />
     </div>
   );

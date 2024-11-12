@@ -326,13 +326,18 @@ const DashboardPage = () => {
   };
 
   // Navigation handler for recommendations
-  const handleViewRecommendations = (scope?: string) => {
-    // If a specific scope is provided, pass it as a query parameter
-    if (scope) {
-      router.push(`/recommendation?scope=${encodeURIComponent(scope)}`);
-    } else {
-      router.push("/recommendation");
-    }
+  const handleViewRecommendations = (exceedingScopes: string[]) => {
+    const scopes = exceedingScopes
+      .map((scope) => {
+        const match = scope.match(/(Scope [1-3])/);
+        return match ? match[1] : null;
+      })
+      .filter((scope): scope is string => scope !== null);
+
+    const query = scopes
+      .map((scope) => `scopes=${encodeURIComponent(scope)}`)
+      .join("&");
+    router.push(`/recommendation?${query}`);
   };
 
   // Handle category click from the chart
@@ -383,16 +388,12 @@ const DashboardPage = () => {
           </div>
         </div>
       </div>
-
       {/* Render RecommendationAlert only when there are exceeding scopes */}
-      {exceedingScopes.length > 0 && (
-        <RecommendationAlert
-          exceedingScopes={exceedingScopes}
-          onViewRecommendations={handleViewRecommendations}
-        />
-      )}
-
-      {/* Dashboard Layout */}
+      <RecommendationAlert
+        exceedingScopes={exceedingScopes}
+        onViewRecommendations={handleViewRecommendations}
+      />
+      ;{/* Dashboard Layout */}
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Column: Metrics and Charts */}
         <div className="md:col-span-2 space-y-6">

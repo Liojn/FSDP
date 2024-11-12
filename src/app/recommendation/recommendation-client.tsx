@@ -17,7 +17,6 @@ import {
   ImplementedRecommendationsState,
   CategoryData,
   MetricData,
-  EmissionScope,
 } from "@/types";
 import RecommendationSkeleton from "./components/RecommendationSkeleton";
 import RecommendationCard from "./components/RecommendationCard";
@@ -62,21 +61,19 @@ class ErrorBoundary extends React.Component<{
 interface RecommendationClientProps {
   initialMetrics: MetricData;
   initialCategory: CategoryType;
-  initialScope?: string;
+  initialScopes?: string[];
 }
 
 export default function RecommendationClient({
   initialMetrics,
   initialCategory,
-  initialScope = "All Scopes",
+  initialScopes = [],
 }: RecommendationClientProps) {
   const { toast } = useToast();
   const [implementedRecommendations, setImplementedRecommendations] =
     useState<ImplementedRecommendationsState>(new Set());
   const [activeCategory] = useState<CategoryType>(initialCategory);
-  const [activeScope, setActiveScope] = useState<EmissionScope | "All Scopes">(
-    initialScope as EmissionScope | "All Scopes"
-  );
+  const [activeScopes, setActiveScopes] = useState<string[]>(initialScopes);
   const [metrics] = useState<MetricData>(initialMetrics);
   const [shouldFetch, setShouldFetch] = useState(true);
 
@@ -100,6 +97,7 @@ export default function RecommendationClient({
           data: {
             category: activeCategory,
             metrics,
+            scopes: activeScopes,
             timeframe: "monthly",
             previousImplementations: Array.from(implementedRecommendations),
           },
@@ -132,9 +130,11 @@ export default function RecommendationClient({
 
   const filteredRecommendations = useMemo(() => {
     const recommendations = recommendationsByCategory[activeCategory] || [];
-    if (activeScope === "All Scopes") return recommendations;
-    return recommendations.filter((rec) => rec.scope === activeScope);
-  }, [recommendationsByCategory, activeCategory, activeScope]);
+    if (activeScopes.length === 0) return recommendations;
+    return recommendations.filter((rec) =>
+      activeScopes.includes(rec.scope || "")
+    );
+  }, [recommendationsByCategory, activeCategory, activeScopes]);
 
   const totalSavings = useMemo(
     () =>
@@ -157,7 +157,7 @@ export default function RecommendationClient({
   }, []);
 
   const handleViewRecommendations = useCallback((scope: string) => {
-    setActiveScope(scope as EmissionScope | "All Scopes");
+    setActiveScopes([scope]);
     setShouldFetch(true);
   }, []);
 

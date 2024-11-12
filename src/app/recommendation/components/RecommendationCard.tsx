@@ -1,3 +1,5 @@
+// src/components/RecommendationCard.tsx
+
 import React, { memo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,21 +30,21 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
                       rec.difficulty.slice(1)}
                   </span>
                 )}
-                {rec.priority && (
+                {rec.priorityLevel && (
                   <span className="text-sm px-2 py-1 rounded-full border">
-                    Priority {rec.priority}
+                    {rec.priorityLevel} Priority
                   </span>
                 )}
-                {rec.roi && (
+                {rec.estimatedROI && (
                   <span className="text-sm px-2 py-1 rounded-full bg-green-100 text-green-800">
-                    ROI: {rec.roi}
+                    ROI: {rec.estimatedROI}%
                   </span>
                 )}
               </div>
             </div>
-            {rec.implementationTimeline && (
+            {rec.estimatedTimeframe && (
               <span className="text-sm text-gray-500">
-                Est. Timeline: {rec.implementationTimeline}
+                Est. Timeline: {rec.estimatedTimeframe}
               </span>
             )}
           </div>
@@ -54,14 +56,15 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
           </p>
           <h4 className="font-semibold mb-2">Steps to Implement:</h4>
           <ol className="list-decimal pl-5 mb-4">
-            {rec.steps.map((step, index) => (
+            {rec.implementationSteps.map((step, index) => (
               <li key={index}>{step}</li>
             ))}
           </ol>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span>
-                Potential Savings: ${rec.savings.toLocaleString()}/year
+                Potential Savings: $
+                {rec.estimatedEmissionReduction.toLocaleString()}/year
               </span>
               <Button
                 variant={isImplemented ? "secondary" : "default"}
@@ -70,14 +73,18 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
                 {isImplemented ? "Implemented" : "Mark as Implemented"}
               </Button>
             </div>
-            {rec.sourceData && (
-              <p className="text-sm text-gray-500">Source: {rec.sourceData}</p>
+            {rec.relatedMetrics && rec.relatedMetrics.length > 0 && (
+              <p className="text-sm text-gray-500">
+                Source: {rec.relatedMetrics.join(", ")}
+              </p>
             )}
             {rec.dashboardLink && (
               <div className="text-sm">
                 <a
                   href={rec.dashboardLink}
                   className="text-blue-600 hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   View in Dashboard →
                 </a>
@@ -93,7 +100,8 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
     return (
       prevProps.rec.title === nextProps.rec.title &&
       prevProps.isImplemented === nextProps.isImplemented &&
-      prevProps.rec.savings === nextProps.rec.savings
+      prevProps.rec.estimatedEmissionReduction ===
+        nextProps.rec.estimatedEmissionReduction
     );
   }
 );
