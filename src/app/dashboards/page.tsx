@@ -326,18 +326,14 @@ const DashboardPage = () => {
   };
 
   // Navigation handler for recommendations
-  const handleViewRecommendations = () => {
-    router.push("/recommendation");
+  const handleViewRecommendations = (scope?: string) => {
+    // If a specific scope is provided, pass it as a query parameter
+    if (scope) {
+      router.push(`/recommendation?scope=${encodeURIComponent(scope)}`);
+    } else {
+      router.push("/recommendation");
+    }
   };
-
-  if (loading) {
-    // Show spinner while loading
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
-      </div>
-    );
-  }
 
   // Handle category click from the chart
   const handleCategoryClick = (category: string, details: string) => {
@@ -352,6 +348,15 @@ const DashboardPage = () => {
     setSelectedCategory(null);
     setCategoryDetails(null);
   };
+
+  if (loading) {
+    // Show spinner while loading
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="pt-0 p-4 space-y-6">

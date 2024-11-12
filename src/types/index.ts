@@ -22,21 +22,34 @@ export interface MetricData {
   };
 }
 
+export type EmissionScope = "Scope 1" | "Scope 2" | "Scope 3";
+
 export interface Recommendation {
+  id: string;
   title: string;
   description: string;
-  impact: string;
+  scope: EmissionScope;
   category: CategoryType;
-  savings: number;
-  steps: string[];
-  implemented: boolean;
-  priority?: number;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  roi?: number;
-  implementationTimeline?: string;
-  sourceData?: string;
+  
+  // Impact and Prioritization
+  estimatedEmissionReduction: number;
+  priorityLevel: 'Low' | 'Medium' | 'High';
+  
+  // Implementation Details
+  implementationSteps: string[];
+  estimatedROI: number;
+  
+  // Status Tracking
+  status: 'Not Started' | 'Planned' | 'In Progress' | 'Completed';
+  
+  // Additional Metadata
+  difficulty: 'Easy' | 'Moderate' | 'Challenging';
+  estimatedCost: number;
+  estimatedTimeframe: string;
+  
+  // Visualization and Tracking
+  relatedMetrics?: string[];
   dashboardLink?: string;
-  scope?: "Scope 1" | "Scope 2" | "Scope 3";
 }
 
 export enum CategoryType {
@@ -47,73 +60,23 @@ export enum CategoryType {
   OVERALL = "overall"
 }
 
-// Component Props Types
-export interface RecommendationCardProps {
-  rec: Recommendation;
-  isImplemented: boolean;
-  toggleRecommendation: (title: string) => void;
+// Existing interfaces remain the same...
+
+// New interface for Scope-Specific Recommendations
+export interface ScopeRecommendationProps {
+  scope: EmissionScope;
+  metrics: MetricData;
+  thresholdExceeded: boolean;
 }
 
-export interface YearlyComparisonProps {
-  data: MetricData;
-}
-
-export interface CategoryBreakdownProps {
-  data: MetricData;
-  category: CategoryType;
-}
-
-export interface ImplementationTrackerProps {
-  recommendation: Recommendation;
-  progress: number;
-}
-
-export interface TrendAnalysisProps {
-  data: MetricData;
-  category: CategoryType;
-}
-
-export interface CrossCategoryInsightsProps {
-  data: MetricData;
-}
-
-// API Types
+// Expanded Recommendation Request
 export interface RecommendationRequest {
   category: CategoryType;
+  scope: EmissionScope;
   metrics: MetricData;
-  timeframe: string;
-  previousImplementations: string[];
+  thresholdExceeded: boolean;
 }
 
-// State Types
+// State Management
 export type ImplementedRecommendationsState = Set<string>;
 export type CategoryData = Record<CategoryType, Recommendation[]>;
-
-// Chart Types
-export interface ChartDataPoint {
-  name: string;
-  value: number;
-  category: CategoryType;
-  color: string;
-}
-
-export interface UserProfile {
-  name: string;
-  email: string;
-  avatarUrl: string;
-}
-
-export interface ApiRecommendation {
-  title?: string;
-  description?: string;
-  impact?: string;
-  savings?: number;
-  steps?: string[];
-  priority?: number;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  roi?: number;
-  implementationTimeline?: string;
-  sourceData?: string;
-  dashboardLink?: string;
-  scope?: "Scope 1" | "Scope 2" | "Scope 3";
-}

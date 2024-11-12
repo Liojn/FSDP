@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useCallback, useMemo, Suspense } from "react";
-import dynamic from "next/dynamic";
 import useSWR from "swr";
 import {
   Card,
@@ -10,11 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ChartsSkeleton from "./components/ChartsSkeleton";
-import RecommendationCard from "./components/RecommendationCard";
-import RecommendationSkeleton from "./components/RecommendationSkeleton";
-import ThresholdSettings from "../dashboards/components/ThresholdSettings";
 import ThresholdAlert from "../dashboards/components/ThresholdAlert";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -23,44 +17,11 @@ import {
   ImplementedRecommendationsState,
   CategoryData,
   MetricData,
+  EmissionScope,
 } from "@/types";
-
-// Dynamic imports for charts
-const YearlyComparison = dynamic(
-  () => import("./components/YearlyComparison"),
-  {
-    loading: () => <ChartsSkeleton />,
-  }
-);
-
-const CategoryBreakdown = dynamic(
-  () => import("./components/CategoryBreakdown"),
-  {
-    loading: () => <ChartsSkeleton />,
-  }
-);
-
-const TrendAnalysis = dynamic(() => import("./components/TrendAnalysis"), {
-  loading: () => <ChartsSkeleton />,
-});
-
-const CrossCategoryInsights = dynamic(
-  () => import("./components/CrossCategoryInsights"),
-  {
-    loading: () => <ChartsSkeleton />,
-  }
-);
-
-const ImplementationTracker = dynamic(
-  () => import("./components/ImplementationTracker"),
-  {
-    loading: () => (
-      <div className="h-20 animate-pulse bg-gray-100 rounded-lg" />
-    ),
-  }
-);
-
-type EmissionScope = "Scope 1" | "Scope 2" | "Scope 3" | "All Scopes";
+import RecommendationSkeleton from "./components/RecommendationSkeleton";
+import RecommendationCard from "./components/RecommendationCard";
+import ImplementationTracker from "./components/ImplementationTracker";
 
 const recommendationFetcher = async ({
   url,
@@ -98,21 +59,26 @@ class ErrorBoundary extends React.Component<{
   }
 }
 
+interface RecommendationClientProps {
+  initialMetrics: MetricData;
+  initialCategory: CategoryType;
+  initialScope?: string;
+}
+
 export default function RecommendationClient({
   initialMetrics,
   initialCategory,
-}: {
-  initialMetrics: MetricData;
-  initialCategory: CategoryType;
-}) {
+  initialScope = "All Scopes",
+}: RecommendationClientProps) {
   const { toast } = useToast();
   const [implementedRecommendations, setImplementedRecommendations] =
     useState<ImplementedRecommendationsState>(new Set());
-  const [activeCategory, setActiveCategory] =
-    useState<CategoryType>(initialCategory);
-  const [activeScope, setActiveScope] = useState<EmissionScope>("All Scopes");
+  const [activeCategory] = useState<CategoryType>(initialCategory);
+  const [activeScope, setActiveScope] = useState<EmissionScope | "All Scopes">(
+    initialScope as EmissionScope | "All Scopes"
+  );
   const [metrics] = useState<MetricData>(initialMetrics);
-  const [shouldFetch, setShouldFetch] = useState(false);
+  const [shouldFetch, setShouldFetch] = useState(true);
 
   // Store fetched recommendations in state to prevent refetching
   const [fetchedCategories, setFetchedCategories] = useState<Set<CategoryType>>(
@@ -126,8 +92,8 @@ export default function RecommendationClient({
       )
     );
 
-  // Modified SWR configuration
-  const { error: fetchError } = useSWR(
+  // Fetch recommendations when component mounts or category/metrics change
+  const { data, error: fetchError } = useSWR(
     shouldFetch && !fetchedCategories.has(activeCategory)
       ? {
           url: "/api/recommendation",
@@ -139,18 +105,18 @@ export default function RecommendationClient({
           },
         }
       : null,
-    async (key) => {
-      const result = await recommendationFetcher(key);
-      setRecommendationsByCategory((prev) => ({
-        ...prev,
-        [activeCategory]: result.recommendations,
-      }));
-      setFetchedCategories((prev) => new Set(prev).add(activeCategory));
-      return result;
-    },
+    recommendationFetcher,
     {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
+      onSuccess: (result) => {
+        setRecommendationsByCategory((prev) => ({
+          ...prev,
+          [activeCategory]: result.recommendations,
+        }));
+        setFetchedCategories((prev) => new Set(prev).add(activeCategory));
+        setShouldFetch(false);
+      },
       onError: (err: Error) => {
         console.error("Error fetching recommendations:", err);
         toast({
@@ -159,6 +125,7 @@ export default function RecommendationClient({
           description:
             "Our AI recommendation system is temporarily down. Please try again later.",
         });
+        setShouldFetch(false);
       },
     }
   );
@@ -173,7 +140,7 @@ export default function RecommendationClient({
     () =>
       filteredRecommendations
         .filter((rec) => implementedRecommendations.has(rec.title))
-        .reduce((acc, rec) => acc + rec.savings, 0),
+        .reduce((acc, rec) => acc + rec.estimatedEmissionReduction, 0),
     [filteredRecommendations, implementedRecommendations]
   );
 
@@ -189,17 +156,8 @@ export default function RecommendationClient({
     });
   }, []);
 
-  const handleTabChange = useCallback((category: CategoryType) => {
-    setActiveCategory(category);
-    setShouldFetch(true);
-  }, []);
-
-  const handleScopeChange = useCallback((scope: EmissionScope) => {
-    setActiveScope(scope);
-  }, []);
-
   const handleViewRecommendations = useCallback((scope: string) => {
-    setActiveScope(scope as EmissionScope);
+    setActiveScope(scope as EmissionScope | "All Scopes");
     setShouldFetch(true);
   }, []);
 
@@ -207,9 +165,8 @@ export default function RecommendationClient({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="text-xl font-semibold text-green-600">
-          Potential Savings: ${totalSavings.toLocaleString()}
+          Potential Emission Reduction: {totalSavings.toLocaleString()} CO₂e
         </div>
-        <ThresholdSettings />
       </div>
 
       {/* Threshold Alert */}
@@ -217,19 +174,6 @@ export default function RecommendationClient({
         metrics={metrics}
         onViewRecommendations={handleViewRecommendations}
       />
-
-      {metrics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ErrorBoundary fallback={<div>Error loading charts</div>}>
-            <Suspense fallback={<ChartsSkeleton />}>
-              <YearlyComparison data={metrics} />
-              <CategoryBreakdown data={metrics} category={activeCategory} />
-              <TrendAnalysis data={metrics} category={activeCategory} />
-              <CrossCategoryInsights data={metrics} />
-            </Suspense>
-          </ErrorBoundary>
-        </div>
-      )}
 
       <Card>
         <CardHeader>
@@ -240,45 +184,11 @@ export default function RecommendationClient({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Tabs defaultValue={CategoryType.OVERALL} value={activeCategory}>
-              <TabsList className="grid grid-cols-5 gap-4">
-                {Object.values(CategoryType).map((category) => (
-                  <TabsTrigger
-                    key={category}
-                    value={category}
-                    onClick={() => handleTabChange(category)}
-                    className="w-full"
-                  >
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-
-            <Tabs defaultValue="All Scopes" value={activeScope}>
-              <TabsList className="grid grid-cols-4 gap-4">
-                {["All Scopes", "Scope 1", "Scope 2", "Scope 3"].map((scope) => (
-                  <TabsTrigger
-                    key={scope}
-                    value={scope}
-                    onClick={() => handleScopeChange(scope as EmissionScope)}
-                    className="w-full"
-                  >
-                    {scope}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-
             {fetchError ? (
               <div className="py-4 text-center text-red-500">
                 Failed to load recommendations. Please try again.
               </div>
-            ) : !shouldFetch ? (
-              <div className="py-4 text-center text-gray-500">
-                Select a category to view recommendations
-              </div>
-            ) : !fetchedCategories.has(activeCategory) ? (
+            ) : !data ? (
               <div className="mt-4">
                 <RecommendationSkeleton />
               </div>

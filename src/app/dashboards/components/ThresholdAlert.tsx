@@ -44,8 +44,9 @@ interface ThresholdAlertProps {
 
 function convertMetricsToScope(metrics: MetricData): ScopeMetrics {
   // Scope 1: Direct emissions from owned sources (livestock + equipment)
-  const scope1 = metrics.livestock.emissions + 
-                (metrics.emissions.byCategory["equipment"] || 0);
+  const scope1 =
+    metrics.livestock.emissions +
+    (metrics.emissions.byCategory["equipment"] || 0);
 
   // Scope 2: Indirect emissions from purchased energy
   const scope2 = metrics.energy.consumption;
@@ -65,79 +66,88 @@ export default function ThresholdAlert({
   onViewRecommendations,
 }: ThresholdAlertProps) {
   const [alerts, setAlerts] = useState<ThresholdAlert[]>([]);
+  const [thresholds, setThresholds] = useState<ScopeThreshold[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
-    checkThresholds();
-  }, [metrics]);
+    const userId = localStorage.getItem("userId");
 
-  const checkThresholds = async () => {
-    try {
-      // Fetch current thresholds
-      const response = await fetch("/api/thresholds");
-      const data = await response.json();
-      const thresholds: ScopeThreshold[] = data.thresholds;
+    // Only fetch thresholds if userId exists
+    if (!userId) return;
 
-      // Convert metrics to scope format
-      const scopeMetrics = convertMetricsToScope(metrics);
-
-      // Check each threshold against current metrics
-      const newAlerts: ThresholdAlert[] = [];
-
-      thresholds.forEach((threshold) => {
-        let currentValue = 0;
-
-        // Map threshold scopes to metric values
-        switch (threshold.scope) {
-          case "Scope 1":
-            currentValue = scopeMetrics.scope1;
-            break;
-          case "Scope 2":
-            currentValue = scopeMetrics.scope2;
-            break;
-          case "Scope 3":
-            currentValue = scopeMetrics.scope3;
-            break;
-          default:
-            return;
-        }
-
-        // Create alert if threshold is exceeded
-        if (currentValue > threshold.value) {
-          newAlerts.push({
-            id: threshold.id,
-            scope: threshold.scope,
-            description: threshold.description,
-            currentValue,
-            thresholdValue: threshold.value,
-            unit: threshold.unit,
-            timestamp: new Date(),
-          });
-        }
-      });
-
-      // Update alerts state
-      setAlerts(newAlerts);
-
-      // Show toast notification for new alerts
-      if (newAlerts.length > 0) {
+    const fetchThresholds = async () => {
+      try {
+        const response = await fetch(`/api/thresholds?userId=${userId}`);
+        const data = await response.json();
+        setThresholds(data.thresholds || []);
+      } catch (error) {
+        console.error("Failed to fetch thresholds:", error);
         toast({
           variant: "destructive",
-          title: "Threshold Alert",
-          description: `${newAlerts.length} emission ${
-            newAlerts.length === 1 ? "scope has" : "scopes have"
-          } exceeded their thresholds`,
+          title: "Error",
+          description: "Failed to fetch thresholds",
         });
       }
-    } catch (error) {
-      console.error("Failed to check thresholds:", error);
+    };
+
+    fetchThresholds();
+  }, []); // Empty dependency array to fetch only once
+
+  useEffect(() => {
+    if (thresholds.length === 0) return;
+
+    // Convert metrics to scope format
+    const scopeMetrics = convertMetricsToScope(metrics);
+
+    // Check each threshold against current metrics
+    const newAlerts: ThresholdAlert[] = [];
+
+    thresholds.forEach((threshold) => {
+      let currentValue = 0;
+
+      // Map threshold scopes to metric values
+      switch (threshold.scope) {
+        case "Scope 1":
+          currentValue = scopeMetrics.scope1;
+          break;
+        case "Scope 2":
+          currentValue = scopeMetrics.scope2;
+          break;
+        case "Scope 3":
+          currentValue = scopeMetrics.scope3;
+          break;
+        default:
+          return;
+      }
+
+      // Create alert if threshold is exceeded
+      if (currentValue > threshold.value) {
+        newAlerts.push({
+          id: threshold.id,
+          scope: threshold.scope,
+          description: threshold.description,
+          currentValue,
+          thresholdValue: threshold.value,
+          unit: threshold.unit,
+          timestamp: new Date(),
+        });
+      }
+    });
+
+    // Update alerts state
+    setAlerts(newAlerts);
+
+    // Show toast notification for new alerts
+    if (newAlerts.length > 0) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to check thresholds",
+        title: "Threshold Alert",
+        description: `${newAlerts.length} emission ${
+          newAlerts.length === 1 ? "scope has" : "scopes have"
+        } exceeded their thresholds`,
       });
     }
-  };
+  }, [metrics, thresholds, toast]);
 
   if (alerts.length === 0) return null;
 
@@ -152,9 +162,7 @@ export default function ThresholdAlert({
                 {alert.scope} Alert
               </CardTitle>
             </div>
-            <CardDescription>
-              {alert.description}
-            </CardDescription>
+            <CardDescription>{alert.description}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
