@@ -56,8 +56,8 @@ const DashboardPage = () => {
 
   const [metricsData, setMetricsData] = useState([ //var to store the data and display, initially predefined
   { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
-  { title: "Total Carbon Emissions", value: "Loading...", unit: "KG CO2" },
-  { title: "Total Net Emission", value: "Loading...", unit: "KG CO2" }
+  { title: "Total Net Carbon Emissions", value: "Loading...", unit: "KG CO2" },
+  { title: "Overall Carbon Neutrality Gap", value: "Loading...", unit: "KG CO2" }
   ]);
 
   //Fetch the avail list of years from the API
@@ -108,10 +108,10 @@ const DashboardPage = () => {
               if (data) {
                   setMetricsData([
                       { title: "Total Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
-                      { title: "Total Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
-                      { title: "Total Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
+                      { title: "Total Net Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
+                      { title: "Overall Carbon Neutrality Gap", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
                   ]);
-                  setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
+                  setCurrentYearEmissions(data["carbonAverage in CO2E"]); //give the current year net admission
               }
 
               if (emissionsData) {
@@ -120,7 +120,7 @@ const DashboardPage = () => {
               }
 
               if (previousEmissionsData){
-                setPreviousYearEmissions(previousEmissionsData["netAverage in CO2E"]); //give the prev year emission
+                setPreviousYearEmissions(previousEmissionsData["carbonAverage in CO2E"]); //give the prev year emission
               }
 
               if (targetGoal) {
@@ -141,11 +141,11 @@ const DashboardPage = () => {
 
               if (data) {
                   setMetricsData([
-                      { title: "Average Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
-                      { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
-                      { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
+                      { title: "Total Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
+                      { title: "Total Net Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
+                      { title: "Overall Carbon Neutrality Gap", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
                   ]);
-                  setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
+                  setCurrentYearEmissions(data["carbonAverage in CO2E"]); //give the current year net admission
               }
 
               if (emissionsData) {
@@ -242,20 +242,18 @@ const DashboardPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
               <div 
-                key={index} 
                 onClick={() => {
-                  if (metric.title === "Total Carbon Emissions") {
+                  if (metric.title === "Total Net Carbon Emissions") {
                     setIsScopeModalOpen(true);
                   }
                 }}
-                className="cursor-pointer"
               >
                 <MetricCard
                   key={index}
                   title={metric.title}
                   value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value).toFixed(0)}
                   unit={metric.unit}
-                  className="bg-white p-4 shadow-md rounded-lg hover:shadow-lg transition-shadow"
+                  className="bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer' : ''"
                 />
                       {/* ScopeModal */}
                 <ScopeModal
@@ -284,14 +282,14 @@ const DashboardPage = () => {
         <div className="flex flex-col space-y-6 ">
           {/* Additional Gauge Graph */}
           <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"> 
-            <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Net Emission Limit Indicator</h3>
+            <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Goal Reduction Progress</h3>
             <div className="flex-1 flex flex-col">
               <div className="bg-white flex-1 flex justify-center items-center pb-4">
                 {currentYearEmissions !== null && targetGoal !== null && previousYearEmissions !== null ? ( //prevent early display and disappear the needle
                   <GaugeChartComponent
                     currentYearEmissions={currentYearEmissions || 0}
                     previousYearEmissions={previousYearEmissions || 0}
-                    targetGoal={targetGoal || 10000} //default, for now
+                    targetReduction={targetGoal || 10000} //default, for now
                   />
                 ) : (
                   <div>Loading gauge data...</div>  // Optionally show a loading state
