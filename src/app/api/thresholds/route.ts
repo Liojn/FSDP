@@ -1,16 +1,39 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import dbConfig from "dbConfig";
+
+// Ensure unique constraints on userId and scope
+async function ensureUniqueIndex(db: any) {
+  await db.collection("thresholds").createIndex(
+    { userId: 1, scope: 1 },
+    { unique: true }
+  );
+}
 
 // Add OPTIONS handler for CORS support
 export async function OPTIONS() {
   return NextResponse.json({}, { status: 200 });
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   console.log("GET request received");
+  const { searchParams } = new URL(req.url);
+  const userId = searchParams.get("userId");
+
+  if (!userId) {
+    return NextResponse.json(
+      { error: "Missing userId parameter" },
+      { status: 400 }
+    );
+  }
+
   try {
     const db = await dbConfig.connectToDatabase();
-    const thresholds = await db.collection("thresholds").find().toArray();
+    await ensureUniqueIndex(db);
+    const thresholds = await db
+      .collection("thresholds")
+      .find({ userId })
+      .toArray();
     return NextResponse.json({ thresholds });
   } catch (error: unknown) {
     console.error("Failed to fetch thresholds:", error);
@@ -25,9 +48,9 @@ export async function POST(req: NextRequest) {
   console.log("POST request received");
   try {
     const body = await req.json();
-    const { scope, description, value, unit } = body;
+    const { userId, scope, description, value, unit } = body;
 
-    if (!scope || !value || !unit) {
+    if (!userId || !scope || !value || !unit) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -35,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
 
     const newThreshold = {
-      id: scope, // Use scope as the ID
+      userId,
       scope,
       description: description || getDefaultDescription(scope),
       value,
@@ -45,8 +68,9 @@ export async function POST(req: NextRequest) {
     };
 
     const db = await dbConfig.connectToDatabase();
+    await ensureUniqueIndex(db);
 
-    // Insert the new threshold
+    // Insert the new threshold or throw error if duplicate
     await db.collection("thresholds").insertOne(newThreshold);
 
     return NextResponse.json({ threshold: newThreshold }, { status: 201 });
@@ -65,20 +89,21 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     console.log("Request body:", body);
 
-    const { id, value, unit } = body;
+    const { userId, scope, value, unit } = body;
 
-    if (!id) {
+    if (!userId || !scope) {
       return NextResponse.json(
-        { error: "Missing threshold ID" },
+        { error: "Missing userId or scope" },
         { status: 400 }
       );
     }
 
     const db = await dbConfig.connectToDatabase();
+    await ensureUniqueIndex(db);
 
     // Use upsert to insert a new document if one doesn't exist
     const result = await db.collection("thresholds").findOneAndUpdate(
-      { id },
+      { userId, scope },
       {
         $set: {
           value,
@@ -86,9 +111,9 @@ export async function PUT(req: NextRequest) {
           updatedAt: new Date(),
         },
         $setOnInsert: {
-          id,
-          scope: id, // Since we're using scope as ID
-          description: getDefaultDescription(id),
+          userId,
+          scope,
+          description: getDefaultDescription(scope),
           createdAt: new Date(),
         },
       },
@@ -109,17 +134,18 @@ export async function DELETE(req: NextRequest) {
   console.log("DELETE request received");
   try {
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
+    const userId = searchParams.get("userId");
+    const scope = searchParams.get("scope");
 
-    if (!id) {
+    if (!userId || !scope) {
       return NextResponse.json(
-        { error: "Missing threshold ID" },
+        { error: "Missing userId or scope" },
         { status: 400 }
       );
     }
 
     const db = await dbConfig.connectToDatabase();
-    const result = await db.collection("thresholds").deleteOne({ id });
+    const result = await db.collection("thresholds").deleteOne({ userId, scope });
 
     if (result.deletedCount === 0) {
       return NextResponse.json(

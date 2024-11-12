@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"; //treat this component as a Client Component
 
 import React, { useState, useEffect } from "react";
@@ -23,6 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ThresholdSettings from "./components/ThresholdSettings";
+import RecommendationAlert from "./components/RecommendationAlert";
+import { useRouter } from "next/navigation";
 
 /* Define the props interface for BarChart
 interface BarChartProps {
@@ -42,7 +45,7 @@ const DashboardPage = () => {
   //popup
   const [showModal, setShowModal] = useState(false); // Modal visibility
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [categoryDetails, setCategoryDetails] = useState<string | null>(null);
+  const [, setCategoryDetails] = useState<string | null>(null);
 
   //companyID
   const [userId, setUserId] = useState<string | null>(null);
@@ -77,6 +80,14 @@ const DashboardPage = () => {
     { title: "Total Carbon Emissions", value: "Loading...", unit: "KG CO2" },
     { title: "Total Net Emission", value: "Loading...", unit: "KG CO2" },
   ]);
+
+  const router = useRouter();
+  const [thresholds] = useState({
+    scope1: 500,
+    scope2: 1000,
+    scope3: 700,
+  });
+  const [exceedingScopes, setExceedingScopes] = useState<string[]>([]);
 
   //Fetch the avail list of years from the API
   useEffect(() => {
@@ -131,7 +142,7 @@ const DashboardPage = () => {
 
             // Process data for both years
             if (data) {
-              setMetricsData([
+              const newMetricsData = [
                 {
                   title: "Total Energy Consumption",
                   value: data["energyAverage in kWh"].toFixed(0),
@@ -147,7 +158,10 @@ const DashboardPage = () => {
                   value: data["netAverage in CO2E"].toFixed(0),
                   unit: "KG CO2",
                 },
-              ]);
+              ];
+
+              setMetricsData(newMetricsData);
+              checkThresholds(newMetricsData);
               setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
             }
 
@@ -180,7 +194,7 @@ const DashboardPage = () => {
               ]);
 
             if (data) {
-              setMetricsData([
+              const newMetricsData = [
                 {
                   title: "Average Energy Consumption",
                   value: data["energyAverage in kWh"].toFixed(0),
@@ -196,7 +210,10 @@ const DashboardPage = () => {
                   value: data["netAverage in CO2E"].toFixed(0),
                   unit: "KG CO2",
                 },
-              ]);
+              ];
+
+              setMetricsData(newMetricsData);
+              checkThresholds(newMetricsData);
               setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
             }
 
@@ -239,6 +256,29 @@ const DashboardPage = () => {
     } else {
       setSelectedMonth(month); // Set the selected month
     }
+  };
+
+  // Add threshold check function
+  const checkThresholds = (metrics: any) => {
+    const exceeding: string[] = [];
+
+    const scope1Value = parseFloat(metrics[0].value);
+    const scope2Value = parseFloat(metrics[1].value);
+    const scope3Value = parseFloat(metrics[2].value);
+
+    if (scope1Value > thresholds.scope1)
+      exceeding.push("Scope 1 (Direct Emissions)");
+    if (scope2Value > thresholds.scope2)
+      exceeding.push("Scope 2 (Indirect Emissions)");
+    if (scope3Value > thresholds.scope3)
+      exceeding.push("Scope 3 (Value Chain Emissions)");
+
+    setExceedingScopes(exceeding);
+  };
+
+  // Add navigation handler
+  const handleViewRecommendations = () => {
+    router.push("/recommendation");
   };
 
   if (loading) {
@@ -291,6 +331,11 @@ const DashboardPage = () => {
           </div>
         </div>
       </div>
+
+      <RecommendationAlert
+        exceedingScopes={exceedingScopes}
+        onViewRecommendations={handleViewRecommendations}
+      />
 
       {/* Dashboard Layout */}
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">

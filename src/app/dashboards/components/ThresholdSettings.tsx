@@ -5,13 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -37,6 +30,9 @@ const defaultDescriptions = {
   "Scope 3": "All other indirect emissions in the value chain",
 };
 
+const userId = localStorage.getItem("userId");
+console.log(userId);
+// default values
 export default function ThresholdSettings() {
   const [thresholds, setThresholds] = useState<ScopeThreshold[]>([
     {
@@ -70,6 +66,12 @@ export default function ThresholdSettings() {
     updates: Partial<ScopeThreshold>
   ) => {
     const updatedThresholds = [...thresholds];
+
+    // Ensure that if the value is cleared, it does not default to 0
+    if (updates.value !== undefined) {
+      updates.value = updates.value === 0 ? undefined : updates.value;
+    }
+
     updatedThresholds[index] = { ...updatedThresholds[index], ...updates };
     setThresholds(updatedThresholds);
   };
@@ -84,7 +86,8 @@ export default function ThresholdSettings() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            id: threshold.id,
+            userId, // Retrieved from localStorage or a variable
+            scope: threshold.scope, // Change 'id' to 'scope' here
             value: threshold.value,
             unit: threshold.unit,
           }),
@@ -140,36 +143,24 @@ export default function ThresholdSettings() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor={`threshold-${index}`}>Threshold Value</Label>
-                  <Input
-                    id={`threshold-${index}`}
-                    type="number"
-                    value={threshold.value}
-                    onChange={(e) =>
-                      handleThresholdChange(index, {
-                        value: Number(e.target.value),
-                      })
-                    }
-                    placeholder="Enter threshold value"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor={`unit-${index}`}>Unit</Label>
-                  <Select
-                    value={threshold.unit}
-                    onValueChange={(value) =>
-                      handleThresholdChange(index, { unit: value })
-                    }
-                  >
-                    <SelectTrigger id={`unit-${index}`}>
-                      <SelectValue placeholder="Select unit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="tons CO₂e">tons CO₂e</SelectItem>
-                      <SelectItem value="kg CO₂e">kg CO₂e</SelectItem>
-                      <SelectItem value="metric tons">metric tons</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id={`threshold-${index}`}
+                      type="number"
+                      value={threshold.value === 0 ? "" : threshold.value}
+                      onChange={(e) => {
+                        const value =
+                          e.target.value === ""
+                            ? undefined
+                            : Math.max(Number(e.target.value), 1);
+                        handleThresholdChange(index, { value });
+                      }}
+                      placeholder="Enter threshold value"
+                      min={1} // This will prevent typing 0 but still allow backspacing
+                      className="flex-grow" // Ensure the input takes up available space
+                    />
+                    <span className="text-gray-700 font-semibold">kg CO₂e</span>
+                  </div>
                 </div>
               </div>
             </div>
