@@ -111,9 +111,9 @@ const CalcluteMonthlyCarbonEmission = (equipmentData: Equipment[], livestockData
         const fuel_emit = equipment.fuel_consumed_l * emissionData[0].fuel_emissions[fuelType]; 
         
         // Extract month from the date, insert to respective month
-        console.log(equipment);
+        //console.log(equipment);
         const month = new Date(equipment.date).getUTCMonth(); // Adjusted here
-        console.log(month);
+        //console.log(month);
         monthlyEmissions[month] += (fuel_emit + electricEmit);    
     }
 
@@ -232,7 +232,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
                     break;
             }        }
         //Return results
-        console.log(results); //test
+        //console.log(results); //test
 
         const carbonEmissionAverage = CalcluteMonthlyCarbonEmission(results.Equipment, results.Livestock, results.Crops, results.Waste, results.EmissionRates, results.Forest)
         return NextResponse.json(carbonEmissionAverage);

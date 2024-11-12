@@ -251,6 +251,7 @@ const DashboardPage = () => {
                 className="cursor-pointer"
               >
                 <MetricCard
+                  key={index}
                   title={metric.title}
                   value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value).toFixed(0)}
                   unit={metric.unit}
