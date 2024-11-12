@@ -9,6 +9,7 @@ import EmissionCategoryChart from '@/app/dashboards/charts/emissionCategory';
 import { PageHeader } from '@/components/shared/page-header';
 import Modal from './popup/modal';
 import { Loader2 } from 'lucide-react';
+import ScopeModal from './popup/scopeModal';
 
 /* Define the props interface for BarChart
 interface BarChartProps {
@@ -33,6 +34,9 @@ const DashboardPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categoryDetails, setCategoryDetails] = useState<string | null>(null);
   
+  //scope popup
+  const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
+
   //companyID
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -237,13 +241,29 @@ const DashboardPage = () => {
           {/* Dashboard Cards for Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
-              <MetricCard
-                key={index}
-                title={metric.title}
-                value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value).toFixed(0)} // condition ? valueIfTrue : valueIfFalse
-                unit={metric.unit}
-                  className={`bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer' : ''}`}
-              />
+              <div 
+                onClick={() => {
+                  if (metric.title === "Total Net Carbon Emissions") {
+                    setIsScopeModalOpen(true);
+                  }
+                }}
+              >
+                <MetricCard
+                  key={index}
+                  title={metric.title}
+                  value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value).toFixed(0)}
+                  unit={metric.unit}
+                  className="bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer' : ''"
+                />
+                      {/* ScopeModal */}
+                <ScopeModal
+                  isOpen={isScopeModalOpen}
+                  onClose={() => setIsScopeModalOpen(false)}
+                  year={selectedYear || new Date().getFullYear()}
+                  month={selectedMonth ? Number(selectedMonth) : undefined}
+                  userId={userId || ''}
+                />
+              </div>
             ))}
           </div>
 

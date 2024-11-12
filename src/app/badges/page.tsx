@@ -12,27 +12,41 @@ interface Achievement {
   progress: number;
   isUnlocked: boolean;
   dateUnlocked: string | null;
-  badge_id: string; // Added for deduplication
+  badge_id: string;
 }
 
-interface AchievementsData {
-  userBadges: {
-    _id: string;
-    user_id: string;
-    badge_id: string;
-    progress: number;
-    isUnlocked: boolean;
-    dateUnlocked: string | null;
-  }[];
-  collections: {
-    EmissionRates: any[];
-    Equipment: any[];
-    Crops: any[];
-    Livestock: any[];
-    Waste: any[];
-    Forest: any[];
-  };
+interface CampaignMilestone {
+  percentage: number;
+  reached: boolean;
 }
+
+interface CampaignData {
+  campaign: {
+    _id: string;
+    name: string;
+    status: string;
+    totalReduction: number;
+    targetReduction: number;
+    signeesCount: number;
+    milestones: CampaignMilestone[];
+  };
+  participants: Array<{
+    company: {
+      _id: string;
+      name: string;
+      email: string;
+    };
+    participation: {
+      _id: string;
+      campaignId: string;
+      companyId: string;
+      joinedAt: string;
+      currentProgress: number;
+      lastUpdated: string;
+    };
+  }>;
+}
+
 
 const AchievementCard = ({ achievement }: { achievement: Achievement }) => (
   <Card className={`relative p-6 rounded-xl border ${
@@ -49,24 +63,15 @@ const AchievementCard = ({ achievement }: { achievement: Achievement }) => (
           Unlocked {new Date(achievement.dateUnlocked!).toLocaleDateString()}
         </span>
       )}
+      {achievement.category === "Campaign" && (
+        <span className="text-xs font-medium text-blue-600">
+          Campaign Milestone
+        </span>
+      )}
     </div>
     
-    <h3 className={`text-lg font-semibold mb-2 ${
-      achievement.isUnlocked 
-        ? 'text-lime-900' 
-        : 'text-gray-600'
-    }`}>
-      {achievement.title}
-    </h3>
-    
-    <p className={`text-sm mb-4 ${
-      achievement.isUnlocked 
-        ? 'text-lime-700' 
-        : 'text-gray-500'
-    }`}>
-      {achievement.description}
-    </p>
-    
+    <h3 className="font-bold text-lg">{achievement.title}</h3>
+    <p className="text-gray-600 text-sm">{achievement.description}</p>
     <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
       <div 
         className={`absolute left-0 top-0 h-full rounded-full ${
@@ -87,9 +92,10 @@ const AchievementsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastCalculated, setLastCalculated] = useState<Date | null>(null);
+  const [isParticipant, setIsParticipant] = useState(false);
 
-  const FETCH_INTERVAL = 10000; // 10 seconds
-  const CALCULATION_INTERVAL = 300000; // 5 minutes
+  const FETCH_INTERVAL = 10000;
+  const CALCULATION_INTERVAL = 300000;
   
   const categories = ["ALL", "Energy", "Waste", "Carbon", "Equipment", "Crop", "Livestock"];
 
@@ -120,34 +126,53 @@ const AchievementsPage = () => {
     }
   };
 
+    const checkCampaignParticipation = (campaignData: CampaignData, userEmail: string): boolean => {
+    if (!campaignData?.participants) {
+      return false;
+    }
+    return campaignData.participants.some(
+      participant => participant.company.email.toLowerCase() === userEmail.toLowerCase()
+    );
+  };
+
   const fetchAndCombineData = async () => {
     try {
       const userId = localStorage.getItem("userId");
-      
-      if (!userId) {
-        throw new Error("No user ID found in local storage");
+      const userEmail = localStorage.getItem("userEmail");
+
+      if (!userId || !userEmail) {
+        throw new Error("User ID or email not found in local storage");
       }
 
-      const [badgesResponse, achievementsResponse] = await Promise.all([
+      const [badgesResponse, achievementsResponse, campaignResponse] = await Promise.all([
         fetch('/api/badges'),
-        fetch(`/api/badges/achivements/${userId}`)
+        fetch(`/api/badges/achivements/${userId}`),
+        fetch('/api/campaign')
       ]);
 
-      if (!badgesResponse.ok || !achievementsResponse.ok) {
+      if (!badgesResponse.ok || !achievementsResponse.ok || !campaignResponse.ok) {
         throw new Error("Failed to fetch data");
       }
 
-      const [badgesData, achievementsData] = await Promise.all([
+      const [badgesData, achievementsData, campaignData] = await Promise.all([
         badgesResponse.json(),
-        achievementsResponse.json()
+        achievementsResponse.json(),
+        campaignResponse.json()
       ]);
 
-      // Create a Map to store unique badges by badge_id
-      const badgeMap = new Map();
+      // Add console.log to debug campaign data and email check
+      console.log('Campaign Data:', campaignData);
+      console.log('User Email:', userEmail);
 
+      // Check participation using email
+      const userIsParticipant = checkCampaignParticipation(campaignData, userEmail);
+      console.log('Is Participant:', userIsParticipant);
+      setIsParticipant(userIsParticipant);
+
+      // Map user achievements and badges data
+      const badgeMap = new Map();
       achievementsData.userBadges.forEach((userBadge: any) => {
         const badgeDetails = badgesData.find((badge: any) => badge._id === userBadge.badge_id);
-        
         if (badgeDetails && !badgeMap.has(userBadge.badge_id)) {
           badgeMap.set(userBadge.badge_id, {
             ...userBadge,
@@ -161,10 +186,24 @@ const AchievementsPage = () => {
         }
       });
 
-      // Convert Map values back to array
-      const uniqueAchievements = Array.from(badgeMap.values());
-      
-      setAchievements(uniqueAchievements);
+      // Only add campaign milestones if user is a participant
+      if (userIsParticipant && campaignData?.campaign?.milestones) {
+        campaignData.campaign.milestones.forEach((milestone: CampaignMilestone) => {
+          badgeMap.set(`milestone-${milestone.percentage}`, {
+            _id: `milestone-${milestone.percentage}`,
+            title: `Campaign Milestone ${milestone.percentage}%`,
+            description: `Achieve ${milestone.percentage}% of target reduction`,
+            category: "Campaign",
+            progress: milestone.reached ? 100 : 0,
+            isUnlocked: milestone.reached,
+            dateUnlocked: milestone.reached ? new Date().toISOString() : null,
+            badge_id: `milestone-${milestone.percentage}`
+          });
+        });
+      }
+
+      const combinedAchievements = Array.from(badgeMap.values());
+      setAchievements(combinedAchievements);
       setError(null);
     } catch (err: any) {
       console.error("Error fetching data:", err);
@@ -175,17 +214,13 @@ const AchievementsPage = () => {
   };
 
   useEffect(() => {
-    // Initial fetch and calculate
     const init = async () => {
       await calculateBadges();
       await fetchAndCombineData();
     };
     init();
 
-    // Set up periodic fetching
     const fetchInterval = setInterval(fetchAndCombineData, FETCH_INTERVAL);
-    
-    // Set up periodic calculation
     const calculationInterval = setInterval(calculateBadges, CALCULATION_INTERVAL);
 
     return () => {
