@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   fetchUniqueYears,
   getMetricsData,
+  EmissionData,
   fetchMonthlyCarbonEmissions,
   fetchEmissionTarget,
   fetchEmissionCategory,
@@ -15,14 +16,14 @@ import EmissionCategoryChart from "@/app/dashboards/charts/emissionCategory";
 import { PageHeader } from "@/components/shared/page-header";
 import Modal from "./popup/modal";
 import { Loader2 } from "lucide-react";
-import ThresholdSettings from "./components/ThresholdSettings";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
+/* Define the props interface for BarChart
+interface BarChartProps {
+  monthlyEmissions: number[];
+  averageAbsorbed: number | null;
+  handleMonthClick: (month: string | number) => void; // Prop to handle month click
+
+}*/
 
 const DashboardPage = () => {
   const [loading, setLoading] = useState(true); // for loading page - nicole
@@ -34,7 +35,7 @@ const DashboardPage = () => {
   //popup
   const [showModal, setShowModal] = useState(false); // Modal visibility
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [, setCategoryDetails] = useState<string | null>(null);
+  const [categoryDetails, setCategoryDetails] = useState<string | null>(null);
 
   //companyID
   const [userId, setUserId] = useState<string | null>(null);
@@ -335,7 +336,7 @@ const DashboardPage = () => {
                   <GaugeChartComponent
                     currentYearEmissions={currentYearEmissions || 0}
                     previousYearEmissions={previousYearEmissions || 0}
-                    targetGoal={targetGoal || 10000} //default, for now
+                    targetReduction={targetGoal || 10000} //default, for now
                   />
                 ) : (
                   <div>Loading gauge data...</div> // Optionally show a loading state

@@ -5,13 +5,13 @@ import GaugeChart from 'react-gauge-chart';
 type GaugeChartProps = {
   currentYearEmissions: number; // Emissions for the current year
   previousYearEmissions: number; // Emissions for the previous year
-  targetGoal: number; // Target goal for the current year
+  targetReduction: number; // percentage in reduction for the current year goal
 };
 
 const GaugeChartComponent: React.FC<GaugeChartProps> = ({
   currentYearEmissions,
   previousYearEmissions,
-  targetGoal,
+  targetReduction,
 }) => {
   //Calculate percentage change from previous year to current year
   let percentageChange = 0;
@@ -42,7 +42,16 @@ const GaugeChartComponent: React.FC<GaugeChartProps> = ({
   }
 
   //Ensure the gauge value does not exceed the target goal
-  const gaugeValue = Math.min(currentYearEmissions, targetGoal); //Do not let gauge to exceed the target
+  let targetGoal;
+  let gaugeValue;
+  if (previousYearEmissions !== 0){
+    targetGoal = (1- targetReduction) * previousYearEmissions; //current year target is previous 0.95 amount
+    gaugeValue = Math.min(currentYearEmissions, targetGoal); //Do not let gauge to exceed the target
+  } else {
+    targetGoal = 10000;//Temporarily, since it can't be left empty;
+    gaugeValue  = 0;
+  }
+  //console.log(targetGoal);
   const max = targetGoal; // Maximum value for the gauge (target)
 
   return (
@@ -55,6 +64,7 @@ const GaugeChartComponent: React.FC<GaugeChartProps> = ({
         percent={gaugeValue / max} // Set the percentage based on current year emissions vs target
         arcWidth={0.2} // Set the width of the gauge arc
         textColor="#000000" // Color of the text
+        formatTextValue={(gaugeValue) => `${gaugeValue}% used`} // Add custom text to the percentage
       />
       
       {/* Only display the comparison and percentage if previous year data avail */}
