@@ -1,3 +1,5 @@
+
+
 // Data Types
 export interface MetricData {
   energy: {
@@ -25,10 +27,16 @@ export interface MetricData {
 export type EmissionScope = "Scope 1" | "Scope 2" | "Scope 3";
 
 export interface Recommendation {
-  impact: ReactNode;
+  priority: undefined;
+  roi: undefined;
+  implementationTimeline: any;
+  steps: any;
+  savings: any;
+  sourceData: any;
   id: string;
   title: string;
   description: string;
+  impact: string; // Changed from ReactNode to string
   scope: EmissionScope;
   category: CategoryType;
   
@@ -66,8 +74,6 @@ export enum CategoryType {
   WASTE = "waste",
   OVERALL = "overall"
 }
-
-// Existing interfaces remain the same...
 
 // New interface for Scope-Specific Recommendations
 export interface ScopeRecommendationProps {

@@ -7,7 +7,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 // Initialize the Claude client with the provided API key
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY, // Use environment variable
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 // Define the structure of a recommendation returned from the API
@@ -42,7 +42,7 @@ const cleanAndParseJSON = (str: string): ApiResponse => {
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error("JSON parsing error:", error);
-    console.error("Original response content:", str); // Log the AI response for debugging
+    console.error("Original response content:", str);
     throw error;
   }
 };
@@ -93,7 +93,6 @@ Livestock: ${metrics.livestock.count} animals, ${metrics.livestock.emissions} to
 - **Return the response as valid JSON only**, with no additional text or explanations.
 - Use the following structure:
 
-<<START_JSON>>
 {
   "recommendations": [
     {
@@ -112,7 +111,6 @@ Livestock: ${metrics.livestock.count} animals, ${metrics.livestock.emissions} to
     }
   ]
 }
-<<END_JSON>>
 
 **Ensure that the entire response is valid JSON without any surrounding text or markdown.**
 `;
@@ -123,20 +121,24 @@ Livestock: ${metrics.livestock.count} animals, ${metrics.livestock.emissions} to
 // Handler function for the POST request
 export async function POST(req: Request) {
   try {
+    console.log("Received recommendation request");
     const { metrics, scopes } = (await req.json()) as {
       metrics: MetricData;
       scopes?: string[];
     };
 
     if (!metrics) {
+      console.error("No metrics provided in request");
       return NextResponse.json(
         { error: "Metrics are required" },
         { status: 400 }
       );
     }
 
+    console.log("Generating prompt with metrics:", JSON.stringify(metrics));
     const prompt = await generatePrompt(metrics, scopes);
 
+    console.log("Sending request to Anthropic API");
     const message = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",
       max_tokens: 1024,
@@ -149,26 +151,27 @@ export async function POST(req: Request) {
       temperature: 0.7,
     });
 
-    // Log the full response from the AI for debugging purposes
-    console.log("AI Response Content:", message.content);
+    console.log("Received response from Anthropic API");
 
     // Check for valid response content and extract the text
     const textContent = message.content.find(
       (block: any) => block.type === "text"
     );
     if (!textContent || !("text" in textContent) || typeof textContent.text !== "string") {
+      console.error("No valid text response from Claude");
       throw new Error("No valid text response from Claude");
     }
+
+    console.log("Raw AI response:", textContent.text);
 
     // Attempt to parse the JSON response
     let parsedResponse: ApiResponse;
     try {
       parsedResponse = cleanAndParseJSON(textContent.text);
+      console.log("Successfully parsed recommendations:", JSON.stringify(parsedResponse));
     } catch (parsingError) {
       console.error("Parsing error:", parsingError);
       console.error("Original AI response:", textContent.text);
-
-      // Provide a fallback or retry logic here if needed
       return NextResponse.json(
         { error: "Failed to parse AI response. Please try again." },
         { status: 500 }
@@ -178,13 +181,12 @@ export async function POST(req: Request) {
     // Transform recommendations
     const recommendations: Recommendation[] = parsedResponse.recommendations.map(
       (rec, index) => ({
-        id: `rec_${index}`, // Generate unique ID
+        id: `rec_${index}`,
         title: rec.title,
         description: rec.description,
         scope: rec.scope || "Scope 1",
-        category: CategoryType.OVERALL, // Use enum value
-
-        // Impact and Prioritization
+        impact: rec.impact,
+        category: CategoryType.OVERALL,
         estimatedEmissionReduction: rec.savings || 0,
         priorityLevel: rec.priority
           ? rec.priority <= 2
@@ -193,15 +195,9 @@ export async function POST(req: Request) {
             ? "Medium"
             : "Low"
           : "Medium",
-
-        // Implementation Details
         implementationSteps: rec.steps || [],
         estimatedROI: rec.roi || 0,
-
-        // Status Tracking
         status: "Not Started",
-
-        // Additional Metadata
         difficulty:
           rec.difficulty === "easy"
             ? "Easy"
@@ -210,15 +206,14 @@ export async function POST(req: Request) {
             : rec.difficulty === "hard"
             ? "Challenging"
             : "Moderate",
-        estimatedCost: 0, // Add logic to estimate cost if needed
+        estimatedCost: 0,
         estimatedTimeframe: rec.implementationTimeline || "3-6 months",
-
-        // Visualization and Tracking
         relatedMetrics: rec.sourceData ? [rec.sourceData] : [],
         dashboardLink: rec.dashboardLink,
       })
     );
 
+    console.log("Sending response with recommendations:", JSON.stringify(recommendations));
     return NextResponse.json({ recommendations }, { status: 200 });
   } catch (error) {
     console.error("API Error:", error);

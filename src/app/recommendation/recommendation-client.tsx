@@ -39,7 +39,11 @@ const recommendationFetcher = async ({
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  if (!response.ok) throw new Error("Failed to fetch recommendations");
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("API Error:", errorData);
+    throw new Error(errorData.error || "Failed to fetch recommendations");
+  }
   return response.json();
 };
 
@@ -108,6 +112,7 @@ export default function RecommendationClient({
       revalidateOnFocus: false,
       dedupingInterval: 30000,
       onSuccess: (result) => {
+        console.log("Received recommendations:", result);
         setRecommendationsByCategory((prev) => ({
           ...prev,
           [activeCategory]: result.recommendations,

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/RecommendationCard.tsx
 
 import React, { memo, useCallback } from "react";
@@ -7,6 +8,9 @@ import { RecommendationCardProps } from "@/types";
 
 const RecommendationCard: React.FC<RecommendationCardProps> = memo(
   ({ rec, isImplemented, toggleRecommendation }) => {
+    // Log every time the component renders
+    console.log(`Rendering RecommendationCard: ${rec.title}`);
+
     // Memoize the click handler to prevent recreating the function on every render
     const handleImplementationToggle = useCallback(
       (e: React.MouseEvent) => {
@@ -30,21 +34,21 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
                       rec.difficulty.slice(1)}
                   </span>
                 )}
-                {rec.priorityLevel && (
+                {rec.priority !== undefined && (
                   <span className="text-sm px-2 py-1 rounded-full border">
-                    {rec.priorityLevel} Priority
+                    Priority {rec.priority}
                   </span>
                 )}
-                {rec.estimatedROI && (
+                {rec.roi !== undefined && (
                   <span className="text-sm px-2 py-1 rounded-full bg-green-100 text-green-800">
-                    ROI: {rec.estimatedROI}%
+                    ROI: {rec.roi}%
                   </span>
                 )}
               </div>
             </div>
-            {rec.estimatedTimeframe && (
+            {rec.implementationTimeline && (
               <span className="text-sm text-gray-500">
-                Est. Timeline: {rec.estimatedTimeframe}
+                Est. Timeline: {rec.implementationTimeline}
               </span>
             )}
           </div>
@@ -56,15 +60,32 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
           </p>
           <h4 className="font-semibold mb-2">Steps to Implement:</h4>
           <ol className="list-decimal pl-5 mb-4">
-            {rec.implementationSteps.map((step, index) => (
-              <li key={index}>{step}</li>
-            ))}
+            {rec.steps.map(
+              (
+                step:
+                  | string
+                  | number
+                  | bigint
+                  | boolean
+                  | React.ReactElement<
+                      any,
+                      string | React.JSXElementConstructor<any>
+                    >
+                  | Iterable<React.ReactNode>
+                  | React.ReactPortal
+                  | Promise<React.AwaitedReactNode>
+                  | null
+                  | undefined,
+                index: React.Key | null | undefined
+              ) => (
+                <li key={index}>{step}</li>
+              )
+            )}
           </ol>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span>
-                Potential Savings: $
-                {rec.estimatedEmissionReduction.toLocaleString()}/year
+                Potential Savings: ${rec.savings.toLocaleString()}/year
               </span>
               <Button
                 variant={isImplemented ? "secondary" : "default"}
@@ -73,10 +94,8 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
                 {isImplemented ? "Implemented" : "Mark as Implemented"}
               </Button>
             </div>
-            {rec.relatedMetrics && rec.relatedMetrics.length > 0 && (
-              <p className="text-sm text-gray-500">
-                Source: {rec.relatedMetrics.join(", ")}
-              </p>
+            {rec.sourceData && (
+              <p className="text-sm text-gray-500">Source: {rec.sourceData}</p>
             )}
             {rec.dashboardLink && (
               <div className="text-sm">
@@ -90,6 +109,9 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
                 </a>
               </div>
             )}
+            {rec.scope && (
+              <span className="text-sm text-gray-500">Scope: {rec.scope}</span>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -100,8 +122,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
     return (
       prevProps.rec.title === nextProps.rec.title &&
       prevProps.isImplemented === nextProps.isImplemented &&
-      prevProps.rec.estimatedEmissionReduction ===
-        nextProps.rec.estimatedEmissionReduction
+      prevProps.rec.savings === nextProps.rec.savings
     );
   }
 );

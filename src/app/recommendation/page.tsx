@@ -22,6 +22,9 @@ async function RecommendationPage({
     ? [scopesParam]
     : [];
 
+  console.log("Metrics:", metrics);
+  console.log("Scopes:", scopes);
+
   return (
     <div className="p-4 px-10">
       <PageHeader title="AI-Curated Farm Management Recommendations" />
