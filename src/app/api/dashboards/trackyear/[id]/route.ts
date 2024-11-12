@@ -7,7 +7,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   
   try {
     const companyId = params.id;
-    console.log(companyId.length); //test wheteher objectId is correct 24 hexa'
+    //console.log(companyId.length); //test wheteher objectId is correct 24 hexa'
 
     //convert companyId to ObjectId
     const objectId = new ObjectId(companyId);
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       { projection: { date: 1 } } //extract the _id and the date corresponding to the company_id
     ).toArray();
 
-    console.log("Equipment Data:", equipmentData); //test purposes
+    //console.log("Equipment Data:", equipmentData); //test purposes
 
     //Extract unique years from the date field
     const yearsSet = new Set<number>(); //Set allows only adding of unique value
