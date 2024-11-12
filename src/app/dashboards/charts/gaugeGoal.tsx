@@ -19,15 +19,16 @@ const GaugeChartComponent: React.FC<GaugeChartProps> = ({
   let arrow = ''; // Variable to hold the arrow direction
 
   if (previousYearEmissions !== 0) {
-    //Calculate percentage change from previous year
-    percentageChange = ((currentYearEmissions - previousYearEmissions) / previousYearEmissions) * 100;
+    //Calculate percentage change from previous year Goal****
+    const baseline = (previousYearEmissions * (1- targetReduction));
+    percentageChange = ((currentYearEmissions - baseline) / baseline) * 100;
 
     //Build the comparison message based on whether current year emission is higher or lower
     if (currentYearEmissions > previousYearEmissions) {
-      comparisonMessage = `carbons emitted than last year.`;
+      comparisonMessage = `carbons emitted than goal set.`;
       arrow = '⬆'; // Up arrow for higher emissions
     } else if (currentYearEmissions < previousYearEmissions) {
-      comparisonMessage = `carbons emitted than last year.`;
+      comparisonMessage = `carbons emitted than goal set.`;
       arrow = '⬇'; // Down arrow for lower emissions
     } else {
       comparisonMessage = "Same as last year.";
@@ -75,7 +76,7 @@ const GaugeChartComponent: React.FC<GaugeChartProps> = ({
               color: percentageChange > 0 ? 'red' : 'green',
             }}
           >
-            {arrow} {Math.abs(percentageChange).toFixed(2)}%
+            {arrow} {Math.abs(percentageChange).toFixed(1)}%
           </span>
           <span> {comparisonMessage}</span>
         </p>

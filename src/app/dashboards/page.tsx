@@ -8,17 +8,8 @@ import GaugeChartComponent  from "@/app/dashboards/charts/gaugeGoal"; //Porgress
 import EmissionCategoryChart from '@/app/dashboards/charts/emissionCategory';
 import { PageHeader } from '@/components/shared/page-header';
 import Modal from './popup/modal';
-import { Loader2 } from 'lucide-react';
+import { Flame, Leaf, Loader2, Zap } from 'lucide-react';
 import ScopeModal from './popup/scopeModal';
-
-/* Define the props interface for BarChart
-interface BarChartProps {
-  monthlyEmissions: number[];
-  averageAbsorbed: number | null;
-  handleMonthClick: (month: string | number) => void; // Prop to handle month click
-
-}*/
-
   
 const DashboardPage = () => {
 
@@ -57,7 +48,7 @@ const DashboardPage = () => {
   const [metricsData, setMetricsData] = useState([ //var to store the data and display, initially predefined
   { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
   { title: "Total Net Carbon Emissions", value: "Loading...", unit: "KG CO2" },
-  { title: "Overall Carbon Neutrality Gap", value: "Loading...", unit: "KG CO2" }
+  { title: "Total Carbon Neutrality Gap", value: "Loading...", unit: "KG CO2" }
   ]);
 
   //Fetch the avail list of years from the API
@@ -108,7 +99,7 @@ const DashboardPage = () => {
                   setMetricsData([
                       { title: "Total Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
                       { title: "Total Net Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
-                      { title: "Overall Carbon Neutrality Gap", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
+                      { title: "Total Carbon Neutrality Gap", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
                   ]);
                   setCurrentYearEmissions(data["carbonAverage in CO2E"]); //give the current year net admission
               }
@@ -142,7 +133,7 @@ const DashboardPage = () => {
                   setMetricsData([
                       { title: "Total Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
                       { title: "Total Net Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
-                      { title: "Overall Carbon Neutrality Gap", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
+                      { title: "Total Carbon Neutrality Gap", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
                   ]);
                   setCurrentYearEmissions(data["carbonAverage in CO2E"]); //give the current year net admission
               }
@@ -210,6 +201,20 @@ const DashboardPage = () => {
     setSelectedCategory(null);
     setCategoryDetails(null);
   };
+
+  //mapping of titles to icons for dashboard
+  const getIconForMetric = (title : string) => {
+    switch (title) {
+      case "Total Net Carbon Emissions":
+        return <Flame className="w-8 h-8 text-orange-500" strokeWidth={3} />;
+      case "Total Energy Consumption":
+        return <Zap className="w-8 h-8 text-yellow-500" strokeWidth={3} />;
+      case "Total Carbon Neutrality Gap":
+        return <Leaf className="w-8 h-8 text-green-500" strokeWidth={3} />;
+      default:
+        return null; // Or a default icon
+    }
+  };
   
   return (
     <div className="pt-0 p-4 space-y-6">
@@ -252,6 +257,7 @@ const DashboardPage = () => {
                   title={metric.title}
                   value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value).toFixed(0)}
                   unit={metric.unit}
+                  icon={getIconForMetric(metric.title)} // Pass the icon dynamically
                   className={`bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer hover:bg-gray-50' : ''}`}
                 />
                 {/* ScopeModal */}
