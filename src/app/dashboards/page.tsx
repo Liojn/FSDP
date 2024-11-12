@@ -101,7 +101,6 @@ const DashboardPage = () => {
                   getMetricsData(companyId, (selectedYear - 1)), // Fetch the emissions data for the previous year, use the net emission from the cards
                   fetchEmissionTarget(companyId, selectedYear),
                   fetchEmissionCategory(companyId, selectedYear, selectedMonth),
-                  console.log(selectedYear -1)
               ]);
 
               // Process data for both years
@@ -253,9 +252,9 @@ const DashboardPage = () => {
                   title={metric.title}
                   value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value).toFixed(0)}
                   unit={metric.unit}
-                  className="bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer' : ''"
+                  className={`bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer hover:bg-gray-50' : ''}`}
                 />
-                      {/* ScopeModal */}
+                {/* ScopeModal */}
                 <ScopeModal
                   isOpen={isScopeModalOpen}
                   onClose={() => setIsScopeModalOpen(false)}
