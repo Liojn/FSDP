@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConfig from "dbConfig";
 
-// Correctly define the HTTP method handlers using function declarations
-
 // Add OPTIONS handler for CORS support
 export async function OPTIONS() {
   return NextResponse.json({}, { status: 200 });
@@ -37,7 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     const newThreshold = {
-      id: Math.random().toString(36).substring(7),
+      id: scope, // Use scope as the ID
       scope,
       description: description || getDefaultDescription(scope),
       value,
@@ -47,6 +45,8 @@ export async function POST(req: NextRequest) {
     };
 
     const db = await dbConfig.connectToDatabase();
+
+    // Insert the new threshold
     await db.collection("thresholds").insertOne(newThreshold);
 
     return NextResponse.json({ threshold: newThreshold }, { status: 201 });
@@ -76,16 +76,7 @@ export async function PUT(req: NextRequest) {
 
     const db = await dbConfig.connectToDatabase();
 
-    // First check if the document exists
-    const existingThreshold = await db.collection("thresholds").findOne({ id });
-
-    if (!existingThreshold) {
-      return NextResponse.json(
-        { error: "Threshold not found" },
-        { status: 404 }
-      );
-    }
-
+    // Use upsert to insert a new document if one doesn't exist
     const result = await db.collection("thresholds").findOneAndUpdate(
       { id },
       {
@@ -94,8 +85,14 @@ export async function PUT(req: NextRequest) {
           unit,
           updatedAt: new Date(),
         },
+        $setOnInsert: {
+          id,
+          scope: id, // Since we're using scope as ID
+          description: getDefaultDescription(id),
+          createdAt: new Date(),
+        },
       },
-      { returnDocument: "after" }
+      { returnDocument: "after", upsert: true }
     );
 
     return NextResponse.json({ threshold: result.value });

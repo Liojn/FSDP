@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import {
   fetchUniqueYears,
   getMetricsData,
-  EmissionData,
   fetchMonthlyCarbonEmissions,
   fetchEmissionTarget,
   fetchEmissionCategory,
@@ -16,6 +15,14 @@ import EmissionCategoryChart from "@/app/dashboards/charts/emissionCategory";
 import { PageHeader } from "@/components/shared/page-header";
 import Modal from "./popup/modal";
 import { Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import ThresholdSettings from "./components/ThresholdSettings";
 
 /* Define the props interface for BarChart
 interface BarChartProps {
