@@ -36,6 +36,7 @@ export interface Recommendation {
   implementationTimeline?: string;
   sourceData?: string;
   dashboardLink?: string;
+  scope?: "Scope 1" | "Scope 2" | "Scope 3";
 }
 
 export enum CategoryType {
@@ -114,4 +115,5 @@ export interface ApiRecommendation {
   implementationTimeline?: string;
   sourceData?: string;
   dashboardLink?: string;
+  scope?: "Scope 1" | "Scope 2" | "Scope 3";
 }

@@ -1,14 +1,29 @@
 "use client"; //treat this component as a Client Component
 
-import React, { useState, useEffect } from 'react';
-import { fetchUniqueYears, getMetricsData, EmissionData, fetchMonthlyCarbonEmissions, fetchEmissionTarget, fetchEmissionCategory } from '../api/dashboards/api';
-import { MetricCard } from '@/components/shared/metric-card'; //Cards component
-import CarbonEmissionChart from '@/app/dashboards/charts/carbonEmissionChart';
-import GaugeChartComponent  from "@/app/dashboards/charts/gaugeGoal"; //Porgress Gauge Chart
-import EmissionCategoryChart from '@/app/dashboards/charts/emissionCategory';
-import { PageHeader } from '@/components/shared/page-header';
-import Modal from './popup/modal';
-import { Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import {
+  fetchUniqueYears,
+  getMetricsData,
+  EmissionData,
+  fetchMonthlyCarbonEmissions,
+  fetchEmissionTarget,
+  fetchEmissionCategory,
+} from "../api/dashboards/api";
+import { MetricCard } from "@/components/shared/metric-card"; //Cards component
+import CarbonEmissionChart from "@/app/dashboards/charts/carbonEmissionChart";
+import GaugeChartComponent from "@/app/dashboards/charts/gaugeGoal"; //Porgress Gauge Chart
+import EmissionCategoryChart from "@/app/dashboards/charts/emissionCategory";
+import { PageHeader } from "@/components/shared/page-header";
+import Modal from "./popup/modal";
+import { Loader2 } from "lucide-react";
+import ThresholdSettings from "./components/ThresholdSettings";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /* Define the props interface for BarChart
 interface BarChartProps {
@@ -18,21 +33,18 @@ interface BarChartProps {
 
 }*/
 
-  
 const DashboardPage = () => {
-
   const [loading, setLoading] = useState(true); // for loading page - nicole
 
-  const [yearFilter, setYearFilter] = useState<string>(''); //Year filter selection, holds the currently selected year from the dropdown. Initially set to an empty string
+  const [yearFilter, setYearFilter] = useState<string>(""); //Year filter selection, holds the currently selected year from the dropdown. Initially set to an empty string
   const [yearOptions, setYearOptions] = useState<number[]>([]); //store Year options from API fetch, initialized as an empty array,
   const [selectedYear, setSelectedYear] = useState<number | null>(null); //Store selected year for subsequent API calls
-
 
   //popup
   const [showModal, setShowModal] = useState(false); // Modal visibility
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categoryDetails, setCategoryDetails] = useState<string | null>(null);
-  
+
   //companyID
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -41,19 +53,23 @@ const DashboardPage = () => {
   const [averageAbsorbed, setAverageAbsorbed] = useState<number | null>(null);
 
   //Store the data for current and previous year emissions, GaugeChart
-  const [currentYearEmissions, setCurrentYearEmissions] = useState<number | null>(0);
-  const [previousYearEmissions, setPreviousYearEmissions] = useState<number | null>(0);
+  const [currentYearEmissions, setCurrentYearEmissions] = useState<
+    number | null
+  >(0);
+  const [previousYearEmissions, setPreviousYearEmissions] = useState<
+    number | null
+  >(0);
   const [targetGoal, setTargetGoal] = useState<number>(10000); //default first
 
   // State for storing carbon emissions data for DONUT CHART
-  const [CategoryEmissionsData, setCategoryEmissionsData] = useState<any>(null); 
-  const [selectedMonth, setSelectedMonth] = useState<number | string>(''); // Track selected month
+  const [CategoryEmissionsData, setCategoryEmissionsData] = useState<any>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | string>(""); // Track selected month
 
-
-  const [metricsData, setMetricsData] = useState([ //var to store the data and display, initially predefined
-  { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
-  { title: "Total Carbon Emissions", value: "Loading...", unit: "KG CO2" },
-  { title: "Total Net Emission", value: "Loading...", unit: "KG CO2" }
+  const [metricsData, setMetricsData] = useState([
+    //var to store the data and display, initially predefined
+    { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
+    { title: "Total Carbon Emissions", value: "Loading...", unit: "KG CO2" },
+    { title: "Total Net Emission", value: "Loading...", unit: "KG CO2" },
   ]);
 
   //Fetch the avail list of years from the API
@@ -61,7 +77,7 @@ const DashboardPage = () => {
     const fetchYears = async () => {
       try {
         //const companyId = '671cf9a6e994afba6c2f332d'; //Assigned now for simplicity
-        const companyId = localStorage.getItem("userId") || '';
+        const companyId = localStorage.getItem("userId") || "";
         const storedUserId = localStorage.getItem("userId");
         if (storedUserId) {
           setUserId(storedUserId);
@@ -76,7 +92,7 @@ const DashboardPage = () => {
         }
       } catch (error) {
         setLoading(false);
-        console.error('Failed to fetch years:', error);
+        console.error("Failed to fetch years:", error);
       }
     };
 
@@ -88,75 +104,109 @@ const DashboardPage = () => {
     const fetchMetricsData = async () => {
       if (selectedYear) {
         try {
-          const companyId = localStorage.getItem("userId") || ''; //'671cf9a6e994afba6c2f332d';
-          if (yearOptions.includes(selectedYear - 1)) { //range already defined in my options list, this is particularly for gauge
-              // If the previous year is available, fetch data for both the current and previous year
-              const [data, emissionsData, previousEmissionsData, targetGoal, emissionCategoryData] = await Promise.all([
-                  getMetricsData(companyId, selectedYear),
-                  fetchMonthlyCarbonEmissions(companyId, selectedYear),
-                  getMetricsData(companyId, (selectedYear - 1)), // Fetch the emissions data for the previous year, use the net emission from the cards
-                  fetchEmissionTarget(companyId, selectedYear),
-                  fetchEmissionCategory(companyId, selectedYear, selectedMonth),
-                  console.log(selectedYear -1)
+          const companyId = localStorage.getItem("userId") || ""; //'671cf9a6e994afba6c2f332d';
+          if (yearOptions.includes(selectedYear - 1)) {
+            //range already defined in my options list, this is particularly for gauge
+            // If the previous year is available, fetch data for both the current and previous year
+            const [
+              data,
+              emissionsData,
+              previousEmissionsData,
+              targetGoal,
+              emissionCategoryData,
+            ] = await Promise.all([
+              getMetricsData(companyId, selectedYear),
+              fetchMonthlyCarbonEmissions(companyId, selectedYear),
+              getMetricsData(companyId, selectedYear - 1), // Fetch the emissions data for the previous year, use the net emission from the cards
+              fetchEmissionTarget(companyId, selectedYear),
+              fetchEmissionCategory(companyId, selectedYear, selectedMonth),
+              console.log(selectedYear - 1),
+            ]);
+
+            // Process data for both years
+            if (data) {
+              setMetricsData([
+                {
+                  title: "Total Energy Consumption",
+                  value: data["energyAverage in kWh"].toFixed(0),
+                  unit: "kWh",
+                },
+                {
+                  title: "Total Carbon Emissions",
+                  value: data["carbonAverage in CO2E"].toFixed(0),
+                  unit: "KG CO2",
+                },
+                {
+                  title: "Total Carbon Net Emissions",
+                  value: data["netAverage in CO2E"].toFixed(0),
+                  unit: "KG CO2",
+                },
               ]);
+              setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
+            }
 
-              // Process data for both years
-              if (data) {
-                  setMetricsData([
-                      { title: "Total Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
-                      { title: "Total Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
-                      { title: "Total Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
-                  ]);
-                  setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
-              }
+            if (emissionsData) {
+              setMonthlyEmissions(emissionsData.monthlyEmissions); // Set the monthly emissions data for the current year
+              setAverageAbsorbed(emissionsData.averageAbsorb); // Set the average absorbed value for the current year
+            }
 
-              if (emissionsData) {
-                  setMonthlyEmissions(emissionsData.monthlyEmissions); // Set the monthly emissions data for the current year
-                  setAverageAbsorbed(emissionsData.averageAbsorb); // Set the average absorbed value for the current year
-              }
+            if (previousEmissionsData) {
+              setPreviousYearEmissions(
+                previousEmissionsData["netAverage in CO2E"]
+              ); //give the prev year emission
+            }
 
-              if (previousEmissionsData){
-                setPreviousYearEmissions(previousEmissionsData["netAverage in CO2E"]); //give the prev year emission
-              }
-
-              if (targetGoal) {
-                setTargetGoal(targetGoal); //set value
-              }
-              // Set emission category data (this will be used for charts)
-              if (emissionCategoryData) {
-                setCategoryEmissionsData(emissionCategoryData); // This is the data you need for the chart
-              }
+            if (targetGoal) {
+              setTargetGoal(targetGoal); //set value
+            }
+            // Set emission category data (this will be used for charts)
+            if (emissionCategoryData) {
+              setCategoryEmissionsData(emissionCategoryData); // This is the data you need for the chart
+            }
           } else {
-              //If the previous year is not available, fetch data only for the current year
-              const [data, emissionsData, targetGoal, emissionCategoryData] = await Promise.all([
-                  getMetricsData(companyId, selectedYear),
-                  fetchMonthlyCarbonEmissions(companyId, selectedYear),
-                  fetchEmissionTarget(companyId, selectedYear),
-                  fetchEmissionCategory(companyId, selectedYear, selectedMonth)
+            //If the previous year is not available, fetch data only for the current year
+            const [data, emissionsData, targetGoal, emissionCategoryData] =
+              await Promise.all([
+                getMetricsData(companyId, selectedYear),
+                fetchMonthlyCarbonEmissions(companyId, selectedYear),
+                fetchEmissionTarget(companyId, selectedYear),
+                fetchEmissionCategory(companyId, selectedYear, selectedMonth),
               ]);
 
-              if (data) {
-                  setMetricsData([
-                      { title: "Average Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
-                      { title: "Average Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
-                      { title: "Average Carbon Net Emissions", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
-                  ]);
-                  setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
-              }
+            if (data) {
+              setMetricsData([
+                {
+                  title: "Average Energy Consumption",
+                  value: data["energyAverage in kWh"].toFixed(0),
+                  unit: "kWh",
+                },
+                {
+                  title: "Average Carbon Emissions",
+                  value: data["carbonAverage in CO2E"].toFixed(0),
+                  unit: "KG CO2",
+                },
+                {
+                  title: "Average Carbon Net Emissions",
+                  value: data["netAverage in CO2E"].toFixed(0),
+                  unit: "KG CO2",
+                },
+              ]);
+              setCurrentYearEmissions(data["netAverage in CO2E"]); //give the current year net admission
+            }
 
-              if (emissionsData) {
-                  setMonthlyEmissions(emissionsData.monthlyEmissions); // Set the monthly emissions data
-                  setAverageAbsorbed(emissionsData.averageAbsorb); // Set the average absorbed value
-              }
-              setPreviousYearEmissions(0); //no data for comparison
+            if (emissionsData) {
+              setMonthlyEmissions(emissionsData.monthlyEmissions); // Set the monthly emissions data
+              setAverageAbsorbed(emissionsData.averageAbsorb); // Set the average absorbed value
+            }
+            setPreviousYearEmissions(0); //no data for comparison
 
-              if (targetGoal) {
-                setTargetGoal(targetGoal); //set value
-              }
-              // Set emission category data (this will be used for charts)
-              if (emissionCategoryData) {
-                setCategoryEmissionsData(emissionCategoryData); // This is the data you need for the chart
-              }
+            if (targetGoal) {
+              setTargetGoal(targetGoal); //set value
+            }
+            // Set emission category data (this will be used for charts)
+            if (emissionCategoryData) {
+              setCategoryEmissionsData(emissionCategoryData); // This is the data you need for the chart
+            }
           }
           setLoading(false);
         } catch (error) {
@@ -169,23 +219,23 @@ const DashboardPage = () => {
   }, [selectedYear, selectedMonth]);
 
   //Handle year filter change
-  const handleYearFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const year = parseInt(event.target.value, 10);
-    setYearFilter(event.target.value); //retrieves the selected year, which is then stored in yearFilter
+  const handleYearFilterChange = (value: string) => {
+    const year = parseInt(value, 10);
+    setYearFilter(value); //retrieves the selected year, which is then stored in yearFilter
     setSelectedYear(year);
-    setSelectedMonth(''); //means all years
+    setSelectedMonth(""); //means all years
   };
 
   // Handler to toggle month selection
   const handleMonthClick = (month: string | number) => {
     if (selectedMonth === month) {
-      setSelectedMonth(''); // If clicked again, clear the selection
+      setSelectedMonth(""); // If clicked again, clear the selection
     } else {
       setSelectedMonth(month); // Set the selected month
     }
   };
 
-    if (loading) {
+  if (loading) {
     // Show spinner in the center of the screen while loading (animation)
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -194,7 +244,7 @@ const DashboardPage = () => {
     );
   }
 
-    // Handle category click from the chart
+  // Handle category click from the chart
   const handleCategoryClick = (category: string, details: string) => {
     setSelectedCategory(category);
     setCategoryDetails(details);
@@ -207,26 +257,33 @@ const DashboardPage = () => {
     setSelectedCategory(null);
     setCategoryDetails(null);
   };
-  
+
   return (
     <div className="pt-0 p-4 space-y-6">
       {/* Dashboard Header */}
       <div className="pt-0 flex justify-between items-center">
-        <PageHeader title='Dashboard' />
-        <div> {/*Dropdown menu */}
-        <span className="font-semibold">Year: </span>
-        <select
-          value={yearFilter}
-          onChange={handleYearFilterChange} 
-          className="bg-white border border-gray-300 rounded-md p-2 text-gray-700"
-        >
-          <option value="">Select Year</option>
-          {yearOptions.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
-        </select>
+        <PageHeader title="Dashboard" />
+        <div>
+          {" "}
+          {/*Dropdown menu */}
+          {/* Threshold Settings */}
+          
+          <div className="flex items-center gap-2"> 
+            <ThresholdSettings />
+            <span className="font-semibold">Year: </span>
+            <Select value={yearFilter} onValueChange={handleYearFilterChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -240,7 +297,11 @@ const DashboardPage = () => {
               <MetricCard
                 key={index}
                 title={metric.title}
-                value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value).toFixed(0)} // condition ? valueIfTrue : valueIfFalse
+                value={
+                  metric.value === "Loading..."
+                    ? metric.value
+                    : parseFloat(metric.value).toFixed(0)
+                } // condition ? valueIfTrue : valueIfFalse
                 unit={metric.unit}
                 className="bg-white p-4 shadow-md rounded-lg"
               />
@@ -252,27 +313,35 @@ const DashboardPage = () => {
             <h3 className="text-lg font-semibold text-gray-700 mb-4">
               Yearly Carbon Emission's Progress
             </h3>
-              <div className="bg-white-200 h-full flex justify-center items-center min-h-[350px]">
-                <CarbonEmissionChart monthlyEmissions={monthlyEmissions} averageAbsorbed={averageAbsorbed} onMonthClick={handleMonthClick} />
-              </div>
+            <div className="bg-white-200 h-full flex justify-center items-center min-h-[350px]">
+              <CarbonEmissionChart
+                monthlyEmissions={monthlyEmissions}
+                averageAbsorbed={averageAbsorbed}
+                onMonthClick={handleMonthClick}
+              />
+            </div>
           </div>
         </div>
 
         {/* Right Column: Goal target indicator and by category */}
         <div className="flex flex-col space-y-6 ">
           {/* Additional Gauge Graph */}
-          <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"> 
-            <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Net Emission Limit Indicator</h3>
+          <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">
+              Net Emission Limit Indicator
+            </h3>
             <div className="flex-1 flex flex-col">
               <div className="bg-white flex-1 flex justify-center items-center pb-4">
-                {currentYearEmissions !== null && targetGoal !== null && previousYearEmissions !== null ? ( //prevent early display and disappear the needle
+                {currentYearEmissions !== null &&
+                targetGoal !== null &&
+                previousYearEmissions !== null ? ( //prevent early display and disappear the needle
                   <GaugeChartComponent
                     currentYearEmissions={currentYearEmissions || 0}
                     previousYearEmissions={previousYearEmissions || 0}
                     targetGoal={targetGoal || 10000} //default, for now
                   />
                 ) : (
-                  <div>Loading gauge data...</div>  // Optionally show a loading state
+                  <div>Loading gauge data...</div> // Optionally show a loading state
                 )}
               </div>
             </div>
@@ -280,28 +349,36 @@ const DashboardPage = () => {
 
           {/* Emission Drilldown */}
           <div className="bg-white p-4 shadow-md rounded-lg pb-0">
-          <div className="flex justify-between items-center pb-0">
-            <h3 className="text-lg font-semibold text-gray-700 flex-shrink-0">Emissions By Category</h3>
-          </div>
-          <div className='flex-1 flex justify-center items-center'>
-            <EmissionCategoryChart 
-              categoryData={CategoryEmissionsData} month={selectedMonth} onCategoryClick={handleCategoryClick}
-            />
-                      {/* Modal Component */}
-            <Modal
-              isVisible={showModal}
-              category={selectedCategory}
-              userId={userId || ''} //empty string if userId is null
-              month={selectedMonth !== undefined && selectedMonth !== null ? Number(selectedMonth) : undefined} // setting month to null so they can use the endpoint for yr data
-              year={selectedYear ?? new Date().getFullYear()} // Fallback to the current year if year is null
-              onClose={closeModal}
-            />
-          </div>
+            <div className="flex justify-between items-center pb-0">
+              <h3 className="text-lg font-semibold text-gray-700 flex-shrink-0">
+                Emissions By Category
+              </h3>
+            </div>
+            <div className="flex-1 flex justify-center items-center">
+              <EmissionCategoryChart
+                categoryData={CategoryEmissionsData}
+                month={selectedMonth}
+                onCategoryClick={handleCategoryClick}
+              />
+              {/* Modal Component */}
+              <Modal
+                isVisible={showModal}
+                category={selectedCategory}
+                userId={userId || ""} //empty string if userId is null
+                month={
+                  selectedMonth !== undefined && selectedMonth !== null
+                    ? Number(selectedMonth)
+                    : undefined
+                } // setting month to null so they can use the endpoint for yr data
+                year={selectedYear ?? new Date().getFullYear()} // Fallback to the current year if year is null
+                onClose={closeModal}
+              />
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 };
-  
+
 export default DashboardPage;

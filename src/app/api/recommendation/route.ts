@@ -20,10 +20,34 @@ interface ApiRecommendation {
   implementationTimeline?: string;     
   sourceData?: string;                 
   dashboardLink?: string;              
+  scope?: "Scope 1" | "Scope 2" | "Scope 3";
 }
 
 interface ApiResponse {
   recommendations: ApiRecommendation[]; 
+}
+
+interface Metrics {
+  energy: {
+    consumption: number;          // Energy consumption in kWh
+    previousYearComparison: number; // Comparison percentage with the previous year
+  };
+  emissions: {
+    total: number;                // Total emissions in tons CO2e
+    byCategory: Record<string, number>;
+  };
+  waste: {
+    quantity: number;             // Quantity of waste in tons
+    byType: Record<string, number>;
+  };
+  crops: {
+    area: number;                 // Area of crops in hectares
+    fertilizer: number;           // Amount of fertilizer used in tons
+  };
+  livestock: {
+    count: number;                // Count of livestock
+    emissions: number;            // Emissions from livestock in tons CO2e
+  };
 }
 
 const cleanAndParseJSON = (str: string): ApiResponse => {
@@ -39,25 +63,37 @@ const cleanAndParseJSON = (str: string): ApiResponse => {
   }
 };
 
-// Function to generate a category-specific prompt based on provided metrics
-interface Metrics {
-  energy: {
-    consumption: number;          // Energy consumption in kWh
-    previousYearComparison: number; // Comparison percentage with the previous year
-  };
-  emissions: {
-    total: number;                // Total emissions in tons CO2e
-  };
-  waste: {
-    quantity: number;             // Quantity of waste in tons
-  };
-  crops: {
-    area: number;                 // Area of crops in hectares
-    fertilizer: number;           // Amount of fertilizer used in tons
-  };
-  livestock: {
-    count: number;                // Count of livestock
-    emissions: number;            // Emissions from livestock in tons CO2e
+// Function to map categories to emission scopes
+function mapCategoryToScope(category: CategoryType): "Scope 1" | "Scope 2" | "Scope 3" | null {
+  switch (category) {
+    case CategoryType.EQUIPMENT:
+      return "Scope 1"; // Direct emissions from owned equipment
+    case CategoryType.LIVESTOCK:
+      return "Scope 1"; // Direct emissions from livestock
+    case CategoryType.CROPS:
+      return "Scope 3"; // Indirect emissions from agricultural activities
+    case CategoryType.WASTE:
+      return "Scope 3"; // Indirect emissions from waste management
+    case CategoryType.OVERALL:
+      return null; // Will generate recommendations for all scopes
+    default:
+      return null;
+  }
+}
+
+// Function to calculate scope-based emissions
+function calculateScopeEmissions(metrics: Metrics) {
+  const scope1 = metrics.livestock.emissions + 
+                (metrics.emissions.byCategory["equipment"] || 0);
+
+  const scope2 = metrics.energy.consumption * 0.0005; // Convert kWh to CO2e tons (approximate)
+
+  const scope3 = metrics.emissions.total - (scope1 + scope2);
+
+  return {
+    scope1,
+    scope2,
+    scope3: Math.max(0, scope3),
   };
 }
 
@@ -67,29 +103,26 @@ async function getExceededThresholds(metrics: Metrics) {
     const response = await fetch("http://localhost:3000/api/thresholds");
     const data = await response.json();
     const thresholds = data.thresholds;
+    const scopeEmissions = calculateScopeEmissions(metrics);
     const exceededThresholds = [];
 
     for (const threshold of thresholds) {
       let currentValue = 0;
-      switch (threshold.category) {
-        case "energy":
-          currentValue = metrics.energy.consumption;
+      switch (threshold.scope) {
+        case "Scope 1":
+          currentValue = scopeEmissions.scope1;
           break;
-        case "emissions":
-          currentValue = metrics.emissions.total;
+        case "Scope 2":
+          currentValue = scopeEmissions.scope2;
           break;
-        case "waste":
-          currentValue = metrics.waste.quantity;
-          break;
-        case "fuel":
-          currentValue = metrics.livestock.emissions; // Using livestock emissions as proxy
+        case "Scope 3":
+          currentValue = scopeEmissions.scope3;
           break;
       }
 
       if (currentValue > threshold.value) {
         exceededThresholds.push({
-          category: threshold.category,
-          metric: threshold.metric,
+          scope: threshold.scope,
           currentValue,
           thresholdValue: threshold.value,
           unit: threshold.unit,
@@ -106,22 +139,34 @@ async function getExceededThresholds(metrics: Metrics) {
 // Function to generate a prompt for the AI based on the category and metrics
 const generatePrompt = async (category: CategoryType, metrics: Metrics, timeframe: string) => {
   const exceededThresholds = await getExceededThresholds(metrics);
-  const systemContext = `You are a JSON-only response system specialized in farm management recommendations. Only output valid JSON objects with no additional text.`;
+  const scopeEmissions = calculateScopeEmissions(metrics);
+  const targetScope = mapCategoryToScope(category);
   
+  const systemContext = `You are a JSON-only response system specialized in farm management recommendations focused on reducing emissions across different scopes. Only output valid JSON objects with no additional text.`;
+  
+  const scopeContext = targetScope 
+    ? `Focus on ${targetScope} emissions reduction strategies.` 
+    : "Consider recommendations across all emission scopes.";
+
   let thresholdContext = "";
   if (exceededThresholds.length > 0) {
     thresholdContext = `\nThe following thresholds have been exceeded:
-${exceededThresholds.map(t => `- ${t.metric}: Current ${t.currentValue} ${t.unit} exceeds threshold of ${t.thresholdValue} ${t.unit}`).join('\n')}
+${exceededThresholds.map(t => `- ${t.scope}: Current ${t.currentValue} ${t.unit} exceeds threshold of ${t.thresholdValue} ${t.unit}`).join('\n')}
 
 Prioritize recommendations that will help bring these metrics back within their thresholds within the ${timeframe} timeframe.`;
   }
 
   const prompt = `${systemContext}
 
-Generate exactly 3 practical recommendations for the ${category} category based on the following metrics over a ${timeframe} period:
+${scopeContext}
 
+Current emissions by scope:
+- Scope 1 (Direct): ${scopeEmissions.scope1.toFixed(2)} tons CO2e
+- Scope 2 (Energy): ${scopeEmissions.scope2.toFixed(2)} tons CO2e
+- Scope 3 (Indirect): ${scopeEmissions.scope3.toFixed(2)} tons CO2e
+
+Additional metrics for context:
 Energy: ${metrics.energy.consumption}kWh (${metrics.energy.previousYearComparison}% vs last year)
-Emissions: ${metrics.emissions.total} tons CO2e
 Waste: ${metrics.waste.quantity} tons
 Crops: ${metrics.crops.area} hectares, ${metrics.crops.fertilizer} tons fertilizer
 Livestock: ${metrics.livestock.count} animals, ${metrics.livestock.emissions} tons CO2e emissions
@@ -141,7 +186,8 @@ Return ONLY a JSON object in this exact format with no additional text:
       "roi": percentage number,
       "implementationTimeline": "timeframe string",
       "sourceData": "reference to metrics used",
-      "dashboardLink": "/dashboards/category-specific-path"
+      "dashboardLink": "/dashboards/category-specific-path",
+      "scope": "Scope 1|Scope 2|Scope 3"
     }
   ]
 }`;
@@ -198,7 +244,8 @@ export async function POST(req: Request) {
       roi: rec.roi,
       implementationTimeline: rec.implementationTimeline,
       sourceData: rec.sourceData,
-      dashboardLink: rec.dashboardLink
+      dashboardLink: rec.dashboardLink,
+      scope: rec.scope
     }));
 
     return NextResponse.json({ recommendations }, { status: 200 });

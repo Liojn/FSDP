@@ -13,42 +13,50 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertCircle } from "lucide-react";
 import { MetricData } from "@/types";
 
-interface Threshold {
+interface ScopeThreshold {
   id: string;
-  category: string;
-  metric: string;
+  scope: "Scope 1" | "Scope 2" | "Scope 3";
+  description: string;
   value: number;
   unit: string;
 }
 
 interface ThresholdAlert {
   id: string;
-  category: string;
-  metric: string;
+  scope: "Scope 1" | "Scope 2" | "Scope 3";
+  description: string;
   currentValue: number;
   thresholdValue: number;
   unit: string;
   timestamp: Date;
 }
 
-interface ThresholdMetrics {
-  energy: { consumption: number };
-  emissions: { total: number };
-  waste: { quantity: number };
-  fuel: { usage: number };
+interface ScopeMetrics {
+  scope1: number;
+  scope2: number;
+  scope3: number;
 }
 
 interface ThresholdAlertProps {
   metrics: MetricData;
-  onViewRecommendations: (category: string) => void;
+  onViewRecommendations: (scope: string) => void;
 }
 
-function convertMetricsForThreshold(metrics: MetricData): ThresholdMetrics {
+function convertMetricsToScope(metrics: MetricData): ScopeMetrics {
+  // Scope 1: Direct emissions from owned sources (livestock + equipment)
+  const scope1 = metrics.livestock.emissions + 
+                (metrics.emissions.byCategory["equipment"] || 0);
+
+  // Scope 2: Indirect emissions from purchased energy
+  const scope2 = metrics.energy.consumption;
+
+  // Scope 3: All other indirect emissions (waste + crops + other categories)
+  const scope3 = metrics.emissions.total - (scope1 + scope2);
+
   return {
-    energy: { consumption: metrics.energy.consumption },
-    emissions: { total: metrics.emissions.total },
-    waste: { quantity: metrics.waste.quantity },
-    fuel: { usage: metrics.livestock.emissions }, // Using livestock emissions as a proxy for fuel usage
+    scope1,
+    scope2,
+    scope3: Math.max(0, scope3), // Ensure we don't get negative values
   };
 }
 
@@ -68,10 +76,10 @@ export default function ThresholdAlert({
       // Fetch current thresholds
       const response = await fetch("/api/thresholds");
       const data = await response.json();
-      const thresholds: Threshold[] = data.thresholds;
+      const thresholds: ScopeThreshold[] = data.thresholds;
 
-      // Convert metrics to threshold format
-      const thresholdMetrics = convertMetricsForThreshold(metrics);
+      // Convert metrics to scope format
+      const scopeMetrics = convertMetricsToScope(metrics);
 
       // Check each threshold against current metrics
       const newAlerts: ThresholdAlert[] = [];
@@ -79,19 +87,16 @@ export default function ThresholdAlert({
       thresholds.forEach((threshold) => {
         let currentValue = 0;
 
-        // Map threshold categories to metric values
-        switch (threshold.category) {
-          case "energy":
-            currentValue = thresholdMetrics.energy.consumption;
+        // Map threshold scopes to metric values
+        switch (threshold.scope) {
+          case "Scope 1":
+            currentValue = scopeMetrics.scope1;
             break;
-          case "emissions":
-            currentValue = thresholdMetrics.emissions.total;
+          case "Scope 2":
+            currentValue = scopeMetrics.scope2;
             break;
-          case "waste":
-            currentValue = thresholdMetrics.waste.quantity;
-            break;
-          case "fuel":
-            currentValue = thresholdMetrics.fuel.usage;
+          case "Scope 3":
+            currentValue = scopeMetrics.scope3;
             break;
           default:
             return;
@@ -101,8 +106,8 @@ export default function ThresholdAlert({
         if (currentValue > threshold.value) {
           newAlerts.push({
             id: threshold.id,
-            category: threshold.category,
-            metric: threshold.metric,
+            scope: threshold.scope,
+            description: threshold.description,
             currentValue,
             thresholdValue: threshold.value,
             unit: threshold.unit,
@@ -119,10 +124,13 @@ export default function ThresholdAlert({
         toast({
           variant: "destructive",
           title: "Threshold Alert",
-          description: `${newAlerts.length} metrics have exceeded their thresholds`,
+          description: `${newAlerts.length} emission ${
+            newAlerts.length === 1 ? "scope has" : "scopes have"
+          } exceeded their thresholds`,
         });
       }
-    } catch {
+    } catch (error) {
+      console.error("Failed to check thresholds:", error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -141,11 +149,11 @@ export default function ThresholdAlert({
             <div className="flex items-center space-x-2">
               <AlertCircle className="h-5 w-5 text-red-500" />
               <CardTitle className="text-red-500">
-                {alert.metric} Alert
+                {alert.scope} Alert
               </CardTitle>
             </div>
             <CardDescription>
-              Threshold exceeded for {alert.category}
+              {alert.description}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -156,19 +164,19 @@ export default function ThresholdAlert({
                     Current Value
                   </p>
                   <p className="text-lg font-semibold text-red-500">
-                    {alert.currentValue} {alert.unit}
+                    {alert.currentValue.toFixed(2)} {alert.unit}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Threshold</p>
                   <p className="text-lg font-semibold">
-                    {alert.thresholdValue} {alert.unit}
+                    {alert.thresholdValue.toFixed(2)} {alert.unit}
                   </p>
                 </div>
               </div>
               <div className="flex justify-end">
                 <Button
-                  onClick={() => onViewRecommendations(alert.category)}
+                  onClick={() => onViewRecommendations(alert.scope)}
                   className="bg-red-500 hover:bg-red-600 text-white"
                 >
                   View Recommendations

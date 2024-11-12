@@ -10,12 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChartsSkeleton from "./components/ChartsSkeleton";
 import RecommendationCard from "./components/RecommendationCard";
 import RecommendationSkeleton from "./components/RecommendationSkeleton";
-import ThresholdSettings from "./components/ThresholdSettings";
-import ThresholdAlert from "./components/ThresholdAlert";
+import ThresholdSettings from "../dashboards/components/ThresholdSettings";
+import ThresholdAlert from "../dashboards/components/ThresholdAlert";
 import { useToast } from "@/hooks/use-toast";
 import {
   CategoryType,
@@ -59,6 +59,8 @@ const ImplementationTracker = dynamic(
     ),
   }
 );
+
+type EmissionScope = "Scope 1" | "Scope 2" | "Scope 3" | "All Scopes";
 
 const recommendationFetcher = async ({
   url,
@@ -108,9 +110,9 @@ export default function RecommendationClient({
     useState<ImplementedRecommendationsState>(new Set());
   const [activeCategory, setActiveCategory] =
     useState<CategoryType>(initialCategory);
+  const [activeScope, setActiveScope] = useState<EmissionScope>("All Scopes");
   const [metrics] = useState<MetricData>(initialMetrics);
   const [shouldFetch, setShouldFetch] = useState(false);
-  const [showThresholdSettings, setShowThresholdSettings] = useState(false);
 
   // Store fetched recommendations in state to prevent refetching
   const [fetchedCategories, setFetchedCategories] = useState<Set<CategoryType>>(
@@ -161,13 +163,18 @@ export default function RecommendationClient({
     }
   );
 
+  const filteredRecommendations = useMemo(() => {
+    const recommendations = recommendationsByCategory[activeCategory] || [];
+    if (activeScope === "All Scopes") return recommendations;
+    return recommendations.filter((rec) => rec.scope === activeScope);
+  }, [recommendationsByCategory, activeCategory, activeScope]);
+
   const totalSavings = useMemo(
     () =>
-      Object.values(recommendationsByCategory)
-        .flat()
+      filteredRecommendations
         .filter((rec) => implementedRecommendations.has(rec.title))
         .reduce((acc, rec) => acc + rec.savings, 0),
-    [recommendationsByCategory, implementedRecommendations]
+    [filteredRecommendations, implementedRecommendations]
   );
 
   const toggleRecommendation = useCallback((title: string) => {
@@ -187,9 +194,12 @@ export default function RecommendationClient({
     setShouldFetch(true);
   }, []);
 
-  const handleViewRecommendations = useCallback((category: string) => {
-    const categoryType = category as CategoryType;
-    setActiveCategory(categoryType);
+  const handleScopeChange = useCallback((scope: EmissionScope) => {
+    setActiveScope(scope);
+  }, []);
+
+  const handleViewRecommendations = useCallback((scope: string) => {
+    setActiveScope(scope as EmissionScope);
     setShouldFetch(true);
   }, []);
 
@@ -199,12 +209,7 @@ export default function RecommendationClient({
         <div className="text-xl font-semibold text-green-600">
           Potential Savings: ${totalSavings.toLocaleString()}
         </div>
-        <button
-          onClick={() => setShowThresholdSettings(!showThresholdSettings)}
-          className="text-sm text-blue-600 hover:text-blue-800"
-        >
-          {showThresholdSettings ? "Hide" : "Show"} Threshold Settings
-        </button>
+        <ThresholdSettings />
       </div>
 
       {/* Threshold Alert */}
@@ -212,9 +217,6 @@ export default function RecommendationClient({
         metrics={metrics}
         onViewRecommendations={handleViewRecommendations}
       />
-
-      {/* Threshold Settings */}
-      {showThresholdSettings && <ThresholdSettings />}
 
       {metrics && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -237,19 +239,36 @@ export default function RecommendationClient({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue={CategoryType.OVERALL} value={activeCategory}>
-            <TabsList className="grid-cols-5 gap-4">
-              {Object.values(CategoryType).map((category) => (
-                <TabsTrigger
-                  key={category}
-                  value={category}
-                  onClick={() => handleTabChange(category)}
-                  className="w-full"
-                >
-                  {category.charAt(0).toUpperCase() + category.slice(1)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+          <div className="space-y-4">
+            <Tabs defaultValue={CategoryType.OVERALL} value={activeCategory}>
+              <TabsList className="grid grid-cols-5 gap-4">
+                {Object.values(CategoryType).map((category) => (
+                  <TabsTrigger
+                    key={category}
+                    value={category}
+                    onClick={() => handleTabChange(category)}
+                    className="w-full"
+                  >
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+
+            <Tabs defaultValue="All Scopes" value={activeScope}>
+              <TabsList className="grid grid-cols-4 gap-4">
+                {["All Scopes", "Scope 1", "Scope 2", "Scope 3"].map((scope) => (
+                  <TabsTrigger
+                    key={scope}
+                    value={scope}
+                    onClick={() => handleScopeChange(scope as EmissionScope)}
+                    className="w-full"
+                  >
+                    {scope}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
 
             {fetchError ? (
               <div className="py-4 text-center text-red-500">
@@ -264,30 +283,24 @@ export default function RecommendationClient({
                 <RecommendationSkeleton />
               </div>
             ) : (
-              Object.values(CategoryType).map((category) => (
-                <TabsContent key={category} value={category}>
-                  <div className="space-y-4">
-                    {recommendationsByCategory[category]?.length ? (
-                      recommendationsByCategory[category].map((rec) => (
-                        <RecommendationCard
-                          key={rec.title}
-                          rec={rec}
-                          isImplemented={implementedRecommendations.has(
-                            rec.title
-                          )}
-                          toggleRecommendation={toggleRecommendation}
-                        />
-                      ))
-                    ) : (
-                      <div className="py-4 text-center text-gray-500">
-                        No recommendations available for this category.
-                      </div>
-                    )}
+              <div className="space-y-4">
+                {filteredRecommendations.length ? (
+                  filteredRecommendations.map((rec) => (
+                    <RecommendationCard
+                      key={rec.title}
+                      rec={rec}
+                      isImplemented={implementedRecommendations.has(rec.title)}
+                      toggleRecommendation={toggleRecommendation}
+                    />
+                  ))
+                ) : (
+                  <div className="py-4 text-center text-gray-500">
+                    No recommendations available for this category and scope.
                   </div>
-                </TabsContent>
-              ))
+                )}
+              </div>
             )}
-          </Tabs>
+          </div>
         </CardContent>
       </Card>
 
@@ -301,8 +314,7 @@ export default function RecommendationClient({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {Object.values(recommendationsByCategory)
-                .flat()
+              {filteredRecommendations
                 .filter((rec) => implementedRecommendations.has(rec.title))
                 .map((rec) => (
                   <ErrorBoundary
