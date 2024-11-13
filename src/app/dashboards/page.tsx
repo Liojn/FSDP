@@ -95,8 +95,8 @@ const DashboardPage = () => {
   // State for metrics data (Cards)
   const [metricsData, setMetricsData] = useState<MetricData[]>([
     { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
-    { title: "Total Net Carbon Emissions", value: "Loading...", unit: "KG CO₂" },
-    { title: "Total Carbon Neutral Emissions", value: "Loading...", unit: "KG CO₂" },
+    { title: "Total Carbon Emissions", value: "Loading...", unit: "KG CO₂" },
+    { title: "Total Net Emissions", value: "Loading...", unit: "KG CO₂" },
   ]);
 
   // Initialize thresholds state
@@ -188,12 +188,12 @@ const DashboardPage = () => {
                       unit: "kWh",
                     },
                     {
-                      title: "Total Net Carbon Emissions",
+                      title: "Total Carbon Emissions",
                       value: data["carbonAverage in CO2E"].toFixed(0),
                       unit: "KG CO₂",
                     },
                     {
-                      title: "Total Carbon Neutral Emissions",
+                      title: "Total Net Emissions",
                       value: data["netAverage in CO2E"].toFixed(0),
                       unit: "KG CO₂",
                     },
@@ -238,12 +238,12 @@ const DashboardPage = () => {
                       unit: "kWh",
                     },
                     {
-                      title: "Total Net Carbon Emissions",
+                      title: "Total Carbon Emissions",
                       value: data["carbonAverage in CO2E"].toFixed(0),
                       unit: "KG CO₂",
                     },
                     {
-                      title: "Total Carbon Neutral Emissions",
+                      title: "Total Net Emissions",
                       value: data["netAverage in CO2E"].toFixed(0),
                       unit: "KG CO₂",
                     },
@@ -304,8 +304,8 @@ const DashboardPage = () => {
     const metricToScope: { [key: string]: "Scope 1" | "Scope 2" | "Scope 3" } =
       {
         "Total Energy Consumption": "Scope 1",
-        "Total Net Carbon Emissions": "Scope 2",
-        "Total Carbon Neutral Emissions": "Scope 3",
+        "Total Carbon Emissions": "Scope 2",
+        "Total Net Emissions": "Scope 3",
       };
 
     metrics.forEach((metric) => {
@@ -352,11 +352,11 @@ const DashboardPage = () => {
   // Mapping of titles to icons for the dashboard
   const getIconForMetric = (title: string) => {
     switch (title) {
-      case "Total Net Carbon Emissions":
+      case "Total Carbon Emissions":
         return <Flame className="w-8 h-8 text-orange-500" strokeWidth={3} />;
       case "Total Energy Consumption":
         return <Zap className="w-8 h-8 text-yellow-500" strokeWidth={3} />;
-      case "Total Carbon Neutral Emissions":
+      case "Total Net Emissions":
         return <Leaf className="w-8 h-8 text-green-500" strokeWidth={3} />;
       default:
         return null; // Or a default icon
