@@ -13,12 +13,14 @@ export default function Login() {
   console.log(email);
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false); // For loading state
   const reset = "";
   const router = useRouter();
 
   const handleSubmission = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(reset);
+    setLoading(true);
 
     const response = await fetch("/api/login", {
       method: "POST",
@@ -29,6 +31,8 @@ export default function Login() {
     });
 
     const data = await response.json();
+    setLoading(false);
+    
     if (response.ok) {
       localStorage.setItem("token", data.token);
       localStorage.setItem("userName", data.name);
@@ -70,10 +74,12 @@ export default function Login() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Card className="w-full max-w-sm">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-cover bg-center"
+      style={{ backgroundImage: "url('/landing-background.png')" }}
+    >
+      <Card className="w-full max-w-sm bg-white/40 backdrop-blur-lg rounded-lg">
         <CardHeader>
-          <h1 className="text-2xl font-bold text-center">Login</h1>
+          <h1 className="text-2xl font-bold text-center text-green-800">Login</h1>
           {message && (
             <Alert variant="destructive" className="mt-4">
               <AlertDescription>{message}</AlertDescription>
@@ -84,7 +90,7 @@ export default function Login() {
           <form onSubmit={handleSubmission}>
             <div className="space-y-4">
               <div className="">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-green-800">Email</Label>
                 <Input
                   type="email"
                   id="email"
@@ -92,10 +98,11 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
                   required
+                  className="placeholder-green-400"
                 />
               </div>
               <div className="">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-green-800">Password</Label>
                 <Input
                   type="password"
                   id="password"
@@ -103,10 +110,15 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
+                  className="placeholder-green-400"
                 />
               </div>
-              <Button type="submit" className="w-full">
-                Login
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={loading} // Disable button when loading
+              >
+                {loading ? 'Logging in...' : 'Login'}
               </Button>
               <p className="mt-4 text-sm text-gray-600 text-center">
                 Don&apos;t have an account?{" "}

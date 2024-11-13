@@ -33,8 +33,7 @@ const EmissionCategoryChart: React.FC<CarbonEmissionChartProps> = ({ monthlyEmis
           }
           return '#66CDAA' //'rgba(192, 245, 143, 0.6)'; //original color
         }),
-        borderColor: '#55B698', //'rgba(180, 225, 125, 0/6)',
-        borderWidth: 1,
+        hoverBackgroundColor: '#448C7A', // darker hover color
         type : 'bar',
       },
       /*{ //Delete the straight line threshold for now
@@ -74,6 +73,11 @@ const EmissionCategoryChart: React.FC<CarbonEmissionChartProps> = ({ monthlyEmis
           setClickedIndex(clickedMonthIndex); // Set new clicked index
         }
       }
+    },
+    onHover: (event: any, elements: any[]) => {
+      // Change cursor to pointer when hovering over bars
+      const canvas = event.native.target;
+      canvas.style.cursor = elements.length ? 'pointer' : 'default';
     },
 
   };

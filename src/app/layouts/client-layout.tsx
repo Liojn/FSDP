@@ -12,9 +12,9 @@ export default function ClientLayout({
 }>) {
   const pathname = usePathname();
 
-  // Modify the condition to exclude the root path (`/`) along with `/login` and `/signup`
+  // Modify the condition to exclude the root path (`/`) along with `/login` and `/signup` and `landing`
   const shouldShowSidebar =
-    pathname !== "/" && pathname !== "/login" && pathname !== "/signup";
+    pathname !== "/" && pathname !== "/login" && pathname !== "/signup" && pathname !== "/landing";
 
   return (
     <SidebarProvider>
