@@ -1,117 +1,132 @@
-// Data Types
+// Enum for Category Type
+export enum CategoryType {
+  OVERALL = "overall",
+  // Add other categories as needed
+}
+
+// Recommendation Type with fully optional fields
+export interface Recommendation {
+  id: string;
+  title: string;
+  description: string;
+  scope: string;
+  impact: string;
+  category: CategoryType;
+  estimatedEmissionReduction: number;
+  priorityLevel: string;
+  implementationSteps: string[];
+  estimatedROI: number;
+  status: string;
+  difficulty: string;
+  estimatedCost: number;
+  estimatedTimeframe: string;
+  relatedMetrics?: string[];
+  dashboardLink?: string;
+}
+
+// Threshold Data Interface
+export interface ThresholdData {
+  userId: string;
+  scope: string;
+  description?: string;
+  value: number;
+  unit: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Emission Data Interface
+export interface EmissionData {
+  scope: string;
+  value: number;
+  unit: string;
+  timestamp?: Date;
+}
+
+// Recommendation Card Props
+export interface RecommendationCardProps {
+  rec: Recommendation;
+  isImplemented?: boolean;
+  toggleRecommendation?: (id: string) => void;
+}
+
+// Metric Data Type (based on previous context)
 export interface MetricData {
   energy: {
     consumption: number;
     previousYearComparison: number;
   };
-  emissions: {
-    total: number;
-    byCategory: Record<string, number>;
-  };
   waste: {
     quantity: number;
-    byType: Record<string, number>;
   };
   crops: {
-    fertilizer: number;
     area: number;
+    fertilizer: number;
   };
   livestock: {
     count: number;
     emissions: number;
   };
+  emissions: {
+    total: number;
+    byCategory: Record<string, number>;
+  };
 }
 
-export interface Recommendation {
-  title: string;
-  description: string;
-  impact: string;
-  category: CategoryType;
-  savings: number;
-  steps: string[];
-  implemented: boolean;
-  priority?: number;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  roi?: number;
-  implementationTimeline?: string;
-  sourceData?: string;
-  dashboardLink?: string;
+// State for Implemented Recommendations
+export interface ImplementedRecommendationsState {
+  [recommendationId: string]: boolean;
 }
 
-export enum CategoryType {
-  EQUIPMENT = "equipment",
-  LIVESTOCK = "livestock",
-  CROPS = "crops",
-  WASTE = "waste",
-  OVERALL = "overall"
+// Category Data Interface with more flexible structure
+export interface CategoryData {
+  [category: string]: Recommendation[];
+  overall: Recommendation[];
 }
 
-// Component Props Types
-export interface RecommendationCardProps {
-  rec: Recommendation;
-  isImplemented: boolean;
-  toggleRecommendation: (title: string) => void;
+// Scope Emissions Interface
+export interface ScopeEmissions {
+  scope1: number;
+  scope2: number;
+  scope3: number;
 }
 
-export interface YearlyComparisonProps {
-  data: MetricData;
+// Utility type to convert ImplementedRecommendationsState to boolean array
+export function implementedToArray(state: ImplementedRecommendationsState): boolean[] {
+  return Object.values(state);
 }
 
-export interface CategoryBreakdownProps {
-  data: MetricData;
-  category: CategoryType;
+// Utility type to convert boolean array to ImplementedRecommendationsState
+export function arrayToImplemented(
+  arr: boolean[], 
+  recommendations: Recommendation[]
+): ImplementedRecommendationsState {
+  return recommendations.reduce((acc, rec, index) => {
+    acc[rec.id] = arr[index] || false;
+    return acc;
+  }, {} as ImplementedRecommendationsState);
 }
 
-export interface ImplementationTrackerProps {
-  recommendation: Recommendation;
-  progress: number;
+// Utility type to convert ImplementedRecommendationsState to Set
+export function implementedToSet(state: ImplementedRecommendationsState): Set<string> {
+  return new Set(
+    Object.entries(state)
+      .filter(([, implemented]) => implemented)
+      .map(([id]) => id)
+  );
 }
 
-export interface TrendAnalysisProps {
-  data: MetricData;
-  category: CategoryType;
+// Utility type to convert Set back to ImplementedRecommendationsState
+export function setToImplemented(
+  set: Set<string>, 
+  existingState?: ImplementedRecommendationsState
+): ImplementedRecommendationsState {
+  const newState: ImplementedRecommendationsState = existingState || {};
+  set.forEach(id => {
+    newState[id] = true;
+  });
+  return newState;
 }
 
-export interface CrossCategoryInsightsProps {
-  data: MetricData;
-}
-
-// API Types
-export interface RecommendationRequest {
-  category: CategoryType;
-  metrics: MetricData;
-  timeframe: string;
-  previousImplementations: string[];
-}
-
-// State Types
-export type ImplementedRecommendationsState = Set<string>;
-export type CategoryData = Record<CategoryType, Recommendation[]>;
-
-// Chart Types
-export interface ChartDataPoint {
-  name: string;
-  value: number;
-  category: CategoryType;
-  color: string;
-}
-
-export interface UserProfile {
-  name: string;
-  email: string;
-  avatarUrl: string;
-}
-
-export interface ApiRecommendation {
-  title?: string;
-  description?: string;
-  impact?: string;
-  savings?: number;
-  steps?: string[];
-  priority?: number;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  roi?: number;
-  implementationTimeline?: string;
-  sourceData?: string;
-  dashboardLink?: string;
-}
+// Export any other existing types
+export * from './leaderboard'; // If you have a leaderboard types file
