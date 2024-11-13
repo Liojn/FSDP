@@ -10,6 +10,12 @@ import { PageHeader } from '@/components/shared/page-header';
 import Modal from './popup/modal';
 import { Flame, Leaf, Loader2, Zap } from 'lucide-react';
 import ScopeModal from './popup/scopeModal';
+
+interface TargetGoalResponse {
+  target: number;
+  isEarliestYear: boolean;
+  firstYearGoal: number;
+}
   
 const DashboardPage = () => {
 
@@ -38,7 +44,9 @@ const DashboardPage = () => {
   //Store the data for current and previous year emissions, GaugeChart
   const [currentYearEmissions, setCurrentYearEmissions] = useState<number | null>(0);
   const [previousYearEmissions, setPreviousYearEmissions] = useState<number | null>(0);
-  const [targetGoal, setTargetGoal] = useState<number>(10000); //default first
+  const [targetGoal, setTargetGoal] = useState<number>(0); //default first, percentage reduction
+  const [isEarliestYear, setIsEarliestYear] = useState<boolean>(false);
+  const [firstYearGoal, setFirstYearGoal] = useState<number>(0); 
 
   // State for storing carbon emissions data for DONUT CHART
   const [CategoryEmissionsData, setCategoryEmissionsData] = useState<any>(null); 
@@ -90,7 +98,7 @@ const DashboardPage = () => {
                   getMetricsData(companyId, selectedYear),
                   fetchMonthlyCarbonEmissions(companyId, selectedYear),
                   getMetricsData(companyId, (selectedYear - 1)), // Fetch the emissions data for the previous year, use the net emission from the cards
-                  fetchEmissionTarget(companyId, selectedYear),
+                  fetchEmissionTarget(companyId, selectedYear) as Promise<TargetGoalResponse>,
                   fetchEmissionCategory(companyId, selectedYear, selectedMonth),
               ]);
 
@@ -114,7 +122,9 @@ const DashboardPage = () => {
               }
 
               if (targetGoal) {
-                setTargetGoal(targetGoal); //set value
+                setTargetGoal(targetGoal.target);
+                setIsEarliestYear(targetGoal.isEarliestYear);
+                setFirstYearGoal(targetGoal.firstYearGoal);
               }
               // Set emission category data (this will be used for charts)
               if (emissionCategoryData) {
@@ -125,7 +135,7 @@ const DashboardPage = () => {
               const [data, emissionsData, targetGoal, emissionCategoryData] = await Promise.all([
                   getMetricsData(companyId, selectedYear),
                   fetchMonthlyCarbonEmissions(companyId, selectedYear),
-                  fetchEmissionTarget(companyId, selectedYear),
+                  fetchEmissionTarget(companyId, selectedYear) as Promise<TargetGoalResponse>,
                   fetchEmissionCategory(companyId, selectedYear, selectedMonth)
               ]);
 
@@ -145,7 +155,9 @@ const DashboardPage = () => {
               setPreviousYearEmissions(0); //no data for comparison
 
               if (targetGoal) {
-                setTargetGoal(targetGoal); //set value
+                setTargetGoal(targetGoal.target);
+                setIsEarliestYear(targetGoal.isEarliestYear);
+                setFirstYearGoal(targetGoal.firstYearGoal);
               }
               // Set emission category data (this will be used for charts)
               if (emissionCategoryData) {
@@ -295,6 +307,8 @@ const DashboardPage = () => {
                     currentYearEmissions={currentYearEmissions || 0}
                     previousYearEmissions={previousYearEmissions || 0}
                     targetReduction={targetGoal || 10000} //default, for now
+                    initialYearGoal={firstYearGoal || 10000}
+                    isEarliestYear={isEarliestYear || false}
                   />
                 ) : (
                   <div>Loading gauge data...</div>  // Optionally show a loading state
