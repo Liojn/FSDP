@@ -12,6 +12,7 @@ export default function SignUp() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [firstYearGoal, setFirstYearGoal] = useState('');
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false); // For loading state
     const router = useRouter();
@@ -27,7 +28,7 @@ export default function SignUp() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ name, email, password }),
+            body: JSON.stringify({ name, email, password, firstYearGoal }),
         });
 
         const data = await response.json();
@@ -39,10 +40,8 @@ export default function SignUp() {
             setName(reset);
             setEmail(reset);
             setPassword(reset);
-
-            
-              router.push('/login');
-           
+            setFirstYearGoal(reset);
+            router.push('/login');
         } else {
             setMessage(data.message);
         }
@@ -98,6 +97,19 @@ export default function SignUp() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
+                      required
+                      className="placeholder-green-400"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="firstYearGoal" className="text-green-800">First Year Goal</Label>
+                    <Input
+                      type="number"
+                      id="firstYearGoal"
+                      value={firstYearGoal}
+                      onChange={(e) => setFirstYearGoal(e.target.value)}
+                      placeholder="Enter first year goal"
                       required
                       className="placeholder-green-400"
                     />
