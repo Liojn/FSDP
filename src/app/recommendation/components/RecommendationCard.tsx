@@ -1,13 +1,14 @@
-// src/components/RecommendationCard.tsx
-
 import React, { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // import Tooltip components
 import { RecommendationCardProps } from "@/types";
 
 const RecommendationCard: React.FC<RecommendationCardProps> = memo(
   ({ rec }) => {
-    // Memoize the click handler to prevent recreating the function on every render
-
     return (
       <Card className="mb-4">
         <CardHeader>
@@ -16,26 +17,42 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
               <CardTitle>{rec.title}</CardTitle>
               <div className="flex gap-2 mt-2">
                 {rec.difficulty && (
-                  <span className="text-sm px-2 py-1 rounded-full bg-gray-100">
-                    {rec.difficulty}
-                  </span>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <span className="text-sm px-2 py-1 rounded-full bg-gray-100">
+                        {rec.difficulty}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <span>Difficulty Level: {rec.difficulty}</span>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
                 {rec.priorityLevel && (
-                  <span className="text-sm px-2 py-1 rounded-full border">
-                    {rec.priorityLevel}
-                  </span>
-                )}
-                {rec.estimatedROI !== undefined && (
-                  <span className="text-sm px-2 py-1 rounded-full bg-green-100 text-green-800">
-                    ROI: {rec.estimatedROI}%
-                  </span>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <span className="text-sm px-2 py-1 rounded-full border">
+                        {rec.priorityLevel}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <span>Priority Level: {rec.priorityLevel}</span>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             </div>
             {rec.estimatedTimeframe && (
-              <span className="text-sm text-gray-500">
-                Est. Timeline: {rec.estimatedTimeframe}
-              </span>
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="text-sm text-gray-500">
+                    Est. Timeline: {rec.estimatedTimeframe}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <span>Estimated Timeframe to Implement</span>
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
         </CardHeader>
@@ -69,10 +86,6 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
                 Related Metrics: {rec.relatedMetrics.join(", ")}
               </p>
             )}
-
-            {/* <div className="flex justify-between text-sm text-gray-500">
-              <span>Status: {rec.status}</span>
-            </div> */}
           </div>
         </CardContent>
       </Card>
