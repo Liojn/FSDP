@@ -39,7 +39,7 @@ interface NetZeroAnalysis {
   ytdNetEmissions: number | null;
 }
 
-const PROJECTION_YEARS = 10;
+const PROJECTION_YEARS = 100;
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 const EmissionsChart: React.FC<EmissionsChartProps> = ({ data, isLoading = false }) => {
