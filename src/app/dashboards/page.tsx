@@ -41,6 +41,12 @@ interface EmissionCategoryData {
   value: number;
 }
 
+interface TargetGoalResponse {
+  target: number;
+  isEarliestYear: boolean;
+  firstYearGoal: number;
+}
+
 // Default descriptions for scopes
 const defaultDescriptions: Record<string, string> = {
   "Scope 1": "Direct emissions from owned or controlled sources",
@@ -52,7 +58,7 @@ const defaultDescriptions: Record<string, string> = {
 const metricToScope: { [key: string]: "Scope 1" | "Scope 2" | "Scope 3" } = {
   "Total Energy Consumption": "Scope 1",
   "Total Net Carbon Emissions": "Scope 2",
-  "Total Carbon Neutrality Gap": "Scope 3",
+  "Total Carbon Neutral Emissions": "Scope 3",
 };
 const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
@@ -60,20 +66,28 @@ const DashboardPage = () => {
   const [yearOptions, setYearOptions] = useState<number[]>([]);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | string>("");
+  // Modal state
   const [showModal, setShowModal] = useState(false);
   const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  // Company/User ID
   const [userId, setUserId] = useState<string | null>(null);
+  // State for monthly emissions chart
   const [monthlyEmissions, setMonthlyEmissions] = useState<number[]>([]);
   const [averageAbsorbed, setAverageAbsorbed] = useState<number | null>(null);
+
+  //Store the data for current and previous year emissions, GaugeChart
   const [currentYearEmissions, setCurrentYearEmissions] = useState<number | null>(0);
   const [previousYearEmissions, setPreviousYearEmissions] = useState<number | null>(0);
   const [targetGoal, setTargetGoal] = useState<number>(10000);
+  const [isEarliestYear, setIsEarliestYear] = useState<boolean>(false);
+  const [firstYearGoal, setFirstYearGoal] = useState<number>(0); 
+  
   const [CategoryEmissionsData, setCategoryEmissionsData] = useState<EmissionCategoryData[] | null>(null);
   const [metricsData, setMetricsData] = useState<MetricData[]>([
     { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
-    { title: "Total Carbon Emissions", value: "Loading...", unit: "KG CO₂" },
-    { title: "Total Net Emissions", value: "Loading...", unit: "KG CO₂" },
+    { title: "Total Net Carbon Emissions", value: "Loading...", unit: "KG CO₂" },
+    { title: "Total Carbon Neutral Emissions", value: "Loading...", unit: "KG CO₂" },
   ]);
   const [thresholds, setThresholds] = useState<ScopeThreshold[]>([]);
   const [exceedingScopes, setExceedingScopes] = useState<string[]>([]);
@@ -144,7 +158,7 @@ const DashboardPage = () => {
               getMetricsData(companyId, selectedYear),
               fetchMonthlyCarbonEmissions(companyId, selectedYear),
               getMetricsData(companyId, selectedYear - 1),
-              fetchEmissionTarget(companyId, selectedYear),
+              fetchEmissionTarget(companyId, selectedYear) as Promise<TargetGoalResponse>,
               fetchEmissionCategory(companyId, selectedYear, selectedMonth),
             ]);
 
@@ -153,7 +167,7 @@ const DashboardPage = () => {
             const [data, emissionsData, targetGoalData, emissionCategoryData] = await Promise.all([
               getMetricsData(companyId, selectedYear),
               fetchMonthlyCarbonEmissions(companyId, selectedYear),
-              fetchEmissionTarget(companyId, selectedYear),
+              fetchEmissionTarget(companyId, selectedYear) as Promise<TargetGoalResponse>,
               fetchEmissionCategory(companyId, selectedYear, selectedMonth),
             ]);
 
@@ -206,7 +220,7 @@ const DashboardPage = () => {
           unit: "KG CO2",
         },
         {
-          title: "Total Carbon Neutrality Gap",
+          title: "Total Carbon Neutral Emissions",
           value: data["netAverage in CO2E"].toFixed(0),
           unit: "KG CO2",
         },
@@ -227,7 +241,9 @@ const DashboardPage = () => {
     );
 
     if (targetGoalData) {
-      setTargetGoal(targetGoalData);
+      setTargetGoal(targetGoalData.target);
+      setIsEarliestYear(targetGoalData.isEarliestYear);
+      setFirstYearGoal(targetGoalData.firstYearGoal);
     }
 
     if (emissionCategoryData) {
@@ -281,7 +297,7 @@ const DashboardPage = () => {
         return <Flame className="w-8 h-8 text-orange-500" strokeWidth={3} />;
       case "Total Energy Consumption":
         return <Zap className="w-8 h-8 text-yellow-500" strokeWidth={3} />;
-      case "Total Carbon Neutrality Gap":
+      case "Total Carbon Neutral Emissions":
         return <Leaf className="w-8 h-8 text-green-500" strokeWidth={3} />;
       default:
         return null;
@@ -318,7 +334,7 @@ const DashboardPage = () => {
         onViewRecommendations={handleViewRecommendations}
       />
 
-      <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
+ <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
@@ -335,8 +351,7 @@ const DashboardPage = () => {
                   value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value.toString()).toFixed(0)}
                   unit={metric.unit}
                   icon={getIconForMetric(metric.title)}
-                  className={`bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer hover:bg-gray-50' : ''}`}
-                />
+                  className={`bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer hover:bg-gray-50' : ''}`}                />
               </div>
             ))}
           </div>
@@ -367,6 +382,8 @@ const DashboardPage = () => {
                     currentYearEmissions={currentYearEmissions}
                     previousYearEmissions={previousYearEmissions}
                     targetReduction={targetGoal}
+                    initialYearGoal={firstYearGoal || 10000}
+                    isEarliestYear={isEarliestYear || false}
                   />
                 ) : (
                   <div>Loading gauge data...</div>

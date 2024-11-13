@@ -53,22 +53,22 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         );
 
          if (emissionGoalForYear) {
-      // Check if it's the earliest year
-      const earliestYear = Math.min(...user.emissionGoal.map((goal: EmissionGoal) => goal.year));
-      const isEarliestYear = emissionGoalForYear.year === earliestYear;
+            // Check if it's the earliest year
+            const earliestYear = Math.min(...user.emissionGoal.map((goal: EmissionGoal) => goal.year));
+            const isEarliestYear = emissionGoalForYear.year === earliestYear;
 
-      return NextResponse.json({
-        target: emissionGoalForYear.target,
-        isEarliestYear: isEarliestYear,
-        firstYearGoal: user.firstYearGoal || 10000 
-      });
-    } else {
-      // If no target found for the year, return default values
-      return NextResponse.json({
-        target: 10000,
-        isEarliestYear: false,
-        firstYearGoal: 10000, //default value;
-      });
+            return NextResponse.json({
+                target: emissionGoalForYear.target,
+                isEarliestYear: isEarliestYear,
+                firstYearGoal: isEarliestYear ? user.firstYearGoal : 10000
+            });
+        } else {
+        // If no target found for the year, return default values
+        return NextResponse.json({
+            target: 10000,
+            isEarliestYear: false,
+            firstYearGoal: null
+        });
     }
   } catch (error) {
     return NextResponse.json({ error: "An error occurred while fetching data" }, { status: 500 });

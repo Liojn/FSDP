@@ -21,13 +21,13 @@ const GaugeChartComponent: React.FC<GaugeChartProps> = ({
   let arrow = '';
   console.log(targetReduction);
   console.log(initialYearGoal);
-
+  console.log(previousYearEmissions);
+  console.log(currentYearEmissions);
   //Calculate percentage change based on whether it's the earliest year or not
   if (isEarliestYear) {
     // For earliest year, calculate against initialYearGoal
     percentageChange = ((currentYearEmissions - initialYearGoal) / initialYearGoal) * 100;
     const baseline = initialYearGoal;
-    
     if (currentYearEmissions > baseline) {
       comparisonMessage = `carbons exceeded from initial goal set.`;
       arrow = '⬆';
@@ -42,6 +42,7 @@ const GaugeChartComponent: React.FC<GaugeChartProps> = ({
     // For other years, use the existing calculation
     const baseline = (previousYearEmissions * (1 - targetReduction));
     percentageChange = ((currentYearEmissions - baseline) / baseline) * 100;
+    console.log(percentageChange);
 
     if (currentYearEmissions > baseline) {
       comparisonMessage = `carbons exceeded from goal set.`;
