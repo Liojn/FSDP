@@ -41,6 +41,12 @@ interface EmissionCategoryData {
   value: number;
 }
 
+interface TargetGoalResponse {
+  target: number;
+  isEarliestYear: boolean;
+  firstYearGoal: number;
+}
+
 // Default descriptions for scopes
 const defaultDescriptions: Record<string, string> = {
   "Scope 1": "Direct emissions from owned or controlled sources",
@@ -59,16 +65,24 @@ const DashboardPage = () => {
   const [yearFilter, setYearFilter] = useState<string>("");
   const [yearOptions, setYearOptions] = useState<number[]>([]);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<number | string>("");
+  const [selectedMonth, setSelectedMonth] = useState<number | string>("");]
+  // Modal state
   const [showModal, setShowModal] = useState(false);
   const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  // Company/User ID
   const [userId, setUserId] = useState<string | null>(null);
+  // State for monthly emissions chart
   const [monthlyEmissions, setMonthlyEmissions] = useState<number[]>([]);
   const [averageAbsorbed, setAverageAbsorbed] = useState<number | null>(null);
+
+  //Store the data for current and previous year emissions, GaugeChart
   const [currentYearEmissions, setCurrentYearEmissions] = useState<number | null>(0);
   const [previousYearEmissions, setPreviousYearEmissions] = useState<number | null>(0);
   const [targetGoal, setTargetGoal] = useState<number>(10000);
+  const [isEarliestYear, setIsEarliestYear] = useState<boolean>(false);
+  const [firstYearGoal, setFirstYearGoal] = useState<number>(0); 
+  
   const [CategoryEmissionsData, setCategoryEmissionsData] = useState<EmissionCategoryData[] | null>(null);
   const [metricsData, setMetricsData] = useState<MetricData[]>([
     { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
@@ -89,7 +103,7 @@ const DashboardPage = () => {
       }
 
       try {
-        const response = await fetch(`/api/thresholds?userId=${storedUserId}`);
+        const response = await fetch(/api/thresholds?userId=${storedUserId});
         if (response.ok) {
           const data = await response.json();
           const userDefinedThresholds = data.thresholds.map(
@@ -144,7 +158,7 @@ const DashboardPage = () => {
               getMetricsData(companyId, selectedYear),
               fetchMonthlyCarbonEmissions(companyId, selectedYear),
               getMetricsData(companyId, selectedYear - 1),
-              fetchEmissionTarget(companyId, selectedYear),
+              fetchEmissionTarget(companyId, selectedYear) as Promise<TargetGoalResponse>,
               fetchEmissionCategory(companyId, selectedYear, selectedMonth),
             ]);
 
@@ -153,7 +167,7 @@ const DashboardPage = () => {
             const [data, emissionsData, targetGoalData, emissionCategoryData] = await Promise.all([
               getMetricsData(companyId, selectedYear),
               fetchMonthlyCarbonEmissions(companyId, selectedYear),
-              fetchEmissionTarget(companyId, selectedYear),
+              fetchEmissionTarget(companyId, selectedYear) as Promise<TargetGoalResponse>,
               fetchEmissionCategory(companyId, selectedYear, selectedMonth),
             ]);
 
@@ -179,7 +193,7 @@ const DashboardPage = () => {
       const threshold = thresholds.find((t) => t.scope === scopeType);
 
       if (threshold && parseFloat(metric.value.toString()) > threshold.value) {
-        exceeding.push(`${threshold.scope} (${threshold.description})`);
+        exceeding.push(${threshold.scope} (${threshold.description}));
       }
     });
 
@@ -227,7 +241,9 @@ const DashboardPage = () => {
     );
 
     if (targetGoalData) {
-      setTargetGoal(targetGoalData);
+      setTargetGoal(targetGoalData.target);
+      setIsEarliestYear(targetGoalData.isEarliestYear);
+      setFirstYearGoal(targetGoalData.firstYearGoal);
     }
 
     if (emissionCategoryData) {
@@ -260,9 +276,9 @@ const DashboardPage = () => {
       .filter((scope): scope is string => scope !== null);
 
     const query = scopes
-      .map((scope) => `scopes=${encodeURIComponent(scope)}`)
+      .map((scope) => scopes=${encodeURIComponent(scope)})
       .join("&");
-    router.push(`/recommendation?${query}`);
+    router.push(/recommendation?${query});
   };
 
   const handleCategoryClick = (category: string) => {
@@ -335,7 +351,7 @@ const DashboardPage = () => {
                   value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value.toString()).toFixed(0)}
                   unit={metric.unit}
                   icon={getIconForMetric(metric.title)}
-                  className={`bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer hover:bg-gray-50' : ''}`}
+                  className={bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer hover:bg-gray-50' : ''}}
                 />
               </div>
             ))}
@@ -362,15 +378,13 @@ const DashboardPage = () => {
             </h3>
             <div className="flex-1 flex flex-col">
               <div className="bg-white flex-1 flex justify-center items-center pb-4">
-                {currentYearEmissions !== null && targetGoal !== null && previousYearEmissions !== null ? (
                   <GaugeChartComponent
                     currentYearEmissions={currentYearEmissions}
                     previousYearEmissions={previousYearEmissions}
                     targetReduction={targetGoal}
+                    initialYearGoal={firstYearGoal || 10000}
+                    isEarliestYear={isEarliestYear || false}
                   />
-                ) : (
-                  <div>Loading gauge data...</div>
-                )}
               </div>
             </div>
           </div>
