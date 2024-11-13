@@ -51,7 +51,7 @@ export default function SignUp() {
         <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-cover bg-center"
             style={{ backgroundImage: "url('/landing-background.png')" }}
         >
-          <Card className="w-full max-w-sm bg-white/40 backdrop-blur-lg rounded-lg">
+          <Card className="w-full max-w-sm bg-white backdrop-blur-lg rounded-lg">
             <CardHeader>
               <h1 className="text-2xl font-bold text-center text-green-800">Sign Up</h1>
               {message && (
