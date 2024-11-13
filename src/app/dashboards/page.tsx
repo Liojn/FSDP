@@ -22,7 +22,7 @@ import ThresholdSettings from "./components/ThresholdSettings";
 import RecommendationAlert from "./components/RecommendationAlert";
 
 import { useDashboardData } from "./hooks/useDashboardData";
-import { generatePdf } from "@/lib/generatePdf";
+import { generateSustainabilityReport } from "@/lib/generatePdf";
 import { Button } from "@/components/ui/button";
 
 const DashboardPage = () => {
@@ -93,17 +93,6 @@ const DashboardPage = () => {
     }
   };
 
-  const handleGeneratePdf = () => {
-    const elements = [
-      metricSectionRef.current,
-      carbonEmissionChartRef.current,
-      gaugeChartRef.current,
-      emissionCategoryChartRef.current,
-    ].filter(Boolean) as HTMLElement[];
-
-    generatePdf(elements);
-  };
-
   if (loading || !userId || !selectedYear) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -118,7 +107,10 @@ const DashboardPage = () => {
         <PageHeader title="Dashboard" />
         <div>
           <div className="flex items-center gap-2">
-            <Button onClick={handleGeneratePdf}>Export Report to PDF</Button>
+            <Button onClick={generateSustainabilityReport}>
+              Export Report to PDF
+            </Button>
+
             <ThresholdSettings />
             <span className="font-semibold">Year: </span>
             <Select value={yearFilter} onValueChange={handleYearFilterChange}>
