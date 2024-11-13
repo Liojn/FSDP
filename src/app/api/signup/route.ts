@@ -9,9 +9,9 @@ export async function POST (req: Request ){
 
         const body = await req.json();
 
-        const { name, email, password } = body;
+        const { name, email, password, firstYearGoal } = body;
 
-        if (!name || !email || !password) {
+        if (!name || !email || !password || !firstYearGoal) {
             return NextResponse.json({ message: 'Missing required fields.' }, { status: 400 });
         }
         const db = await dbClient.connectToDatabase();
@@ -28,6 +28,8 @@ export async function POST (req: Request ){
             name,
             email,
             password: hashedPassword,
+            firstYearGoal,
+            emissionGoal: [],
         })
 
         return NextResponse.json({ message: 'User created successfully' }, { status: 201 });
