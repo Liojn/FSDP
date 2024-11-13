@@ -33,6 +33,8 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({ data, isLoading = false }) 
   const [yearsToNetZero, setYearsToNetZero] = useState<number | null>(null);
   const [netZeroYear, setNetZeroYear] = useState<number | null>(null);
   const [netZeroTarget, setNetZeroTarget] = useState<number | null>(null);
+  const [targetPercentage, setTargetPercentage] = useState<number | null>(null);
+  const [minTargetPercentage, setMinTargetPercentage] = useState<number | null>(null);
 
   const getLatestTarget = (emissionTargets: { [key: number]: number }): number => {
     const years = Object.keys(emissionTargets).map(Number);
@@ -47,6 +49,12 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({ data, isLoading = false }) 
     const yearsToNetZero = Math.ceil(Math.log(targetEmissions / currentEmissions) / Math.log(1 - targetPercentage));
     const netZeroYear = new Date().getFullYear() + yearsToNetZero;
     return [yearsToNetZero, netZeroYear, targetEmissions];
+  };
+
+  const calculateMinimumPercentToNetZeroBy2050 = (initialEmissions: number, currentEmissions: number): [number] => {
+    const targetEmissions = initialEmissions * 0.1; // 10% of initial emissions
+    const minTargetPercentage = 1 - Math.exp(Math.log(targetEmissions / currentEmissions) / (2050 - new Date().getFullYear()));
+    return [minTargetPercentage];
   };
 
 const prepareYearlyData = (): DataPoint[] => {
@@ -149,9 +157,17 @@ useEffect(() => {
       targetPercentage
     );
 
+    const [minPercentage] = calculateMinimumPercentToNetZeroBy2050(
+      initialEmissions,
+      currentEmissions
+    );
+
+    // console.log(minPercentage);
     setYearsToNetZero(years);
     setNetZeroYear(year);
     setNetZeroTarget(target);
+    setTargetPercentage(targetPercentage * 100);
+    setMinTargetPercentage(minPercentage * 100);
   }
   
   setChartData(yearlyData);
@@ -244,15 +260,17 @@ useEffect(() => {
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Emissions Reduction Timeline</CardTitle>
+        <CardTitle>Net Zero Emission Timeline</CardTitle>
       </CardHeader>
       <CardContent>
         {yearsToNetZero !== null && netZeroYear !== null && netZeroTarget !== null && (
           <Alert className="mb-4 bg-blue-50">
             <AlertTitle className="text-blue-800">Net Zero Emissions: 90% reduction in emissions from initial emissions</AlertTitle>
             <AlertDescription className="text-blue-700">
-              Net Zero Target: {netZeroTarget?.toLocaleString()} kg<br />
-              Based on current reduction goals set, it would take you approx <strong>{yearsToNetZero}</strong> years to reach Net Zero Emissions by <strong>{netZeroYear}</strong>.
+              Net Zero Target: {netZeroTarget?.toFixed(0)} kg<br/>
+              Target Percentage Reduction: {targetPercentage?.toFixed(0)}%<br/>
+              Based on current reduction goals set, it would take you approx <strong>{yearsToNetZero}</strong> years to reach net zero Emissions by <strong>{netZeroYear}</strong>.<br/>
+              To hit net zero emissions by <strong>2050</strong>, you have to reduce your emissions by at least <strong>{minTargetPercentage?.toFixed(0)}</strong> per year for future years.
             </AlertDescription>
           </Alert>
         )}
