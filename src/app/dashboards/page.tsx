@@ -58,14 +58,14 @@ const defaultDescriptions: Record<string, string> = {
 const metricToScope: { [key: string]: "Scope 1" | "Scope 2" | "Scope 3" } = {
   "Total Energy Consumption": "Scope 1",
   "Total Net Carbon Emissions": "Scope 2",
-  "Total Carbon Neutrality Gap": "Scope 3",
+  "Total Carbon Neutral Emissions": "Scope 3",
 };
 const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [yearFilter, setYearFilter] = useState<string>("");
   const [yearOptions, setYearOptions] = useState<number[]>([]);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<number | string>("");]
+  const [selectedMonth, setSelectedMonth] = useState<number | string>("");
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
@@ -86,8 +86,8 @@ const DashboardPage = () => {
   const [CategoryEmissionsData, setCategoryEmissionsData] = useState<EmissionCategoryData[] | null>(null);
   const [metricsData, setMetricsData] = useState<MetricData[]>([
     { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
-    { title: "Total Carbon Emissions", value: "Loading...", unit: "KG CO₂" },
-    { title: "Total Net Emissions", value: "Loading...", unit: "KG CO₂" },
+    { title: "Total Net Carbon Emissions", value: "Loading...", unit: "KG CO₂" },
+    { title: "Total Carbon Neutral Emissions", value: "Loading...", unit: "KG CO₂" },
   ]);
   const [thresholds, setThresholds] = useState<ScopeThreshold[]>([]);
   const [exceedingScopes, setExceedingScopes] = useState<string[]>([]);
@@ -103,7 +103,7 @@ const DashboardPage = () => {
       }
 
       try {
-        const response = await fetch(/api/thresholds?userId=${storedUserId});
+        const response = await fetch(`/api/thresholds?userId=${storedUserId}`);
         if (response.ok) {
           const data = await response.json();
           const userDefinedThresholds = data.thresholds.map(
@@ -193,7 +193,7 @@ const DashboardPage = () => {
       const threshold = thresholds.find((t) => t.scope === scopeType);
 
       if (threshold && parseFloat(metric.value.toString()) > threshold.value) {
-        exceeding.push(${threshold.scope} (${threshold.description}));
+        exceeding.push(`${threshold.scope} (${threshold.description})`);
       }
     });
 
@@ -220,7 +220,7 @@ const DashboardPage = () => {
           unit: "KG CO2",
         },
         {
-          title: "Total Carbon Neutrality Gap",
+          title: "Total Carbon Neutral Emissions",
           value: data["netAverage in CO2E"].toFixed(0),
           unit: "KG CO2",
         },
@@ -276,9 +276,9 @@ const DashboardPage = () => {
       .filter((scope): scope is string => scope !== null);
 
     const query = scopes
-      .map((scope) => scopes=${encodeURIComponent(scope)})
+      .map((scope) => `scopes=${encodeURIComponent(scope)}`)
       .join("&");
-    router.push(/recommendation?${query});
+    router.push(`/recommendation?${query}`);
   };
 
   const handleCategoryClick = (category: string) => {
@@ -297,7 +297,7 @@ const DashboardPage = () => {
         return <Flame className="w-8 h-8 text-orange-500" strokeWidth={3} />;
       case "Total Energy Consumption":
         return <Zap className="w-8 h-8 text-yellow-500" strokeWidth={3} />;
-      case "Total Carbon Neutrality Gap":
+      case "Total Carbon Neutral Emissions":
         return <Leaf className="w-8 h-8 text-green-500" strokeWidth={3} />;
       default:
         return null;
@@ -334,7 +334,7 @@ const DashboardPage = () => {
         onViewRecommendations={handleViewRecommendations}
       />
 
-      <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
+ <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
@@ -351,8 +351,7 @@ const DashboardPage = () => {
                   value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value.toString()).toFixed(0)}
                   unit={metric.unit}
                   icon={getIconForMetric(metric.title)}
-                  className={bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer hover:bg-gray-50' : ''}}
-                />
+                  className={`bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer hover:bg-gray-50' : ''}`}                />
               </div>
             ))}
           </div>
@@ -378,6 +377,7 @@ const DashboardPage = () => {
             </h3>
             <div className="flex-1 flex flex-col">
               <div className="bg-white flex-1 flex justify-center items-center pb-4">
+                {currentYearEmissions !== null && targetGoal !== null && previousYearEmissions !== null ? (
                   <GaugeChartComponent
                     currentYearEmissions={currentYearEmissions}
                     previousYearEmissions={previousYearEmissions}
@@ -385,6 +385,9 @@ const DashboardPage = () => {
                     initialYearGoal={firstYearGoal || 10000}
                     isEarliestYear={isEarliestYear || false}
                   />
+                ) : (
+                  <div>Loading gauge data...</div>
+                )}
               </div>
             </div>
           </div>
