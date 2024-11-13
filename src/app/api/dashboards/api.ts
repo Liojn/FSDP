@@ -95,13 +95,22 @@ export const fetchEmissionTarget = async (companyId: string, year: number) => {
 
     //Check if the target was returned
     if (data.target !== undefined) {
-      return data.target;
+      return {
+        target: data.target,
+        isEarliestYear: data.isEarliestYear || false, // Provide default values if not present
+        firstYearGoal: data.firstYearGoal || 10000    // Default to 10000 if not present
+      };
     } else {
       throw new Error("Target data not found.");
     }
   } catch (error) {
     console.error("Error fetching emission target:", error);
-    return null; // You can return a default value if needed
+    //Return default values when error
+    return {
+      target: 10000,
+      isEarliestYear: false,
+      firstYearGoal: 10000
+    };
   }
 };
 
