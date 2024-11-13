@@ -38,6 +38,11 @@ interface ScopeThreshold {
   unit: string;
 }
 
+interface TargetGoalResponse {
+  target: number;
+  isEarliestYear: boolean;
+  firstYearGoal: number;
+}
 interface MetricData {
   title: string;
   value: string | number;
@@ -76,15 +81,12 @@ const DashboardPage = () => {
   const [monthlyEmissions, setMonthlyEmissions] = useState<number[]>([]);
   const [averageAbsorbed, setAverageAbsorbed] = useState<number | null>(null);
 
-  // Store the data for current and previous year emissions (Gauge Chart)
-  const [currentYearEmissions, setCurrentYearEmissions] = useState<
-    number | null
-  >(0);
-  const [previousYearEmissions, setPreviousYearEmissions] = useState<
-    number | null
-  >(0);
-  const [targetGoal, setTargetGoal] = useState<number>(10000); // Default value
-
+  //Store the data for current and previous year emissions, GaugeChart
+  const [currentYearEmissions, setCurrentYearEmissions] = useState<number | null>(0);
+  const [previousYearEmissions, setPreviousYearEmissions] = useState<number | null>(0);
+  const [targetGoal, setTargetGoal] = useState<number>(0); //default first, percentage reduction
+  const [isEarliestYear, setIsEarliestYear] = useState<boolean>(false);
+  const [firstYearGoal, setFirstYearGoal] = useState<number>(0); 
   // State for storing carbon emissions data for Emission Category Chart
   const [CategoryEmissionsData, setCategoryEmissionsData] = useState<
     EmissionCategoryData[] | null
@@ -166,115 +168,106 @@ const DashboardPage = () => {
     const fetchMetricsData = async () => {
       if (selectedYear && userId) {
         try {
-          const companyId = localStorage.getItem("userId") || "";
-          if (yearOptions.includes(selectedYear - 1)) {
-            // If the previous year is available, fetch data for both years
-            const [
-              data,
-              emissionsData,
-              previousEmissionsData,
-              targetGoalData,
-              emissionCategoryData,
-            ] = await Promise.all([
-              getMetricsData(companyId, selectedYear),
-              fetchMonthlyCarbonEmissions(companyId, selectedYear),
-              getMetricsData(companyId, selectedYear - 1),
-              fetchEmissionTarget(companyId, selectedYear),
-              fetchEmissionCategory(companyId, selectedYear, selectedMonth),
-            ]);
-
-            // Process data for both years
-            if (data) {
-              const newMetricsData: MetricData[] = [
-                {
-                  title: "Total Energy Consumption",
-                  value: data["energyAverage in kWh"].toFixed(0),
-                  unit: "kWh",
-                },
-                {
-                  title: "Total Carbon Emissions",
-                  value: data["carbonAverage in CO2E"].toFixed(0),
-                  unit: "KG CO₂",
-                },
-                {
-                  title: "Total Net Emissions",
-                  value: data["netAverage in CO2E"].toFixed(0),
-                  unit: "KG CO₂",
-                },
-              ];
-
-              setMetricsData(newMetricsData);
-              checkThresholds(newMetricsData);
-              setCurrentYearEmissions(data["netAverage in CO2E"]);
-            }
-
-            if (emissionsData) {
-              setMonthlyEmissions(emissionsData.monthlyEmissions);
-              setAverageAbsorbed(emissionsData.averageAbsorb);
-            }
-
-            if (previousEmissionsData) {
-              setPreviousYearEmissions(
-                previousEmissionsData["netAverage in CO2E"]
-              );
-            }
-
-            if (targetGoalData) {
-              setTargetGoal(targetGoalData);
-            }
-
-            // Set emission category data
-            if (emissionCategoryData) {
-              setCategoryEmissionsData(emissionCategoryData);
-            }
-          } else {
-            // If the previous year is not available, fetch data only for the current year
-            const [data, emissionsData, targetGoalData, emissionCategoryData] =
-              await Promise.all([
-                getMetricsData(companyId, selectedYear),
-                fetchMonthlyCarbonEmissions(companyId, selectedYear),
-                fetchEmissionTarget(companyId, selectedYear),
-                fetchEmissionCategory(companyId, selectedYear, selectedMonth),
+          const companyId = localStorage.getItem("userId") || ''; //'671cf9a6e994afba6c2f332d';
+          if (yearOptions.includes(selectedYear - 1)) { //range already defined in my options list, this is particularly for gauge
+              // If the previous year is available, fetch data for both the current and previous year
+              const [data, emissionsData, previousEmissionsData, targetGoal, emissionCategoryData] = await Promise.all([
+                  getMetricsData(companyId, selectedYear),
+                  fetchMonthlyCarbonEmissions(companyId, selectedYear),
+                  getMetricsData(companyId, (selectedYear - 1)), // Fetch the emissions data for the previous year, use the net emission from the cards
+                  fetchEmissionTarget(companyId, selectedYear) as Promise<TargetGoalResponse>,
+                  fetchEmissionCategory(companyId, selectedYear, selectedMonth),
               ]);
 
-            if (data) {
-              const newMetricsData: MetricData[] = [
-                {
-                  title: "Total Energy Consumption",
-                  value: data["energyAverage in kWh"].toFixed(0),
-                  unit: "kWh",
-                },
-                {
-                  title: "Total Carbon Emissions",
-                  value: data["carbonAverage in CO2E"].toFixed(0),
-                  unit: "KG CO₂",
-                },
-                {
-                  title: "Total Net Emissions",
-                  value: data["netAverage in CO2E"].toFixed(0),
-                  unit: "KG CO₂",
-                },
-              ];
+              // Process data for both years
+              if (data) {
+                  const newMetricsData: MetricData[] = [
+                    {
+                      title: "Total Energy Consumption",
+                      value: data["energyAverage in kWh"].toFixed(0),
+                      unit: "kWh",
+                    },
+                    {
+                      title: "Total Carbon Emissions",
+                      value: data["carbonAverage in CO2E"].toFixed(0),
+                      unit: "KG CO₂",
+                    },
+                    {
+                      title: "Total Net Emissions",
+                      value: data["netAverage in CO2E"].toFixed(0),
+                      unit: "KG CO₂",
+                    },
+                  ];
+                  setMetricsData(newMetricsData);
+                  checkThresholds(newMetricsData);
+                  setCurrentYearEmissions(data["carbonAverage in CO2E"]); //give the current year net admission
+              }
 
-              setMetricsData(newMetricsData);
-              checkThresholds(newMetricsData);
-              setCurrentYearEmissions(data["netAverage in CO2E"]);
-            }
+              if (emissionsData) {
+                  setMonthlyEmissions(emissionsData.monthlyEmissions); // Set the monthly emissions data for the current year
+                  setAverageAbsorbed(emissionsData.averageAbsorb); // Set the average absorbed value for the current year
+              }
 
-            if (emissionsData) {
-              setMonthlyEmissions(emissionsData.monthlyEmissions);
-              setAverageAbsorbed(emissionsData.averageAbsorb);
-            }
-            setPreviousYearEmissions(0);
+              if (previousEmissionsData){
+                setPreviousYearEmissions(previousEmissionsData["carbonAverage in CO2E"]); //give the prev year emission
+              }
 
-            if (targetGoalData) {
-              setTargetGoal(targetGoalData);
-            }
+              if (targetGoal) {
+                setTargetGoal(targetGoal.target);
+                setIsEarliestYear(targetGoal.isEarliestYear);
+                setFirstYearGoal(targetGoal.firstYearGoal);
+              }
+              // Set emission category data (this will be used for charts)
+              if (emissionCategoryData) {
+                setCategoryEmissionsData(emissionCategoryData); // This is the data you need for the chart
+              }
+          } else {
+              //If the previous year is not available, fetch data only for the current year
+              const [data, emissionsData, targetGoal, emissionCategoryData] = await Promise.all([
+                  getMetricsData(companyId, selectedYear),
+                  fetchMonthlyCarbonEmissions(companyId, selectedYear),
+                  fetchEmissionTarget(companyId, selectedYear) as Promise<TargetGoalResponse>,
+                  fetchEmissionCategory(companyId, selectedYear, selectedMonth)
+              ]);
 
-            // Set emission category data
-            if (emissionCategoryData) {
-              setCategoryEmissionsData(emissionCategoryData);
-            }
+              if (data) {
+                  const newMetricsData: MetricData[] = [
+                    {
+                      title: "Total Energy Consumption",
+                      value: data["energyAverage in kWh"].toFixed(0),
+                      unit: "kWh",
+                    },
+                    {
+                      title: "Total Carbon Emissions",
+                      value: data["carbonAverage in CO2E"].toFixed(0),
+                      unit: "KG CO₂",
+                    },
+                    {
+                      title: "Total Net Emissions",
+                      value: data["netAverage in CO2E"].toFixed(0),
+                      unit: "KG CO₂",
+                    },
+                  ];
+                  setMetricsData(newMetricsData);
+                  checkThresholds(newMetricsData);
+                  setCurrentYearEmissions(data["carbonAverage in CO2E"]); //give the current year net admission
+              }
+
+              if (emissionsData) {
+                  setMonthlyEmissions(emissionsData.monthlyEmissions); // Set the monthly emissions data
+                  setAverageAbsorbed(emissionsData.averageAbsorb); // Set the average absorbed value
+              }
+              setPreviousYearEmissions(0); //no data for comparison
+
+              if (targetGoal) {
+                setTargetGoal(targetGoal.target);
+                setIsEarliestYear(targetGoal.isEarliestYear);
+                setFirstYearGoal(targetGoal.firstYearGoal);
+              }
+              // Set emission category data (this will be used for charts)
+              if (emissionCategoryData) {
+                setCategoryEmissionsData(emissionCategoryData); // This is the data you need for the chart
+              }
           }
           setLoading(false);
         } catch (error) {
@@ -481,7 +474,9 @@ const DashboardPage = () => {
                   <GaugeChartComponent
                     currentYearEmissions={currentYearEmissions || 0}
                     previousYearEmissions={previousYearEmissions || 0}
-                    targetReduction={targetGoal}
+                    targetReduction={targetGoal || 10000} //default, for now
+                    initialYearGoal={firstYearGoal || 10000}
+                    isEarliestYear={isEarliestYear || false}
                   />
                 ) : (
                   <div>Loading gauge data...</div>
