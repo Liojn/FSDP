@@ -24,12 +24,20 @@ export async function POST (req: Request ){
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Get the current year
+        const currentYear = new Date().getFullYear();
+
         await db.collection("User").insertOne({
             name,
             email,
             password: hashedPassword,
             firstYearGoal,
-            emissionGoal: [],
+            emissionGoal: [
+                {
+                    year: currentYear,
+                    target: 0, // Preset target to 0
+                }
+            ],
         })
 
         return NextResponse.json({ message: 'User created successfully' }, { status: 201 });
