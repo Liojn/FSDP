@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from "@/../dbConfig";
 
+interface EmissionGoal {
+  year: number;
+  target: number;
+}
+
+interface UserData {
+  _id: string;
+  name: string;
+  emissionGoal: EmissionGoal[];
+}
+
 interface EquipmentItem {
   total_electricity_used_kWh?: number;
   fuel_consumed_l?: number;
@@ -28,13 +39,22 @@ export async function POST(req: Request) {
     const userName = req.headers.get('userName');
     const { endYear, dataType } = await req.json();
     let companyId;
+    let emissionTargets: { [key: number]: number } = {};
 
     if (userName) {
-      const user = await db.collection('User').findOne({ name: userName });
+      const user: UserData | null = await db.collection('User').findOne({ name: userName });
       if (!user) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
       companyId = user._id;
+      
+      // Extract emission targets from user data
+      if (user.emissionGoal) {
+        emissionTargets = user.emissionGoal.reduce((acc, goal) => {
+          acc[goal.year] = goal.target;
+          return acc;
+        }, {} as { [key: number]: number });
+      }
     }
 
     if (!endYear || !dataType || !companyId) {
@@ -50,28 +70,26 @@ export async function POST(req: Request) {
     const forestData = await db.collection('Forest').find({
       company_id: companyId,
       date: {
-        $gte: new Date(endYear, 0, 1), // Start of the specified year
-        $lte: new Date(endYear, 11, 31) // End of the specified year
+        $gte: new Date(endYear, 0, 1),
+        $lte: new Date(endYear, 11, 31)
       }
     }).toArray();
 
-    // Calculate the total annual forest offset using the absorption rate for the specified year
     const totalAnnualForestOffset = forestData.reduce((sum: number, forest: any) => {
       return sum + (forest.totalAreaInHectares || 0) * (emissionRates.absorption_rate_per_year_kg || 0);
     }, 0);
 
-    // Calculate the monthly forest offset by dividing the annual offset by 12
     const monthlyForestOffset = totalAnnualForestOffset / 12;
 
-    // Initialize an object to store data as arrays for each category, emissions, absorption, and net emissions
     const monthlyData = {
       equipment: Array(12).fill(0),
       livestock: Array(12).fill(0),
       crops: Array(12).fill(0),
       waste: Array(12).fill(0),
       totalMonthlyEmissions: Array(12).fill(0),
-      totalMonthlyAbsorption: Array(12).fill(monthlyForestOffset), // Absorption is constant for each month
-      netMonthlyEmissions: Array(12).fill(0)
+      totalMonthlyAbsorption: Array(12).fill(monthlyForestOffset),
+      netMonthlyEmissions: Array(12).fill(0),
+      emissionTargets // Include emission targets in the response
     };
 
     for (let month = 0; month < 12; month++) {
@@ -99,7 +117,6 @@ export async function POST(req: Request) {
           date: { $gte: startDate, $lte: endDate },
         }).toArray();
 
-        // Calculate emissions for each category for the month
         monthlyData.equipment[month] = equipmentData.reduce((sum: number, item: EquipmentItem) => {
           const electricityEmissions = (item.total_electricity_used_kWh || 0) * (emissionRates.energy.electricity_emission || 0);
           const fuelEmissions = (item.fuel_consumed_l || 0) * (emissionRates.fuel_emissions[item.fuel_type?.toLowerCase() || ''] || 0);
@@ -120,16 +137,12 @@ export async function POST(req: Request) {
           return sum + (item.waste_quantity_kg || 0) * (emissionRates.waste_emissions[item.waste_type?.toLowerCase().replace(/_/g, '') || ''] || 0);
         }, 0);
 
-        // Calculate total emissions for the month across all categories
         const totalEmissions = monthlyData.equipment[month] + monthlyData.livestock[month] +
-                               monthlyData.crops[month] + monthlyData.waste[month];
+                             monthlyData.crops[month] + monthlyData.waste[month];
         monthlyData.totalMonthlyEmissions[month] = totalEmissions;
-
-        // Calculate net emissions by subtracting the monthly absorption
         monthlyData.netMonthlyEmissions[month] = totalEmissions - monthlyForestOffset;
 
       } else if (dataType === 'energy-consumption') {
-        // Calculate energy consumption for equipment only if dataType is energy-consumption
         const equipmentData: EquipmentItem[] = await db.collection('Equipment').find({
           company_id: companyId,
           date: { $gte: startDate, $lte: endDate },

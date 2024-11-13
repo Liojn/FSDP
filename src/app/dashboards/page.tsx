@@ -1,43 +1,83 @@
-"use client"; //treat this component as a Client Component
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client"; // Treat this component as a Client Component
 
-import React, { useState, useEffect } from 'react';
-import { fetchUniqueYears, getMetricsData, EmissionData, fetchMonthlyCarbonEmissions, fetchEmissionTarget, fetchEmissionCategory } from '../api/dashboards/api';
-import { MetricCard } from '@/components/shared/metric-card'; //Cards component
-import CarbonEmissionChart from '@/app/dashboards/charts/carbonEmissionChart';
-import GaugeChartComponent  from "@/app/dashboards/charts/gaugeGoal"; //Porgress Gauge Chart
-import EmissionCategoryChart from '@/app/dashboards/charts/emissionCategory';
-import { PageHeader } from '@/components/shared/page-header';
-import Modal from './popup/modal';
-import { Flame, Leaf, Loader2, Zap } from 'lucide-react';
-import ScopeModal from './popup/scopeModal';
+import React, { useState, useEffect } from "react";
+import {
+  fetchUniqueYears,
+  getMetricsData,
+  fetchMonthlyCarbonEmissions,
+  fetchEmissionTarget,
+  fetchEmissionCategory,
+  EmissionData,
+} from "../api/dashboards/api";
+import { MetricCard } from "@/components/shared/metric-card"; // Cards component
+import CarbonEmissionChart from "@/app/dashboards/charts/carbonEmissionChart";
+import GaugeChartComponent from "@/app/dashboards/charts/gaugeGoal"; // Progress Gauge Chart
+import EmissionCategoryChart from "@/app/dashboards/charts/emissionCategory";
+import { PageHeader } from "@/components/shared/page-header";
+import Modal from "./popup/modal";
+import { Loader2, Flame, Leaf, Zap } from "lucide-react";
+import ScopeModal from "./popup/scopeModal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import ThresholdSettings from "./components/ThresholdSettings";
+import RecommendationAlert from "./components/RecommendationAlert";
+import { useRouter } from "next/navigation";
+
+// Define interfaces
+interface ScopeThreshold {
+  id: string;
+  scope: "Scope 1" | "Scope 2" | "Scope 3";
+  description: string;
+  value: number;
+  unit: string;
+}
 
 interface TargetGoalResponse {
   target: number;
   isEarliestYear: boolean;
   firstYearGoal: number;
 }
-  
+interface MetricData {
+  title: string;
+  value: string | number;
+  unit: string;
+}
+
+interface EmissionCategoryData {
+  category: string;
+  value: number;
+}
+
+// Default descriptions for scopes
+const defaultDescriptions = {
+  "Scope 1": "Direct emissions from owned or controlled sources",
+  "Scope 2":
+    "Indirect emissions from purchased electricity, steam, heating, and cooling",
+  "Scope 3": "All other indirect emissions in the value chain",
+};
+
 const DashboardPage = () => {
+  const [loading, setLoading] = useState(true); // for loading page
+  const [yearFilter, setYearFilter] = useState<string>(""); // Year filter selection
+  const [yearOptions, setYearOptions] = useState<number[]>([]); // Store year options from API fetch
+  const [selectedYear, setSelectedYear] = useState<number | null>(null); // Store selected year
+  const [selectedMonth, setSelectedMonth] = useState<number | string>(""); // Track selected month
 
-  const [loading, setLoading] = useState(true); // for loading page - nicole
-
-  const [yearFilter, setYearFilter] = useState<string>(''); //Year filter selection, holds the currently selected year from the dropdown. Initially set to an empty string
-  const [yearOptions, setYearOptions] = useState<number[]>([]); //store Year options from API fetch, initialized as an empty array,
-  const [selectedYear, setSelectedYear] = useState<number | null>(null); //Store selected year for subsequent API calls
-
-
-  //popup
+  // Modal state
   const [showModal, setShowModal] = useState(false); // Modal visibility
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [categoryDetails, setCategoryDetails] = useState<string | null>(null);
-  
-  //scope popup
-  const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
+  const [, setCategoryDetails] = useState<string | null>(null);
 
-  //companyID
+  // Company/User ID
   const [userId, setUserId] = useState<string | null>(null);
 
-  //State for monthly emission
+  // State for monthly emissions chart
   const [monthlyEmissions, setMonthlyEmissions] = useState<number[]>([]);
   const [averageAbsorbed, setAverageAbsorbed] = useState<number | null>(null);
 
@@ -47,49 +87,86 @@ const DashboardPage = () => {
   const [targetGoal, setTargetGoal] = useState<number>(0); //default first, percentage reduction
   const [isEarliestYear, setIsEarliestYear] = useState<boolean>(false);
   const [firstYearGoal, setFirstYearGoal] = useState<number>(0); 
+  // State for storing carbon emissions data for Emission Category Chart
+  const [CategoryEmissionsData, setCategoryEmissionsData] = useState<
+    EmissionCategoryData[] | null
+  >(null);
 
-  // State for storing carbon emissions data for DONUT CHART
-  const [CategoryEmissionsData, setCategoryEmissionsData] = useState<any>(null); 
-  const [selectedMonth, setSelectedMonth] = useState<number | string>(''); // Track selected month
-
-
-  const [metricsData, setMetricsData] = useState([ //var to store the data and display, initially predefined
-  { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
-  { title: "Total Net Carbon Emissions", value: "Loading...", unit: "KG CO2" },
-  { title: "Total Carbon Neutrality Gap", value: "Loading...", unit: "KG CO2" }
+  // State for metrics data (Cards)
+  const [metricsData, setMetricsData] = useState<MetricData[]>([
+    { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
+    { title: "Total Net Carbon Emissions", value: "Loading...", unit: "KG CO₂" },
+    { title: "Total Carbon Neutral Emissions", value: "Loading...", unit: "KG CO₂" },
   ]);
 
-  //Fetch the avail list of years from the API
+  // Initialize thresholds state
+  const [thresholds, setThresholds] = useState<ScopeThreshold[]>([]);
+  const [exceedingScopes, setExceedingScopes] = useState<string[]>([]); // State to hold scopes exceeding thresholds
+
+  const [isScopeModalOpen, setIsScopeModalOpen] = useState(false); // State for ScopeModal
+
+  const router = useRouter();
+
+  // Fetch user thresholds
+  useEffect(() => {
+    const fetchThresholds = async () => {
+      const storedUserId = localStorage.getItem("userId");
+      if (!storedUserId) {
+        console.warn("No userId found");
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/thresholds?userId=${storedUserId}`);
+        if (response.ok) {
+          const data = await response.json();
+          const userDefinedThresholds = data.thresholds.map(
+            (threshold: ScopeThreshold) => ({
+              ...threshold,
+              description: defaultDescriptions[threshold.scope],
+            })
+          );
+          setThresholds(userDefinedThresholds);
+        } else {
+          console.error("Failed to fetch user thresholds");
+        }
+      } catch (error) {
+        console.error("Error fetching thresholds:", error);
+      }
+    };
+    fetchThresholds();
+  }, []);
+
+  // Fetch the available list of years from the API
   useEffect(() => {
     const fetchYears = async () => {
       try {
-        //const companyId = '671cf9a6e994afba6c2f332d'; //Assigned now for simplicity
-        const companyId = localStorage.getItem("userId") || '';
+        const companyId = localStorage.getItem("userId") || "";
         const storedUserId = localStorage.getItem("userId");
         if (storedUserId) {
           setUserId(storedUserId);
         }
         const years = await fetchUniqueYears(companyId);
-        setYearOptions(years); //Update the year options state, call the function
+        setYearOptions(years);
 
-        //Set the default year to the latest year
+        // Set the default year to the latest year
         if (years.length > 0) {
-          setYearFilter(years[0].toString()); //Set to the latest year as default
-          setSelectedYear(years[0]); // Store the selected year
+          setYearFilter(years[0].toString());
+          setSelectedYear(years[0]);
         }
       } catch (error) {
         setLoading(false);
-        console.error('Failed to fetch years:', error);
+        console.error("Failed to fetch years:", error);
       }
     };
 
     fetchYears();
-  }, []); //Empty dependency array, runs once after render
+  }, []);
 
-  //Fetch emission and energy data based on the selected year
+  // Fetch emission and energy data based on the selected year and thresholds
   useEffect(() => {
     const fetchMetricsData = async () => {
-      if (selectedYear) {
+      if (selectedYear && userId) {
         try {
           const companyId = localStorage.getItem("userId") || ''; //'671cf9a6e994afba6c2f332d';
           if (yearOptions.includes(selectedYear - 1)) { //range already defined in my options list, this is particularly for gauge
@@ -104,11 +181,25 @@ const DashboardPage = () => {
 
               // Process data for both years
               if (data) {
-                  setMetricsData([
-                      { title: "Total Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
-                      { title: "Total Net Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
-                      { title: "Total Carbon Neutrality Gap", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
-                  ]);
+                  const newMetricsData: MetricData[] = [
+                    {
+                      title: "Total Energy Consumption",
+                      value: data["energyAverage in kWh"].toFixed(0),
+                      unit: "kWh",
+                    },
+                    {
+                      title: "Total Net Carbon Emissions",
+                      value: data["carbonAverage in CO2E"].toFixed(0),
+                      unit: "KG CO₂",
+                    },
+                    {
+                      title: "Total Carbon Neutral Emissions",
+                      value: data["netAverage in CO2E"].toFixed(0),
+                      unit: "KG CO₂",
+                    },
+                  ];
+                  setMetricsData(newMetricsData);
+                  checkThresholds(newMetricsData);
                   setCurrentYearEmissions(data["carbonAverage in CO2E"]); //give the current year net admission
               }
 
@@ -140,11 +231,25 @@ const DashboardPage = () => {
               ]);
 
               if (data) {
-                  setMetricsData([
-                      { title: "Total Energy Consumption", value: data["energyAverage in kWh"].toFixed(0), unit: "kWh" },
-                      { title: "Total Net Carbon Emissions", value: data["carbonAverage in CO2E"].toFixed(0), unit: "KG CO2" },
-                      { title: "Total Carbon Neutrality Gap", value: data["netAverage in CO2E"].toFixed(0), unit: "KG CO2" }
-                  ]);
+                  const newMetricsData: MetricData[] = [
+                    {
+                      title: "Total Energy Consumption",
+                      value: data["energyAverage in kWh"].toFixed(0),
+                      unit: "kWh",
+                    },
+                    {
+                      title: "Total Net Carbon Emissions",
+                      value: data["carbonAverage in CO2E"].toFixed(0),
+                      unit: "KG CO₂",
+                    },
+                    {
+                      title: "Total Carbon Neutral Emissions",
+                      value: data["netAverage in CO2E"].toFixed(0),
+                      unit: "KG CO₂",
+                    },
+                  ];
+                  setMetricsData(newMetricsData);
+                  checkThresholds(newMetricsData);
                   setCurrentYearEmissions(data["carbonAverage in CO2E"]); //give the current year net admission
               }
 
@@ -172,35 +277,65 @@ const DashboardPage = () => {
     };
 
     fetchMetricsData();
-  }, [selectedYear, selectedMonth]);
+  }, [selectedYear, selectedMonth, thresholds]);
 
-  //Handle year filter change
-  const handleYearFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const year = parseInt(event.target.value, 10);
-    setYearFilter(event.target.value); //retrieves the selected year, which is then stored in yearFilter
+  // Handle year filter change
+  const handleYearFilterChange = (value: string) => {
+    const year = parseInt(value, 10);
+    setYearFilter(value);
     setSelectedYear(year);
-    setSelectedMonth(''); //means all years
+    setSelectedMonth("");
   };
 
   // Handler to toggle month selection
   const handleMonthClick = (month: string | number) => {
     if (selectedMonth === month) {
-      setSelectedMonth(''); // If clicked again, clear the selection
+      setSelectedMonth("");
     } else {
-      setSelectedMonth(month); // Set the selected month
+      setSelectedMonth(month);
     }
   };
 
-    if (loading) {
-    // Show spinner in the center of the screen while loading (animation)
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
-      </div>
-    );
-  }
+  // Check thresholds function
+  const checkThresholds = (metrics: MetricData[]) => {
+    const exceeding: string[] = [];
 
-    // Handle category click from the chart
+    // Map metrics to their corresponding scope types
+    const metricToScope: { [key: string]: "Scope 1" | "Scope 2" | "Scope 3" } =
+      {
+        "Total Energy Consumption": "Scope 1",
+        "Total Net Carbon Emissions": "Scope 2",
+        "Total Carbon Neutral Emissions": "Scope 3",
+      };
+
+    metrics.forEach((metric) => {
+      const scopeType = metricToScope[metric.title];
+      const threshold = thresholds.find((t) => t.scope === scopeType);
+
+      if (threshold && parseFloat(metric.value.toString()) > threshold.value) {
+        exceeding.push(`${threshold.scope} (${threshold.description})`);
+      }
+    });
+
+    setExceedingScopes(exceeding);
+  };
+
+  // Navigation handler for recommendations
+  const handleViewRecommendations = (exceedingScopes: string[]) => {
+    const scopes = exceedingScopes
+      .map((scope) => {
+        const match = scope.match(/(Scope [1-3])/);
+        return match ? match[1] : null;
+      })
+      .filter((scope): scope is string => scope !== null);
+
+    const query = scopes
+      .map((scope) => `scopes=${encodeURIComponent(scope)}`)
+      .join("&");
+    router.push(`/recommendation?${query}`);
+  };
+
+  // Handle category click from the chart
   const handleCategoryClick = (category: string, details: string) => {
     setSelectedCategory(category);
     setCategoryDetails(details);
@@ -214,42 +349,59 @@ const DashboardPage = () => {
     setCategoryDetails(null);
   };
 
-  //mapping of titles to icons for dashboard
-  const getIconForMetric = (title : string) => {
+  // Mapping of titles to icons for the dashboard
+  const getIconForMetric = (title: string) => {
     switch (title) {
       case "Total Net Carbon Emissions":
         return <Flame className="w-8 h-8 text-orange-500" strokeWidth={3} />;
       case "Total Energy Consumption":
         return <Zap className="w-8 h-8 text-yellow-500" strokeWidth={3} />;
-      case "Total Carbon Neutrality Gap":
+      case "Total Carbon Neutral Emissions":
         return <Leaf className="w-8 h-8 text-green-500" strokeWidth={3} />;
       default:
         return null; // Or a default icon
     }
   };
-  
+
+  if (loading) {
+    // Show spinner while loading
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
+      </div>
+    );
+  }
+
   return (
     <div className="pt-0 p-4 space-y-6">
       {/* Dashboard Header */}
       <div className="pt-0 flex justify-between items-center">
-        <PageHeader title='Dashboard' />
-        <div> {/*Dropdown menu */}
-        <span className="font-semibold">Year: </span>
-        <select
-          value={yearFilter}
-          onChange={handleYearFilterChange} 
-          className="bg-white border border-gray-300 rounded-md p-2 text-gray-700"
-        >
-          <option value="">Select Year</option>
-          {yearOptions.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
-        </select>
+        <PageHeader title="Dashboard" />
+        <div>
+          {/* Dropdown menu and Threshold Settings */}
+          <div className="flex items-center gap-2">
+            <ThresholdSettings />
+            <span className="font-semibold">Year: </span>
+            <Select value={yearFilter} onValueChange={handleYearFilterChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
-
+      {/* Render RecommendationAlert only when there are exceeding scopes */}
+      <RecommendationAlert
+        exceedingScopes={exceedingScopes}
+        onViewRecommendations={handleViewRecommendations}
+      />
       {/* Dashboard Layout */}
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Column: Metrics and Charts */}
@@ -257,20 +409,28 @@ const DashboardPage = () => {
           {/* Dashboard Cards for Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
-              <div 
+              <div
+                key={index}
                 onClick={() => {
-                  if (metric.title === "Total Net Carbon Emissions") {
+                  if (metric.title === "Total Carbon Emissions") {
                     setIsScopeModalOpen(true);
                   }
                 }}
               >
                 <MetricCard
-                  key={index}
                   title={metric.title}
-                  value={metric.value === "Loading..." ? metric.value : parseFloat(metric.value).toFixed(0)}
+                  value={
+                    metric.value === "Loading..."
+                      ? metric.value
+                      : parseFloat(metric.value.toString()).toFixed(0)
+                  }
                   unit={metric.unit}
                   icon={getIconForMetric(metric.title)} // Pass the icon dynamically
-                  className={`bg-white p-4 shadow-md rounded-lg ${index === 1 ? 'hover:cursor-pointer hover:bg-gray-50' : ''}`}
+                  className={`bg-white p-4 shadow-md rounded-lg ${
+                    metric.title === "Total Carbon Emissions"
+                      ? "hover:cursor-pointer hover:bg-gray-50"
+                      : ""
+                  }`}
                 />
                 {/* ScopeModal */}
                 <ScopeModal
@@ -278,31 +438,39 @@ const DashboardPage = () => {
                   onClose={() => setIsScopeModalOpen(false)}
                   year={selectedYear || new Date().getFullYear()}
                   month={selectedMonth ? Number(selectedMonth) : undefined}
-                  userId={userId || ''}
+                  userId={userId || ""}
                 />
               </div>
             ))}
           </div>
 
-          {/* Bar Chart: */}
+          {/* Bar Chart */}
           <div className="bg-white p-4 shadow-md rounded-lg">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">
-              Yearly Carbon Emission's Progress
+              Yearly Carbon Emission&apos;s Progress
             </h3>
-              <div className="bg-white-200 h-full flex justify-center items-center min-h-[350px]">
-                <CarbonEmissionChart monthlyEmissions={monthlyEmissions} averageAbsorbed={averageAbsorbed} onMonthClick={handleMonthClick} />
-              </div>
+            <div className="bg-white-200 h-full flex justify-center items-center min-h-[350px]">
+              <CarbonEmissionChart
+                monthlyEmissions={monthlyEmissions}
+                averageAbsorbed={averageAbsorbed}
+                onMonthClick={handleMonthClick}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Right Column: Goal target indicator and by category */}
-        <div className="flex flex-col space-y-6 ">
-          {/* Additional Gauge Graph */}
-          <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"> 
-            <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">Goal Reduction Progress</h3>
+        {/* Right Column: Gauge Chart and Emission Category Chart */}
+        <div className="flex flex-col space-y-6">
+          {/* Gauge Chart */}
+          <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">
+              Net Emission Limit Indicator
+            </h3>
             <div className="flex-1 flex flex-col">
               <div className="bg-white flex-1 flex justify-center items-center pb-4">
-                {currentYearEmissions !== null && targetGoal !== null && previousYearEmissions !== null ? ( //prevent early display and disappear the needle
+                {currentYearEmissions !== null &&
+                targetGoal !== null &&
+                previousYearEmissions !== null ? (
                   <GaugeChartComponent
                     currentYearEmissions={currentYearEmissions || 0}
                     previousYearEmissions={previousYearEmissions || 0}
@@ -311,36 +479,46 @@ const DashboardPage = () => {
                     isEarliestYear={isEarliestYear || false}
                   />
                 ) : (
-                  <div>Loading gauge data...</div>  // Optionally show a loading state
+                  <div>Loading gauge data...</div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Emission Drilldown */}
+          {/* Emission Category Chart */}
           <div className="bg-white p-4 shadow-md rounded-lg pb-0">
-          <div className="flex justify-between items-center pb-0">
-            <h3 className="text-lg font-semibold text-gray-700 flex-shrink-0">Emissions By Category</h3>
-          </div>
-          <div className='flex-1 flex justify-center items-center'>
-            <EmissionCategoryChart 
-              categoryData={CategoryEmissionsData} month={selectedMonth} onCategoryClick={handleCategoryClick}
-            />
-                      {/* Modal Component */}
-            <Modal
-              isVisible={showModal}
-              category={selectedCategory}
-              userId={userId || ''} //empty string if userId is null
-              month={selectedMonth !== undefined && selectedMonth !== null ? Number(selectedMonth) : undefined} // setting month to null so they can use the endpoint for yr data
-              year={selectedYear ?? new Date().getFullYear()} // Fallback to the current year if year is null
-              onClose={closeModal}
-            />
-          </div>
+            <div className="flex justify-between items-center pb-0">
+              <h3 className="text-lg font-semibold text-gray-700 flex-shrink-0">
+                Emissions By Category
+              </h3>
+            </div>
+            <div className="flex-1 flex justify-center items-center">
+              <EmissionCategoryChart
+                categoryData={CategoryEmissionsData}
+                month={selectedMonth}
+                onCategoryClick={handleCategoryClick}
+              />
+              {/* Modal Component */}
+              {showModal && (
+                <Modal
+                  isVisible={showModal}
+                  category={selectedCategory}
+                  userId={userId || ""}
+                  month={
+                    selectedMonth !== undefined && selectedMonth !== null
+                      ? Number(selectedMonth)
+                      : undefined
+                  }
+                  year={selectedYear ?? new Date().getFullYear()}
+                  onClose={closeModal}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 };
-  
+
 export default DashboardPage;

@@ -1,164 +1,239 @@
-import { NextResponse } from "next/server";
-import { CategoryType, Recommendation, RecommendationRequest } from "@/types/";
-import Anthropic from '@anthropic-ai/sdk';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// src/app/api/recommendation/route.ts
 
-// Initialize the Claude client with the provided API key
+import { NextResponse } from "next/server";
+import { Recommendation, MetricData, CategoryType } from "@/types";
+import Anthropic from "@anthropic-ai/sdk";
+
+// Initialize the Anthropic client with your API key
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY // Use environment variable
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// Define the structure of a recommendation returned from the API
+// Define the structure of a recommendation returned from the AI
 interface ApiRecommendation {
-  title: string;                       
-  description: string;                 
-  impact: string;                      
-  steps: string[];                     
-  savings: number;                     
-  priority?: number;                   
-  difficulty?: 'easy' | 'medium' | 'hard'; 
-  roi?: number;                        
-  implementationTimeline?: string;     
-  sourceData?: string;                 
-  dashboardLink?: string;              
+  title: string;
+  description: string;
+  impact: string;
+  steps: string[];
+  savings: number;
+  priority?: number;
+  difficulty?: "easy" | "medium" | "hard";
+  roi?: number;
+  implementationTimeline?: string;
+  sourceData?: string;
+  dashboardLink?: string;
+  scope?: "Scope 1" | "Scope 2" | "Scope 3";
 }
 
 interface ApiResponse {
-  recommendations: ApiRecommendation[]; 
+  recommendations: ApiRecommendation[];
 }
 
+// Function to clean and parse JSON from the AI response
 const cleanAndParseJSON = (str: string): ApiResponse => {
   try {
-    const start = str.indexOf('{');
-    const end = str.lastIndexOf('}') + 1;
+    // Remove any markdown code block markers, if present
+    str = str.trim();
+    if (str.startsWith("```json")) str = str.slice(7);
+    else if (str.startsWith("```")) str = str.slice(3);
+    if (str.endsWith("```")) str = str.slice(0, -3);
+
+    // Extract JSON object between the first '{' and the last '}'
+    const start = str.indexOf("{");
+    const end = str.lastIndexOf("}") + 1;
     if (start === -1 || end === 0) throw new Error("No JSON object found");
+
     const jsonStr = str.slice(start, end);
-    return JSON.parse(jsonStr);
+    return JSON.parse(jsonStr); // Parse and return the JSON object
   } catch (error) {
     console.error("JSON parsing error:", error);
+    console.error("Original response content:", str);
     throw error;
   }
 };
 
-// Function to generate a category-specific prompt based on provided metrics
-interface Metrics {
-  energy: {
-    consumption: number;          // Energy consumption in kWh
-    previousYearComparison: number; // Comparison percentage with the previous year
-  };
-  emissions: {
-    total: number;                // Total emissions in tons CO2e
-  };
-  waste: {
-    quantity: number;             // Quantity of waste in tons
-  };
-  crops: {
-    area: number;                 // Area of crops in hectares
-    fertilizer: number;           // Amount of fertilizer used in tons
-  };
-  livestock: {
-    count: number;                // Count of livestock
-    emissions: number;            // Emissions from livestock in tons CO2e
+
+// Function to calculate scope-based emissions
+function calculateScopeEmissions(metrics: MetricData) {
+  const scope1 =
+    metrics.livestock.emissions + (metrics.emissions.byCategory["equipment"] || 0);
+
+  const scope2 = metrics.energy.consumption * 0.0005; // Convert kWh to CO2e tons (approximate)
+
+  const scope3 = metrics.emissions.total - (scope1 + scope2);
+
+  return {
+    scope1,
+    scope2,
+    scope3: Math.max(0, scope3),
   };
 }
 
-// Function to generate a prompt for the AI based on the category and metrics
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const generatePrompt = (category: CategoryType, metrics: Metrics, _timeframe: string) => {
-  const systemContext = `You are a JSON-only response system specialized in farm management recommendations. Only output valid JSON objects with no additional text.`;
-  
-  const prompt = `${systemContext}
+// Function to generate a prompt for the AI based on the metrics
+const generatePrompt = async (metrics: MetricData, scopes?: string[]) => {
+  const scopeEmissions = calculateScopeEmissions(metrics);
 
-Generate exactly 3 practical recommendations for the ${category} category based on the following metrics:
+  const scopesText =
+    scopes && scopes.length > 0
+      ? `The user needs recommendations for the following scopes: ${scopes.join(
+          ", "
+        )}.`
+      : "The user needs general recommendations.";
 
-Energy: ${metrics.energy.consumption}kWh (${metrics.energy.previousYearComparison}% vs last year)
-Emissions: ${metrics.emissions.total} tons CO2e
+  const aiPrompt = `
+${scopesText}
+
+Current emissions by scope:
+- Scope 1 (Direct): ${scopeEmissions.scope1.toFixed(2)} tons CO₂e
+- Scope 2 (Energy): ${scopeEmissions.scope2.toFixed(2)} tons CO₂e
+- Scope 3 (Indirect): ${scopeEmissions.scope3.toFixed(2)} tons CO₂e
+
+Additional metrics for context:
+Energy: ${metrics.energy.consumption} kWh (${metrics.energy.previousYearComparison}% vs last year)
 Waste: ${metrics.waste.quantity} tons
 Crops: ${metrics.crops.area} hectares, ${metrics.crops.fertilizer} tons fertilizer
-Livestock: ${metrics.livestock.count} animals, ${metrics.livestock.emissions} tons CO2e emissions
+Livestock: ${metrics.livestock.count} animals, ${metrics.livestock.emissions} tons CO₂e emissions
 
-Return ONLY a JSON object in this exact format with no additional text:
+**Instructions:**
+- Provide exactly 3 practical recommendations.
+- **Return the response as valid JSON only**, with no additional text or explanations.
+- **Do not include any markdown, code snippets, or additional formatting.**
+- Use the following structure:
+
 {
   "recommendations": [
     {
-      "title": "Clear action-oriented title",
-      "description": "Clear 1-2 sentence description",
-      "impact": "Specific metrics and numbers",
-      "steps": ["step1", "step2", "step3"],
-      "savings": 1000,
-      "priority": 1-5 number,
-      "difficulty": "easy|medium|hard",
-      "roi": percentage number,
-      "implementationTimeline": "timeframe string",
-      "sourceData": "reference to metrics used",
-      "dashboardLink": "/dashboards/category-specific-path"
+      "title": "Actionable recommendation title",
+      "description": "Brief description of the recommendation",
+      "impact": "Estimated reduction in emissions",
+      "steps": ["Step 1", "Step 2"],
+      "savings": 0,
+      "priority": 1,
+      "difficulty": "easy",
+      "roi": 10,
+      "implementationTimeline": "3 months",
+      "sourceData": "source of metrics used",
+      "dashboardLink": "/dashboard/link",
+      "scope": "Scope 1"
     }
   ]
-}`;
+}
 
-  return prompt;
+**Ensure that the entire response is valid JSON without any surrounding text or markdown.**
+`;
+
+  return aiPrompt;
 };
 
 // Handler function for the POST request
 export async function POST(req: Request) {
   try {
-    const { category, metrics, timeframe } = await req.json() as RecommendationRequest;
-    
-    if (!category || !metrics || !timeframe) {
+    console.log("Received recommendation request");
+    const { metrics, scopes } = (await req.json()) as {
+      metrics: MetricData;
+      scopes?: string[];
+    };
+
+    if (!metrics) {
+      console.error("No metrics provided in request");
       return NextResponse.json(
-        { error: "Category, metrics, and timeframe are required" },
+        { error: "Metrics are required" },
         { status: 400 }
       );
     }
 
-    const prompt = generatePrompt(category, metrics, timeframe);
+    console.log("Generating prompt with metrics:", JSON.stringify(metrics));
+    const prompt = await generatePrompt(metrics, scopes);
 
-    const message = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 1024,
+    console.log("Sending request to Anthropic API");
+
+    const msg = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307", // Use the appropriate model
+      max_tokens: 1000,
+      temperature: 0.7,
       messages: [
         {
           role: "user",
-          content: prompt
-        }
+          content: [
+            {
+              type: "text",
+              text: prompt,
+            },
+          ],
+        },
       ],
-      temperature: 0.7
     });
 
-    // Check for valid response and get the text content
-    const textContent = message.content.find(block => block.type === 'text');
-    if (!textContent || typeof textContent.text !== 'string') {
-      throw new Error("No valid text response from Claude");
-    }
+// After receiving the response
+console.log("Received response from Anthropic API");
+console.log("Full response:", msg); // Log the full response to see its structure
 
-    // Parse and validate response
-    const parsedResponse = cleanAndParseJSON(textContent.text);
-    
+// Extract the assistant's reply from the appropriate property
+// Adjust the property path based on your findings in the logged response
+const assistantReply = (msg.content[0] as any).text;
+console.log("Assistant Reply:", assistantReply);
+
+// Attempt to parse the JSON response
+let parsedResponse: ApiResponse;
+try {
+  parsedResponse = cleanAndParseJSON(assistantReply);
+  console.log("Successfully parsed recommendations:", JSON.stringify(parsedResponse));
+} catch (parsingError) {
+  console.error("Parsing error:", parsingError);
+  return NextResponse.json(
+    { error: "Failed to parse AI response. Please try again." },
+    { status: 500 }
+  );
+}
+
+
     // Transform recommendations
-    const recommendations: Recommendation[] = parsedResponse.recommendations.map((rec) => ({
-      title: rec.title,
-      description: rec.description,
-      impact: rec.impact,
-      steps: rec.steps,
-      savings: typeof rec.savings === 'number' ? rec.savings : 0,
-      category,
-      implemented: false,
-      priority: rec.priority,
-      difficulty: rec.difficulty,
-      roi: rec.roi,
-      implementationTimeline: rec.implementationTimeline,
-      sourceData: rec.sourceData,
-      dashboardLink: rec.dashboardLink
-    }));
+    const recommendations: Recommendation[] =
+      parsedResponse.recommendations.map((rec, index) => ({
+        id: `rec_${index}`,
+        title: rec.title,
+        description: rec.description,
+        scope: rec.scope || "Scope 1",
+        impact: rec.impact,
+        category: CategoryType.OVERALL,
+        estimatedEmissionReduction: rec.savings || 0,
+        priorityLevel: rec.priority
+          ? rec.priority <= 2
+            ? "High"
+            : rec.priority <= 4
+            ? "Medium"
+            : "Low"
+          : "Medium",
+        implementationSteps: rec.steps || [],
+        estimatedROI: rec.roi || 0,
+        status: "Not Started",
+        difficulty:
+          rec.difficulty === "easy"
+            ? "Easy"
+            : rec.difficulty === "medium"
+            ? "Moderate"
+            : rec.difficulty === "hard"
+            ? "Challenging"
+            : "Moderate",
+        estimatedCost: 0,
+        estimatedTimeframe: rec.implementationTimeline || "3-6 months",
+        relatedMetrics: rec.sourceData ? [rec.sourceData] : [],
+        dashboardLink: rec.dashboardLink || "",
+      }));
 
+    console.log(
+      "Sending response with recommendations:",
+      JSON.stringify(recommendations)
+    );
     return NextResponse.json({ recommendations }, { status: 200 });
-
   } catch (error) {
     console.error("API Error:", error);
     return NextResponse.json(
-      { 
+      {
         error: "Failed to generate recommendations",
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }, 
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
