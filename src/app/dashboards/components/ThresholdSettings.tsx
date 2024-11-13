@@ -58,6 +58,8 @@ export default function ThresholdSettings() {
   const [thresholds, setThresholds] =
     useState<ScopeThreshold[]>(defaultThresholds);
   const [mainGoals, setMainGoals] = useState("");
+  const [inputValues, setInputValues] = useState<{ [key: string]: string }>({});
+  const [isOpen, setIsOpen] = useState(false); // Track the sheet's open state
   const { toast } = useToast();
 
   useEffect(() => {
@@ -70,7 +72,37 @@ export default function ThresholdSettings() {
 
     const fetchUserThresholds = async () => {
       try {
-        // Update the endpoint to fetch the last emission goal
+        const thresholdResponse = await fetch(
+          `/api/thresholds?userId=${userId}`
+        );
+        if (thresholdResponse.ok) {
+          const { thresholds: thresholdData } = await thresholdResponse.json();
+          if (thresholdData && thresholdData.length > 0) {
+            const userThresholds = defaultThresholds.map((defaultThreshold) => {
+              const userThreshold = thresholdData.find(
+                (t: any) => t.scope === defaultThreshold.scope
+              );
+              if (userThreshold) {
+                return {
+                  ...defaultThreshold,
+                  value: userThreshold.value,
+                };
+              }
+              return defaultThreshold;
+            });
+            setThresholds(userThresholds);
+
+            const newInputValues = userThresholds.reduce(
+              (acc, threshold) => ({
+                ...acc,
+                [threshold.id]: threshold.value?.toString() || "",
+              }),
+              {}
+            );
+            setInputValues(newInputValues);
+          }
+        }
+
         const response = await fetch(`/api/update-goals?userId=${userId}`);
         if (response.ok) {
           const data = await response.json();
@@ -78,29 +110,29 @@ export default function ThresholdSettings() {
             data.lastEmissionGoal &&
             data.lastEmissionGoal.target !== undefined
           ) {
-            setMainGoals(data.lastEmissionGoal.target.toString()); // Set mainGoals directly
+            setMainGoals(data.lastEmissionGoal.target.toString());
           }
-        } else {
-          console.error("Failed to fetch last emission goal");
         }
       } catch (error) {
-        console.error("Error fetching last emission goal:", error);
+        console.error("Error fetching data:", error);
       }
     };
 
     fetchUserThresholds();
   }, []);
 
-  const handleThresholdChange = (
-    index: number,
-    updates: Partial<ScopeThreshold>
-  ) => {
-    const updatedThresholds = [...thresholds];
-    if (updates.value !== undefined) {
-      updates.value = updates.value === 0 ? undefined : updates.value;
-    }
-    updatedThresholds[index] = { ...updatedThresholds[index], ...updates };
-    setThresholds(updatedThresholds);
+  const handleThresholdChange = (id: string, value: string) => {
+    setInputValues((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+
+    const numValue = value === "" ? 1 : Math.max(Number(value), 1);
+    setThresholds((prev) =>
+      prev.map((threshold) =>
+        threshold.id === id ? { ...threshold, value: numValue } : threshold
+      )
+    );
   };
 
   const handleSaveChanges = async () => {
@@ -154,6 +186,7 @@ export default function ThresholdSettings() {
         title: "Success",
         description: "All settings updated successfully",
       });
+      setIsOpen(false); // Close the sheet after successful save
     } catch (error) {
       console.error("Failed to update thresholds:", error);
       toast({
@@ -166,13 +199,17 @@ export default function ThresholdSettings() {
   };
 
   return (
-    <Sheet>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline">Edit Threshold and Goals Settings</Button>
+        <Button variant="outline" onClick={() => setIsOpen(true)}>
+          Edit Threshold and Goals Settings
+        </Button>
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Emission Scope Thresholds and Goals</SheetTitle>
+          <SheetTitle className="pt-5">
+            Emission Scope Thresholds and Goals
+          </SheetTitle>
           <SheetDescription>
             Set custom thresholds for each emission scope and an overall
             emissions goal.
@@ -180,7 +217,7 @@ export default function ThresholdSettings() {
         </SheetHeader>
 
         <div className="space-y-2 mt-4">
-          {thresholds.map((threshold, index) => (
+          {thresholds.map((threshold) => (
             <div key={threshold.id} className="space-y-4">
               <div className="space-y-1">
                 <Label>{threshold.scope}</Label>
@@ -189,19 +226,15 @@ export default function ThresholdSettings() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label htmlFor={`threshold-${index}`}>Threshold Value</Label>
+                  <Label htmlFor={threshold.id}>Threshold Value</Label>
                   <div className="flex items-center space-x-2">
                     <Input
-                      id={`threshold-${index}`}
+                      id={threshold.id}
                       type="number"
-                      value={threshold.value === 0 ? "" : threshold.value}
-                      onChange={(e) => {
-                        const value =
-                          e.target.value === ""
-                            ? undefined
-                            : Math.max(Number(e.target.value), 1);
-                        handleThresholdChange(index, { value });
-                      }}
+                      value={inputValues[threshold.id] || ""}
+                      onChange={(e) =>
+                        handleThresholdChange(threshold.id, e.target.value)
+                      }
                       placeholder="Enter threshold value"
                       min={1}
                       className="flex-grow"
