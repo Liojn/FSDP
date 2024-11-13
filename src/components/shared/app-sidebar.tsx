@@ -45,7 +45,6 @@ const navigationItems = [
   { title: "Prediction", url: "/prediction", icon: ChartColumn },
   { title: "Badges", url: "/badges", icon: Medal },
   { title: "Campaign", url: "/campaign", icon: PencilLine },
-  { title: "Recommendations", url: "/recommendation", icon: Lightbulb },
 ];
 
 const appConfig = {

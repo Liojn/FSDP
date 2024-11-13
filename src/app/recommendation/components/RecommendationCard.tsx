@@ -1,20 +1,14 @@
-import React, { memo, useCallback } from "react";
+import React, { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // import Tooltip components
 import { RecommendationCardProps } from "@/types";
 
 const RecommendationCard: React.FC<RecommendationCardProps> = memo(
-  ({ rec, isImplemented, toggleRecommendation }) => {
-    // Memoize the click handler to prevent recreating the function on every render
-    const handleImplementationToggle = useCallback(
-      (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleRecommendation(rec.title);
-      },
-      [toggleRecommendation, rec.title]
-    );
-
+  ({ rec }) => {
     return (
       <Card className="mb-4">
         <CardHeader>
@@ -23,27 +17,42 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
               <CardTitle>{rec.title}</CardTitle>
               <div className="flex gap-2 mt-2">
                 {rec.difficulty && (
-                  <span className="text-sm px-2 py-1 rounded-full bg-gray-100">
-                    {rec.difficulty.charAt(0).toUpperCase() +
-                      rec.difficulty.slice(1)}
-                  </span>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <span className="text-sm px-2 py-1 rounded-full bg-gray-100">
+                        {rec.difficulty}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <span>Difficulty Level: {rec.difficulty}</span>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
-                {rec.priority && (
-                  <span className="text-sm px-2 py-1 rounded-full border">
-                    Priority {rec.priority}
-                  </span>
-                )}
-                {rec.roi && (
-                  <span className="text-sm px-2 py-1 rounded-full bg-green-100 text-green-800">
-                    ROI: {rec.roi}
-                  </span>
+                {rec.priorityLevel && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <span className="text-sm px-2 py-1 rounded-full border">
+                        {rec.priorityLevel}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <span>Priority Level: {rec.priorityLevel}</span>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             </div>
-            {rec.implementationTimeline && (
-              <span className="text-sm text-gray-500">
-                Est. Timeline: {rec.implementationTimeline}
-              </span>
+            {rec.estimatedTimeframe && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="text-sm text-gray-500">
+                    Est. Timeline: {rec.estimatedTimeframe}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <span>Estimated Timeframe to Implement</span>
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
         </CardHeader>
@@ -52,48 +61,43 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
           <p className="mb-4">
             <strong>Impact:</strong> {rec.impact}
           </p>
-          <h4 className="font-semibold mb-2">Steps to Implement:</h4>
-          <ol className="list-decimal pl-5 mb-4">
-            {rec.steps.map((step, index) => (
-              <li key={index}>{step}</li>
-            ))}
-          </ol>
+          {rec.implementationSteps && rec.implementationSteps.length > 0 && (
+            <>
+              <h4 className="font-semibold mb-2">Steps to Implement:</h4>
+              <ol className="list-decimal pl-5 mb-4">
+                {rec.implementationSteps.map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))}
+              </ol>
+            </>
+          )}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span>
-                Potential Savings: ${rec.savings.toLocaleString()}/year
+                Estimated Emission Reduction:{" "}
+                {rec.estimatedEmissionReduction.toLocaleString()} CO₂e
+                {rec.estimatedCost > 0
+                  ? ` | Cost: $${rec.estimatedCost.toLocaleString()}`
+                  : ""}
               </span>
-              <Button
-                variant={isImplemented ? "secondary" : "default"}
-                onClick={handleImplementationToggle}
-              >
-                {isImplemented ? "Implemented" : "Mark as Implemented"}
-              </Button>
             </div>
-            {rec.sourceData && (
-              <p className="text-sm text-gray-500">Source: {rec.sourceData}</p>
-            )}
-            {rec.dashboardLink && (
-              <div className="text-sm">
-                <a
-                  href={rec.dashboardLink}
-                  className="text-blue-600 hover:underline"
-                >
-                  View in Dashboard →
-                </a>
-              </div>
+            {rec.relatedMetrics && rec.relatedMetrics.length > 0 && (
+              <p className="text-sm text-gray-500">
+                Related Metrics: {rec.relatedMetrics.join(", ")}
+              </p>
             )}
           </div>
         </CardContent>
       </Card>
     );
   },
-  // Add a custom comparison function to prevent unnecessary re-renders
+  // Custom comparison function to prevent unnecessary re-renders
   (prevProps, nextProps) => {
     return (
-      prevProps.rec.title === nextProps.rec.title &&
+      prevProps.rec.id === nextProps.rec.id &&
       prevProps.isImplemented === nextProps.isImplemented &&
-      prevProps.rec.savings === nextProps.rec.savings
+      prevProps.rec.estimatedEmissionReduction ===
+        nextProps.rec.estimatedEmissionReduction
     );
   }
 );
