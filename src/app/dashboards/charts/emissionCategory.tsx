@@ -46,7 +46,7 @@ const EmissionCategoryChart: React.FC<EmissionsChartProps> = ({
           emissions.crops?.emission || 0,
         ],
         backgroundColor: [ '#4B9A8D', '#C0F58F', '#2BAEAB', '#A7D8B8', '#F2D9A0'],
-        hoverBackgroundColor: [ '#4B9A8D', '#C0F58F', '#2BAEAB', '#A7D8B8', '#F2D9A0'],
+        hoverBackgroundColor: ['#3F8277', '#A5D67A', '#249492', '#8EBB9C', '#D1BC87'],
         borderColor: '#ffffff',
         borderWidth: 1,
       },
@@ -95,6 +95,11 @@ const EmissionCategoryChart: React.FC<EmissionsChartProps> = ({
         const details = getCategoryDetails(category);
         onCategoryClick(category, details); // Pass the category and details to the parent
       }
+    },
+    onHover: (event: any, elements: any[]) => {
+      // Change cursor to pointer when hovering over bars
+      const canvas = event.native.target;
+      canvas.style.cursor = elements.length ? 'pointer' : 'default';
     },
   };
 

@@ -8,6 +8,7 @@ import {
   fetchMonthlyCarbonEmissions,
   fetchEmissionTarget,
   fetchEmissionCategory,
+  EmissionData,
 } from "../api/dashboards/api";
 import { MetricCard } from "@/components/shared/metric-card"; // Cards component
 import CarbonEmissionChart from "@/app/dashboards/charts/carbonEmissionChart";
@@ -15,7 +16,8 @@ import GaugeChartComponent from "@/app/dashboards/charts/gaugeGoal"; // Progress
 import EmissionCategoryChart from "@/app/dashboards/charts/emissionCategory";
 import { PageHeader } from "@/components/shared/page-header";
 import Modal from "./popup/modal";
-import { Loader2 } from "lucide-react";
+import { Loader2, Flame, Leaf, Zap } from "lucide-react";
+import ScopeModal from "./popup/scopeModal";
 import {
   Select,
   SelectContent,
@@ -98,6 +100,8 @@ const DashboardPage = () => {
   // Initialize thresholds state
   const [thresholds, setThresholds] = useState<ScopeThreshold[]>([]);
   const [exceedingScopes, setExceedingScopes] = useState<string[]>([]); // State to hold scopes exceeding thresholds
+
+  const [isScopeModalOpen, setIsScopeModalOpen] = useState(false); // State for ScopeModal
 
   const router = useRouter();
 
@@ -352,6 +356,20 @@ const DashboardPage = () => {
     setCategoryDetails(null);
   };
 
+  // Mapping of titles to icons for the dashboard
+  const getIconForMetric = (title: string) => {
+    switch (title) {
+      case "Total Carbon Emissions":
+        return <Flame className="w-8 h-8 text-orange-500" strokeWidth={3} />;
+      case "Total Energy Consumption":
+        return <Zap className="w-8 h-8 text-yellow-500" strokeWidth={3} />;
+      case "Total Net Emissions":
+        return <Leaf className="w-8 h-8 text-green-500" strokeWidth={3} />;
+      default:
+        return null; // Or a default icon
+    }
+  };
+
   if (loading) {
     // Show spinner while loading
     return (
@@ -398,17 +416,38 @@ const DashboardPage = () => {
           {/* Dashboard Cards for Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
-              <MetricCard
+              <div
                 key={index}
-                title={metric.title}
-                value={
-                  metric.value === "Loading..."
-                    ? metric.value
-                    : parseFloat(metric.value.toString()).toFixed(0)
-                }
-                unit={metric.unit}
-                className="bg-white p-4 shadow-md rounded-lg"
-              />
+                onClick={() => {
+                  if (metric.title === "Total Carbon Emissions") {
+                    setIsScopeModalOpen(true);
+                  }
+                }}
+              >
+                <MetricCard
+                  title={metric.title}
+                  value={
+                    metric.value === "Loading..."
+                      ? metric.value
+                      : parseFloat(metric.value.toString()).toFixed(0)
+                  }
+                  unit={metric.unit}
+                  icon={getIconForMetric(metric.title)} // Pass the icon dynamically
+                  className={`bg-white p-4 shadow-md rounded-lg ${
+                    metric.title === "Total Carbon Emissions"
+                      ? "hover:cursor-pointer hover:bg-gray-50"
+                      : ""
+                  }`}
+                />
+                {/* ScopeModal */}
+                <ScopeModal
+                  isOpen={isScopeModalOpen}
+                  onClose={() => setIsScopeModalOpen(false)}
+                  year={selectedYear || new Date().getFullYear()}
+                  month={selectedMonth ? Number(selectedMonth) : undefined}
+                  userId={userId || ""}
+                />
+              </div>
             ))}
           </div>
 

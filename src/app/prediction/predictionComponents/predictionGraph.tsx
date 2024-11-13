@@ -11,6 +11,7 @@ interface MonthlyData {
   totalMonthlyEmissions: number[];
   totalMonthlyAbsorption: number[];
   netMonthlyEmissions: number[];
+  emissionTargets: { [key: number]: number };
 }
 
 interface EmissionsChartProps {
@@ -28,6 +29,7 @@ interface DataPoint {
   cumulativeYTDNetEmissions?: number;
   isProjected: boolean;
   monthsPresent?: number;
+  targetEmissions?: number;
   [key: string]: any;
 }
 
@@ -37,9 +39,8 @@ interface NetZeroAnalysis {
   ytdNetEmissions: number | null;
 }
 
-const ANNUAL_EMISSIONS_TARGET = 10000;
-const PROJECTION_YEARS = 5;
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const PROJECTION_YEARS = 10;
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 const EmissionsChart: React.FC<EmissionsChartProps> = ({ data, isLoading = false }) => {
   const [showNetZeroAlert, setShowNetZeroAlert] = useState(false);
@@ -49,27 +50,24 @@ const EmissionsChart: React.FC<EmissionsChartProps> = ({ data, isLoading = false
     cumulativeNetZeroMonth: null,
     ytdNetEmissions: null
   });
-  
 
   const calculateMonthlyNetZeroPoint = (data: DataPoint[]): { year: number | null; month: number | null } => {
     let previousPoint: DataPoint | null = null;
     
     for (const point of data) {
       if (point.cumulativeYTDNetEmissions !== undefined) {
-        // Check if we've crossed the zero point between this point and the previous point
         if (previousPoint && 
             previousPoint.cumulativeYTDNetEmissions! > 0 && 
             point.cumulativeYTDNetEmissions <= 0) {
-          // Linear interpolation to find more precise month
-          const totalDays = 365; // Assuming a year
+          const totalDays = 365;
           const daysToZero = Math.abs(previousPoint.cumulativeYTDNetEmissions! / 
             (point.cumulativeYTDNetEmissions - previousPoint.cumulativeYTDNetEmissions!)) * totalDays;
           
-          const month = Math.ceil(daysToZero / (totalDays / 12));
+          const month = Math.floor(daysToZero / (totalDays / 12));
           
           return {
-            year: point.year || null,
-            month: Math.min(month, 12)
+            year: previousPoint.year || null,
+            month: Math.min(month, 11) // Using 0-based month index
           };
         }
         previousPoint = point;
@@ -105,6 +103,13 @@ const EmissionsChart: React.FC<EmissionsChartProps> = ({ data, isLoading = false
     return previousYearsEmissions + yearNetEmissions;
   };
 
+  const getLatestTarget = (emissionTargets: { [key: number]: number }): number => {
+    const years = Object.keys(emissionTargets).map(Number);
+    if (years.length === 0) return 0.9; // Default 90% if no targets
+    const latestYear = Math.max(...years);
+    return emissionTargets[latestYear];
+  };
+
   const prepareYearlyData = (): DataPoint[] => {
     if (!data?.totalMonthlyEmissions?.length || !data?.totalMonthlyAbsorption?.length) {
       return [];
@@ -114,6 +119,9 @@ const EmissionsChart: React.FC<EmissionsChartProps> = ({ data, isLoading = false
     const historicalData: DataPoint[] = [];
     let lastDataYear = currentYear;
     let cumulativeNetEmissions = 0;
+    let previousYearEmissions = 0;
+    let latestTarget = getLatestTarget(data.emissionTargets);
+    let latestAnnualAbsorption = 0;
     
     // Process historical data
     for (let i = 0; i < data.totalMonthlyEmissions.length; i += 12) {
@@ -129,9 +137,13 @@ const EmissionsChart: React.FC<EmissionsChartProps> = ({ data, isLoading = false
       const totalAbsorption = data.totalMonthlyAbsorption
         .slice(i, i + validMonths.length)
         .reduce((sum, val) => sum + (val || 0), 0);
+      
+      latestAnnualAbsorption = (totalAbsorption / validMonths.length) * 12;
 
       const netEmissions = totalEmissions - totalAbsorption;
       cumulativeNetEmissions += netEmissions;
+
+      const targetEmissions = previousYearEmissions * (1 - (data.emissionTargets[year] || latestTarget));
 
       const yearData: DataPoint = {
         year,
@@ -140,37 +152,40 @@ const EmissionsChart: React.FC<EmissionsChartProps> = ({ data, isLoading = false
         netEmissions,
         cumulativeYTDNetEmissions: cumulativeNetEmissions,
         isProjected: false,
-        monthsPresent: validMonths.length
+        monthsPresent: validMonths.length,
+        targetEmissions
       };
       
       lastDataYear = year;
+      previousYearEmissions = totalEmissions;
       historicalData.push(yearData);
     }
 
     // Add projections for future years
     const projectedData: DataPoint[] = [];
     if (historicalData.length > 0 && cumulativeNetEmissions > 0) {
-      let projectedEmissions = ANNUAL_EMISSIONS_TARGET;
-      const lastYear = historicalData[historicalData.length - 1];
-      const annualAbsorption = (lastYear.absorption / lastYear.monthsPresent!) * 12;
+      let projectedEmissions = previousYearEmissions;
       
       for (let i = 1; i <= PROJECTION_YEARS; i++) {
         const projectedYear = lastDataYear + i;
-        const projectedNetEmissions = projectedEmissions - annualAbsorption;
+        const targetPercentage = data.emissionTargets[projectedYear] || latestTarget;
+        projectedEmissions *= (1 - targetPercentage);
+        
+        const projectedNetEmissions = projectedEmissions - latestAnnualAbsorption;
         cumulativeNetEmissions += projectedNetEmissions;
         
         projectedData.push({
           year: projectedYear,
           totalEmissions: projectedEmissions,
-          absorption: annualAbsorption,
+          absorption: latestAnnualAbsorption,
           netEmissions: projectedNetEmissions,
           cumulativeYTDNetEmissions: cumulativeNetEmissions,
           isProjected: true,
-          monthsPresent: 12
+          monthsPresent: 12,
+          targetEmissions: projectedEmissions
         });
 
         if (cumulativeNetEmissions <= 0) break;
-        projectedEmissions *= 0.9;
       }
     }
 
@@ -205,7 +220,7 @@ const EmissionsChart: React.FC<EmissionsChartProps> = ({ data, isLoading = false
     
     const analysis = analyzeNetZeroYears(yearlyData);    
     setNetZeroAnalysis(analysis);
-    setShowNetZeroAlert(analysis.cumulativeNetZeroYear !== null);
+    setShowNetZeroAlert(analysis.cumulativeNetZeroYear !== null && analysis.cumulativeNetZeroMonth !== null);
   }, [data]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -250,7 +265,7 @@ const EmissionsChart: React.FC<EmissionsChartProps> = ({ data, isLoading = false
           <Legend />
           <ReferenceLine 
             y={0} 
-            label="Net Zero" 
+            label="Carbon Neutral" 
             stroke="#52c41a" 
             strokeDasharray="3 3"
           />
@@ -264,9 +279,17 @@ const EmissionsChart: React.FC<EmissionsChartProps> = ({ data, isLoading = false
           />
           <Line 
             type="monotone" 
+            dataKey="targetEmissions" 
+            stroke="#faad14" 
+            name="Target Emissions" 
+            strokeWidth={2}
+            strokeDasharray="5 5"
+          />
+          <Line 
+            type="monotone" 
             dataKey="netEmissions" 
             stroke="#1890ff" 
-            name="Carbon Neutral Emissions" 
+            name="Carbon Neutral Emission YTD" 
             strokeWidth={2}
             strokeDasharray={(d: any) => d?.isProjected ? "5 5" : "0"}
           />
@@ -282,7 +305,7 @@ const EmissionsChart: React.FC<EmissionsChartProps> = ({ data, isLoading = false
             type="monotone" 
             dataKey="cumulativeYTDNetEmissions" 
             stroke="#722ed1" 
-            name="Cumulative YTD Carbon Neutral Emissions" 
+            name="Cumulative Carbon Neutral Emissions YTD" 
             strokeWidth={2}
             dot={{ r: 4 }}
           />
@@ -309,17 +332,11 @@ const EmissionsChart: React.FC<EmissionsChartProps> = ({ data, isLoading = false
         <CardTitle>Carbon Neutral Emission Breakdown</CardTitle>
       </CardHeader>
       <CardContent>
-        {showNetZeroAlert && netZeroAnalysis.ytdNetEmissions !== null && (
+        {showNetZeroAlert && netZeroAnalysis.cumulativeNetZeroYear && netZeroAnalysis.cumulativeNetZeroMonth !== null && (
           <Alert className="mb-4 bg-green-50">
-            <AlertTitle className="text-green-800">Carbon Neutral Progress</AlertTitle>
+            <AlertTitle className="text-green-800">Carbon Neutral Target</AlertTitle>
             <AlertDescription className="text-green-700">
-              <div className="space-y-2">
-                {netZeroAnalysis.cumulativeNetZeroYear && netZeroAnalysis.cumulativeNetZeroMonth && (
-                  <div>
-                    Based on current projections, carbon neutral will be achieved in {MONTHS[netZeroAnalysis.cumulativeNetZeroMonth - 1]} {netZeroAnalysis.cumulativeNetZeroYear}
-                  </div>
-                )}
-              </div>
+              Projected to achieve carbon neutrality in {MONTHS[netZeroAnalysis.cumulativeNetZeroMonth]} {netZeroAnalysis.cumulativeNetZeroYear}
             </AlertDescription>
           </Alert>
         )}
