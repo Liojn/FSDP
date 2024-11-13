@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// src/app/api/recommendations/route.ts
+// src/app/api/recommendation/route.ts
 
 import { NextResponse } from "next/server";
 import { Recommendation, MetricData, CategoryType } from "@/types";
 import Anthropic from "@anthropic-ai/sdk";
 
-// Initialize the Claude client with the provided API key
+// Initialize the Anthropic client with your API key
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// Define the structure of a recommendation returned from the API
+// Define the structure of a recommendation returned from the AI
 interface ApiRecommendation {
   title: string;
   description: string;
@@ -33,19 +33,26 @@ interface ApiResponse {
 // Function to clean and parse JSON from the AI response
 const cleanAndParseJSON = (str: string): ApiResponse => {
   try {
+    // Remove any markdown code block markers, if present
+    str = str.trim();
+    if (str.startsWith("```json")) str = str.slice(7);
+    else if (str.startsWith("```")) str = str.slice(3);
+    if (str.endsWith("```")) str = str.slice(0, -3);
+
+    // Extract JSON object between the first '{' and the last '}'
     const start = str.indexOf("{");
     const end = str.lastIndexOf("}") + 1;
     if (start === -1 || end === 0) throw new Error("No JSON object found");
-    const jsonStr = str.slice(start, end);
 
-    // Parse JSON
-    return JSON.parse(jsonStr);
+    const jsonStr = str.slice(start, end);
+    return JSON.parse(jsonStr); // Parse and return the JSON object
   } catch (error) {
     console.error("JSON parsing error:", error);
     console.error("Original response content:", str);
     throw error;
   }
 };
+
 
 // Function to calculate scope-based emissions
 function calculateScopeEmissions(metrics: MetricData) {
@@ -91,6 +98,7 @@ Livestock: ${metrics.livestock.count} animals, ${metrics.livestock.emissions} to
 **Instructions:**
 - Provide exactly 3 practical recommendations.
 - **Return the response as valid JSON only**, with no additional text or explanations.
+- **Do not include any markdown, code snippets, or additional formatting.**
 - Use the following structure:
 
 {
@@ -139,48 +147,50 @@ export async function POST(req: Request) {
     const prompt = await generatePrompt(metrics, scopes);
 
     console.log("Sending request to Anthropic API");
-    const message = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 1024,
+
+    const msg = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307", // Use the appropriate model
+      max_tokens: 1000,
+      temperature: 0.7,
       messages: [
         {
           role: "user",
-          content: prompt,
+          content: [
+            {
+              type: "text",
+              text: prompt,
+            },
+          ],
         },
       ],
-      temperature: 0.7,
     });
 
-    console.log("Received response from Anthropic API");
+// After receiving the response
+console.log("Received response from Anthropic API");
+console.log("Full response:", msg); // Log the full response to see its structure
 
-    // Check for valid response content and extract the text
-    const textContent = message.content.find(
-      (block: any) => block.type === "text"
-    );
-    if (!textContent || !("text" in textContent) || typeof textContent.text !== "string") {
-      console.error("No valid text response from Claude");
-      throw new Error("No valid text response from Claude");
-    }
+// Extract the assistant's reply from the appropriate property
+// Adjust the property path based on your findings in the logged response
+const assistantReply = (msg.content[0] as any).text;
+console.log("Assistant Reply:", assistantReply);
 
-    console.log("Raw AI response:", textContent.text);
+// Attempt to parse the JSON response
+let parsedResponse: ApiResponse;
+try {
+  parsedResponse = cleanAndParseJSON(assistantReply);
+  console.log("Successfully parsed recommendations:", JSON.stringify(parsedResponse));
+} catch (parsingError) {
+  console.error("Parsing error:", parsingError);
+  return NextResponse.json(
+    { error: "Failed to parse AI response. Please try again." },
+    { status: 500 }
+  );
+}
 
-    // Attempt to parse the JSON response
-    let parsedResponse: ApiResponse;
-    try {
-      parsedResponse = cleanAndParseJSON(textContent.text);
-      console.log("Successfully parsed recommendations:", JSON.stringify(parsedResponse));
-    } catch (parsingError) {
-      console.error("Parsing error:", parsingError);
-      console.error("Original AI response:", textContent.text);
-      return NextResponse.json(
-        { error: "Failed to parse AI response. Please try again." },
-        { status: 500 }
-      );
-    }
 
     // Transform recommendations
-    const recommendations: Recommendation[] = parsedResponse.recommendations.map(
-      (rec, index) => ({
+    const recommendations: Recommendation[] =
+      parsedResponse.recommendations.map((rec, index) => ({
         id: `rec_${index}`,
         title: rec.title,
         description: rec.description,
@@ -209,11 +219,13 @@ export async function POST(req: Request) {
         estimatedCost: 0,
         estimatedTimeframe: rec.implementationTimeline || "3-6 months",
         relatedMetrics: rec.sourceData ? [rec.sourceData] : [],
-        dashboardLink: rec.dashboardLink,
-      })
-    );
+        dashboardLink: rec.dashboardLink || "",
+      }));
 
-    console.log("Sending response with recommendations:", JSON.stringify(recommendations));
+    console.log(
+      "Sending response with recommendations:",
+      JSON.stringify(recommendations)
+    );
     return NextResponse.json({ recommendations }, { status: 200 });
   } catch (error) {
     console.error("API Error:", error);

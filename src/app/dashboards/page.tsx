@@ -114,15 +114,13 @@ const DashboardPage = () => {
         const response = await fetch(`/api/thresholds?userId=${storedUserId}`);
         if (response.ok) {
           const data = await response.json();
-          if (data.thresholds && data.thresholds.length > 0) {
-            const userDefinedThresholds = data.thresholds.map(
-              (threshold: ScopeThreshold) => ({
-                ...threshold,
-                description: defaultDescriptions[threshold.scope],
-              })
-            );
-            setThresholds(userDefinedThresholds);
-          }
+          const userDefinedThresholds = data.thresholds.map(
+            (threshold: ScopeThreshold) => ({
+              ...threshold,
+              description: defaultDescriptions[threshold.scope],
+            })
+          );
+          setThresholds(userDefinedThresholds);
         } else {
           console.error("Failed to fetch user thresholds");
         }
@@ -393,7 +391,7 @@ const DashboardPage = () => {
         exceedingScopes={exceedingScopes}
         onViewRecommendations={handleViewRecommendations}
       />
-      ;{/* Dashboard Layout */}
+      {/* Dashboard Layout */}
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Column: Metrics and Charts */}
         <div className="md:col-span-2 space-y-6">

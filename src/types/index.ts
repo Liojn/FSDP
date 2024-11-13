@@ -1,95 +1,132 @@
+// Enum for Category Type
+export enum CategoryType {
+  OVERALL = "overall",
+  // Add other categories as needed
+}
 
+// Recommendation Type with fully optional fields
+export interface Recommendation {
+  id: string;
+  title: string;
+  description: string;
+  scope: string;
+  impact: string;
+  category: CategoryType;
+  estimatedEmissionReduction: number;
+  priorityLevel: string;
+  implementationSteps: string[];
+  estimatedROI: number;
+  status: string;
+  difficulty: string;
+  estimatedCost: number;
+  estimatedTimeframe: string;
+  relatedMetrics?: string[];
+  dashboardLink?: string;
+}
 
-// Data Types
+// Threshold Data Interface
+export interface ThresholdData {
+  userId: string;
+  scope: string;
+  description?: string;
+  value: number;
+  unit: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Emission Data Interface
+export interface EmissionData {
+  scope: string;
+  value: number;
+  unit: string;
+  timestamp?: Date;
+}
+
+// Recommendation Card Props
+export interface RecommendationCardProps {
+  rec: Recommendation;
+  isImplemented?: boolean;
+  toggleRecommendation?: (id: string) => void;
+}
+
+// Metric Data Type (based on previous context)
 export interface MetricData {
   energy: {
     consumption: number;
     previousYearComparison: number;
   };
-  emissions: {
-    total: number;
-    byCategory: Record<string, number>;
-  };
   waste: {
     quantity: number;
-    byType: Record<string, number>;
   };
   crops: {
-    fertilizer: number;
     area: number;
+    fertilizer: number;
   };
   livestock: {
     count: number;
     emissions: number;
   };
+  emissions: {
+    total: number;
+    byCategory: Record<string, number>;
+  };
 }
 
-export type EmissionScope = "Scope 1" | "Scope 2" | "Scope 3";
-
-export interface Recommendation {
-  priority: undefined;
-  roi: undefined;
-  implementationTimeline: any;
-  steps: any;
-  savings: any;
-  sourceData: any;
-  id: string;
-  title: string;
-  description: string;
-  impact: string; // Changed from ReactNode to string
-  scope: EmissionScope;
-  category: CategoryType;
-  
-  // Impact and Prioritization
-  estimatedEmissionReduction: number;
-  priorityLevel: 'Low' | 'Medium' | 'High';
-  
-  // Implementation Details
-  implementationSteps: string[];
-  estimatedROI: number;
-  
-  // Status Tracking
-  status: 'Not Started' | 'Planned' | 'In Progress' | 'Completed';
-  
-  // Additional Metadata
-  difficulty: 'Easy' | 'Moderate' | 'Challenging';
-  estimatedCost: number;
-  estimatedTimeframe: string;
-  
-  // Visualization and Tracking
-  relatedMetrics?: string[];
-  dashboardLink?: string;
+// State for Implemented Recommendations
+export interface ImplementedRecommendationsState {
+  [recommendationId: string]: boolean;
 }
 
-export interface RecommendationCardProps {
-  rec: Recommendation;
-  isImplemented: boolean;
-  toggleRecommendation: (title: string) => void;
+// Category Data Interface with more flexible structure
+export interface CategoryData {
+  [category: string]: Recommendation[];
+  overall: Recommendation[];
 }
 
-export enum CategoryType {
-  EQUIPMENT = "equipment",
-  LIVESTOCK = "livestock",
-  CROPS = "crops",
-  WASTE = "waste",
-  OVERALL = "overall"
+// Scope Emissions Interface
+export interface ScopeEmissions {
+  scope1: number;
+  scope2: number;
+  scope3: number;
 }
 
-// New interface for Scope-Specific Recommendations
-export interface ScopeRecommendationProps {
-  scope: EmissionScope;
-  metrics: MetricData;
-  thresholdExceeded: boolean;
+// Utility type to convert ImplementedRecommendationsState to boolean array
+export function implementedToArray(state: ImplementedRecommendationsState): boolean[] {
+  return Object.values(state);
 }
 
-// Expanded Recommendation Request
-export interface RecommendationRequest {
-  category: CategoryType;
-  scope: EmissionScope;
-  metrics: MetricData;
-  thresholdExceeded: boolean;
+// Utility type to convert boolean array to ImplementedRecommendationsState
+export function arrayToImplemented(
+  arr: boolean[], 
+  recommendations: Recommendation[]
+): ImplementedRecommendationsState {
+  return recommendations.reduce((acc, rec, index) => {
+    acc[rec.id] = arr[index] || false;
+    return acc;
+  }, {} as ImplementedRecommendationsState);
 }
 
-// State Management
-export type ImplementedRecommendationsState = Set<string>;
-export type CategoryData = Record<CategoryType, Recommendation[]>;
+// Utility type to convert ImplementedRecommendationsState to Set
+export function implementedToSet(state: ImplementedRecommendationsState): Set<string> {
+  return new Set(
+    Object.entries(state)
+      .filter(([, implemented]) => implemented)
+      .map(([id]) => id)
+  );
+}
+
+// Utility type to convert Set back to ImplementedRecommendationsState
+export function setToImplemented(
+  set: Set<string>, 
+  existingState?: ImplementedRecommendationsState
+): ImplementedRecommendationsState {
+  const newState: ImplementedRecommendationsState = existingState || {};
+  set.forEach(id => {
+    newState[id] = true;
+  });
+  return newState;
+}
+
+// Export any other existing types
+export * from './leaderboard'; // If you have a leaderboard types file

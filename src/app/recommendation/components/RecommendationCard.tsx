@@ -1,25 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/RecommendationCard.tsx
 
-import React, { memo, useCallback } from "react";
+import React, { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { RecommendationCardProps } from "@/types";
 
 const RecommendationCard: React.FC<RecommendationCardProps> = memo(
-  ({ rec, isImplemented, toggleRecommendation }) => {
-    // Log every time the component renders
-    console.log(`Rendering RecommendationCard: ${rec.title}`);
-
+  ({ rec }) => {
     // Memoize the click handler to prevent recreating the function on every render
-    const handleImplementationToggle = useCallback(
-      (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleRecommendation(rec.title);
-      },
-      [toggleRecommendation, rec.title]
-    );
 
     return (
       <Card className="mb-4">
@@ -30,25 +17,24 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
               <div className="flex gap-2 mt-2">
                 {rec.difficulty && (
                   <span className="text-sm px-2 py-1 rounded-full bg-gray-100">
-                    {rec.difficulty.charAt(0).toUpperCase() +
-                      rec.difficulty.slice(1)}
+                    {rec.difficulty}
                   </span>
                 )}
-                {rec.priority !== undefined && (
+                {rec.priorityLevel && (
                   <span className="text-sm px-2 py-1 rounded-full border">
-                    Priority {rec.priority}
+                    {rec.priorityLevel}
                   </span>
                 )}
-                {rec.roi !== undefined && (
+                {rec.estimatedROI !== undefined && (
                   <span className="text-sm px-2 py-1 rounded-full bg-green-100 text-green-800">
-                    ROI: {rec.roi}%
+                    ROI: {rec.estimatedROI}%
                   </span>
                 )}
               </div>
             </div>
-            {rec.implementationTimeline && (
+            {rec.estimatedTimeframe && (
               <span className="text-sm text-gray-500">
-                Est. Timeline: {rec.implementationTimeline}
+                Est. Timeline: {rec.estimatedTimeframe}
               </span>
             )}
           </div>
@@ -58,71 +44,47 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
           <p className="mb-4">
             <strong>Impact:</strong> {rec.impact}
           </p>
-          <h4 className="font-semibold mb-2">Steps to Implement:</h4>
-          <ol className="list-decimal pl-5 mb-4">
-            {rec.steps.map(
-              (
-                step:
-                  | string
-                  | number
-                  | bigint
-                  | boolean
-                  | React.ReactElement<
-                      any,
-                      string | React.JSXElementConstructor<any>
-                    >
-                  | Iterable<React.ReactNode>
-                  | React.ReactPortal
-                  | Promise<React.AwaitedReactNode>
-                  | null
-                  | undefined,
-                index: React.Key | null | undefined
-              ) => (
-                <li key={index}>{step}</li>
-              )
-            )}
-          </ol>
+          {rec.implementationSteps && rec.implementationSteps.length > 0 && (
+            <>
+              <h4 className="font-semibold mb-2">Steps to Implement:</h4>
+              <ol className="list-decimal pl-5 mb-4">
+                {rec.implementationSteps.map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))}
+              </ol>
+            </>
+          )}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span>
-                Potential Savings: ${rec.savings.toLocaleString()}/year
+                Estimated Emission Reduction:{" "}
+                {rec.estimatedEmissionReduction.toLocaleString()} CO₂e
+                {rec.estimatedCost > 0
+                  ? ` | Cost: $${rec.estimatedCost.toLocaleString()}`
+                  : ""}
               </span>
-              <Button
-                variant={isImplemented ? "secondary" : "default"}
-                onClick={handleImplementationToggle}
-              >
-                {isImplemented ? "Implemented" : "Mark as Implemented"}
-              </Button>
             </div>
-            {rec.sourceData && (
-              <p className="text-sm text-gray-500">Source: {rec.sourceData}</p>
+            {rec.relatedMetrics && rec.relatedMetrics.length > 0 && (
+              <p className="text-sm text-gray-500">
+                Related Metrics: {rec.relatedMetrics.join(", ")}
+              </p>
             )}
-            {rec.dashboardLink && (
-              <div className="text-sm">
-                <a
-                  href={rec.dashboardLink}
-                  className="text-blue-600 hover:underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  View in Dashboard →
-                </a>
-              </div>
-            )}
-            {rec.scope && (
-              <span className="text-sm text-gray-500">Scope: {rec.scope}</span>
-            )}
+
+            {/* <div className="flex justify-between text-sm text-gray-500">
+              <span>Status: {rec.status}</span>
+            </div> */}
           </div>
         </CardContent>
       </Card>
     );
   },
-  // Add a custom comparison function to prevent unnecessary re-renders
+  // Custom comparison function to prevent unnecessary re-renders
   (prevProps, nextProps) => {
     return (
-      prevProps.rec.title === nextProps.rec.title &&
+      prevProps.rec.id === nextProps.rec.id &&
       prevProps.isImplemented === nextProps.isImplemented &&
-      prevProps.rec.savings === nextProps.rec.savings
+      prevProps.rec.estimatedEmissionReduction ===
+        nextProps.rec.estimatedEmissionReduction
     );
   }
 );

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useCallback, useMemo, Suspense } from "react";
@@ -15,38 +16,11 @@ import {
   CategoryType,
   Recommendation,
   ImplementedRecommendationsState,
-  CategoryData,
   MetricData,
 } from "@/types";
 import RecommendationSkeleton from "./components/RecommendationSkeleton";
 import RecommendationCard from "./components/RecommendationCard";
 import ImplementationTracker from "./components/ImplementationTracker";
-
-const recommendationFetcher = async ({
-  url,
-  data,
-}: {
-  url: string;
-  data: {
-    category: CategoryType;
-    metrics: MetricData;
-    timeframe: string;
-    previousImplementations: string[];
-  };
-}): Promise<{ recommendations: Recommendation[] }> => {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error("API Error:", errorData);
-    throw new Error(errorData.error || "Failed to fetch recommendations");
-  }
-  return response.json();
-};
-
 class ErrorBoundary extends React.Component<{
   fallback: React.ReactNode;
   children: React.ReactNode;
@@ -62,6 +36,26 @@ class ErrorBoundary extends React.Component<{
   }
 }
 
+const recommendationFetcher = async ({
+  url,
+  data,
+}: {
+  url: string;
+  data: any;
+}): Promise<{ recommendations: Recommendation[] }> => {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("API Error:", errorData);
+    throw new Error(errorData.error || "Failed to fetch recommendations");
+  }
+  return response.json();
+};
+
 interface RecommendationClientProps {
   initialMetrics: MetricData;
   initialCategory: CategoryType;
@@ -75,51 +69,28 @@ export default function RecommendationClient({
 }: RecommendationClientProps) {
   const { toast } = useToast();
   const [implementedRecommendations, setImplementedRecommendations] =
-    useState<ImplementedRecommendationsState>(new Set());
+    useState<ImplementedRecommendationsState>({});
   const [activeCategory] = useState<CategoryType>(initialCategory);
   const [activeScopes, setActiveScopes] = useState<string[]>(initialScopes);
   const [metrics] = useState<MetricData>(initialMetrics);
-  const [shouldFetch, setShouldFetch] = useState(true);
 
-  // Store fetched recommendations in state to prevent refetching
-  const [fetchedCategories, setFetchedCategories] = useState<Set<CategoryType>>(
-    new Set()
-  );
-  const [recommendationsByCategory, setRecommendationsByCategory] =
-    useState<CategoryData>(
-      Object.values(CategoryType).reduce(
-        (acc, category) => ({ ...acc, [category]: [] }),
-        {} as CategoryData
-      )
-    );
-
-  // Fetch recommendations when component mounts or category/metrics change
   const { data, error: fetchError } = useSWR(
-    shouldFetch && !fetchedCategories.has(activeCategory)
-      ? {
-          url: "/api/recommendation",
-          data: {
-            category: activeCategory,
-            metrics,
-            scopes: activeScopes,
-            timeframe: "monthly",
-            previousImplementations: Array.from(implementedRecommendations),
-          },
-        }
-      : null,
+    {
+      url: "/api/recommendation",
+      data: {
+        category: activeCategory,
+        metrics,
+        scopes: activeScopes,
+        timeframe: "monthly",
+        previousImplementations: Object.keys(implementedRecommendations).filter(
+          (key) => implementedRecommendations[key]
+        ),
+      },
+    },
     recommendationFetcher,
     {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
-      onSuccess: (result) => {
-        console.log("Received recommendations:", result);
-        setRecommendationsByCategory((prev) => ({
-          ...prev,
-          [activeCategory]: result.recommendations,
-        }));
-        setFetchedCategories((prev) => new Set(prev).add(activeCategory));
-        setShouldFetch(false);
-      },
       onError: (err: Error) => {
         console.error("Error fetching recommendations:", err);
         toast({
@@ -128,52 +99,37 @@ export default function RecommendationClient({
           description:
             "Our AI recommendation system is temporarily down. Please try again later.",
         });
-        setShouldFetch(false);
       },
     }
   );
 
+  console.log("Data from useSWR:", data);
+
+  // Filter recommendations by active scopes
   const filteredRecommendations = useMemo(() => {
-    const recommendations = recommendationsByCategory[activeCategory] || [];
+    const recommendations = data?.recommendations || [];
+    console.log("Recommendations:", recommendations);
+
     if (activeScopes.length === 0) return recommendations;
     return recommendations.filter((rec) =>
       activeScopes.includes(rec.scope || "")
     );
-  }, [recommendationsByCategory, activeCategory, activeScopes]);
+  }, [data, activeScopes]);
 
-  const totalSavings = useMemo(
-    () =>
-      filteredRecommendations
-        .filter((rec) => implementedRecommendations.has(rec.title))
-        .reduce((acc, rec) => acc + rec.estimatedEmissionReduction, 0),
-    [filteredRecommendations, implementedRecommendations]
-  );
-
-  const toggleRecommendation = useCallback((title: string) => {
+  const toggleRecommendation = useCallback((id: string) => {
     setImplementedRecommendations((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(title)) {
-        newSet.delete(title);
-      } else {
-        newSet.add(title);
-      }
-      return newSet;
+      const newState = { ...prev };
+      newState[id] = !newState[id];
+      return newState;
     });
   }, []);
 
   const handleViewRecommendations = useCallback((scope: string) => {
     setActiveScopes([scope]);
-    setShouldFetch(true);
   }, []);
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="text-xl font-semibold text-green-600">
-          Potential Emission Reduction: {totalSavings.toLocaleString()} CO₂e
-        </div>
-      </div>
-
       {/* Threshold Alert */}
       <ThresholdAlert
         metrics={metrics}
@@ -202,9 +158,9 @@ export default function RecommendationClient({
                 {filteredRecommendations.length ? (
                   filteredRecommendations.map((rec) => (
                     <RecommendationCard
-                      key={rec.title}
+                      key={rec.id}
                       rec={rec}
-                      isImplemented={implementedRecommendations.has(rec.title)}
+                      isImplemented={!!implementedRecommendations[rec.id]}
                       toggleRecommendation={toggleRecommendation}
                     />
                   ))
@@ -219,7 +175,9 @@ export default function RecommendationClient({
         </CardContent>
       </Card>
 
-      {implementedRecommendations.size > 0 && (
+      {Object.keys(implementedRecommendations).filter(
+        (key) => implementedRecommendations[key]
+      ).length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Implementation Progress</CardTitle>
@@ -230,10 +188,10 @@ export default function RecommendationClient({
           <CardContent>
             <div className="space-y-4">
               {filteredRecommendations
-                .filter((rec) => implementedRecommendations.has(rec.title))
+                .filter((rec) => implementedRecommendations[rec.id])
                 .map((rec) => (
                   <ErrorBoundary
-                    key={rec.title}
+                    key={rec.id}
                     fallback={<div>Error loading tracker</div>}
                   >
                     <Suspense

@@ -48,3 +48,40 @@ export async function POST(req: Request) {
         return NextResponse.json({ message: "Failed to update goals" }, { status: 500 });
     }
 }
+
+export async function GET(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const userId = searchParams.get("userId");
+
+        if (!userId) {
+            return NextResponse.json({ message: "User ID is required" }, { status: 400 });
+        }
+
+        const db = await dbClient.connectToDatabase();
+        const userCollection = db.collection("User");
+
+        // Convert userId (stored as string) to ObjectId for MongoDB query
+        const userObjectId = new ObjectId(userId);
+
+        // Fetch the user document
+        const user = await userCollection.findOne({ _id: userObjectId });
+        if (!user) {
+            return NextResponse.json({ message: "User not found" }, { status: 404 });
+        }
+
+        // Check if emissionGoal array exists and has entries
+        const emissionGoals = user.emissionGoal;
+        if (!emissionGoals || emissionGoals.length === 0) {
+            return NextResponse.json({ message: "No emission goals found for the user" }, { status: 404 });
+        }
+
+        // Get the last entry in the emissionGoal array
+        const lastEmissionGoal = emissionGoals[emissionGoals.length - 1];
+
+        return NextResponse.json({ lastEmissionGoal });
+    } catch (error) {
+        console.error("Error fetching last emission goal:", error);
+        return NextResponse.json({ message: "Failed to retrieve emission goal" }, { status: 500 });
+    }
+}

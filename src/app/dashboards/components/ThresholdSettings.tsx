@@ -57,12 +57,12 @@ const defaultThresholds: ScopeThreshold[] = [
 export default function ThresholdSettings() {
   const [thresholds, setThresholds] =
     useState<ScopeThreshold[]>(defaultThresholds);
+  const [mainGoals, setMainGoals] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
 
-    // Only fetch if userId exists
     if (!userId) {
       console.warn("No userId found. Skipping threshold fetch.");
       return;
@@ -70,30 +70,21 @@ export default function ThresholdSettings() {
 
     const fetchUserThresholds = async () => {
       try {
-        const response = await fetch(`/api/thresholds?userId=${userId}`);
+        // Update the endpoint to fetch the last emission goal
+        const response = await fetch(`/api/update-goals?userId=${userId}`);
         if (response.ok) {
           const data = await response.json();
-
-          // If user has defined thresholds, completely replace defaults
-          if (data.thresholds && data.thresholds.length > 0) {
-            const userDefinedThresholds = data.thresholds.map(
-              (threshold: ScopeThreshold) => ({
-                ...threshold,
-                id: `scope${threshold.scope.slice(-1)}`,
-                description:
-                  defaultDescriptions[
-                    threshold.scope as keyof typeof defaultDescriptions
-                  ],
-              })
-            );
-
-            setThresholds(userDefinedThresholds);
+          if (
+            data.lastEmissionGoal &&
+            data.lastEmissionGoal.target !== undefined
+          ) {
+            setMainGoals(data.lastEmissionGoal.target.toString()); // Set mainGoals directly
           }
         } else {
-          console.error("Failed to fetch user thresholds");
+          console.error("Failed to fetch last emission goal");
         }
       } catch (error) {
-        console.error("Error fetching user thresholds:", error);
+        console.error("Error fetching last emission goal:", error);
       }
     };
 
@@ -125,31 +116,43 @@ export default function ThresholdSettings() {
     }
 
     try {
-      const updatePromises = thresholds.map((threshold) =>
-        fetch("/api/thresholds", {
-          method: "PUT",
+      const updatePromises = [
+        ...thresholds.map((threshold) =>
+          fetch("/api/thresholds", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userId,
+              scope: threshold.scope,
+              value: threshold.value,
+              unit: threshold.unit,
+            }),
+          }).then(async (response) => {
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || "Failed to update threshold");
+            }
+            return response.json();
+          })
+        ),
+        fetch("/api/update-goals", {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            mainGoals: parseFloat(mainGoals),
             userId,
-            scope: threshold.scope,
-            value: threshold.value,
-            unit: threshold.unit,
           }),
-        }).then(async (response) => {
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Failed to update threshold");
-          }
-          return response.json();
-        })
-      );
+        }),
+      ];
 
       await Promise.all(updatePromises);
       toast({
         title: "Success",
-        description: "All threshold settings updated successfully",
+        description: "All settings updated successfully",
       });
     } catch (error) {
       console.error("Failed to update thresholds:", error);
@@ -157,9 +160,7 @@ export default function ThresholdSettings() {
         variant: "destructive",
         title: "Error",
         description:
-          error instanceof Error
-            ? error.message
-            : "Failed to update threshold settings",
+          error instanceof Error ? error.message : "Failed to update settings",
       });
     }
   };
@@ -167,18 +168,18 @@ export default function ThresholdSettings() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline">Edit Threshold Settings</Button>
+        <Button variant="outline">Edit Threshold and Goals Settings</Button>
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Emission Scope Thresholds</SheetTitle>
+          <SheetTitle>Emission Scope Thresholds and Goals</SheetTitle>
           <SheetDescription>
-            Set custom thresholds for each emission scope to receive alerts when
-            exceeded.
+            Set custom thresholds for each emission scope and an overall
+            emissions goal.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-6 mt-4">
+        <div className="space-y-2 mt-4">
           {thresholds.map((threshold, index) => (
             <div key={threshold.id} className="space-y-4">
               <div className="space-y-1">
@@ -211,10 +212,24 @@ export default function ThresholdSettings() {
               </div>
             </div>
           ))}
+
+          <div className="space-y-4 mt-6">
+            <Label htmlFor="mainGoals">
+              Overall Carbon Emissions Goal (% Reduction)
+            </Label>
+            <Input
+              id="mainGoals"
+              type="number"
+              min="0"
+              step="0.01"
+              value={mainGoals}
+              onChange={(e) => setMainGoals(e.target.value)}
+            />
+          </div>
         </div>
 
         <SheetFooter className="mt-6">
-          <Button type="submit" onClick={handleSaveChanges}>
+          <Button type="button" onClick={handleSaveChanges}>
             Save Changes
           </Button>
         </SheetFooter>
