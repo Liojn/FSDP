@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Flame, Leaf, Loader2, Zap } from "lucide-react";
 import {
@@ -22,6 +22,8 @@ import ThresholdSettings from "./components/ThresholdSettings";
 import RecommendationAlert from "./components/RecommendationAlert";
 
 import { useDashboardData } from "./hooks/useDashboardData";
+import { generatePdf } from "@/lib/generatePdf";
+import { Button } from "@/components/ui/button";
 
 const DashboardPage = () => {
   const router = useRouter();
@@ -46,12 +48,15 @@ const DashboardPage = () => {
     handleMonthClick,
   } = useDashboardData();
 
-  // State for modals and interactions
-  const [showModal, setShowModal] = React.useState(false);
-  const [isScopeModalOpen, setIsScopeModalOpen] = React.useState(false);
-  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(
-    null
-  );
+  const [showModal, setShowModal] = useState(false);
+  const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // References for PDF content
+  const metricSectionRef = useRef<HTMLDivElement>(null);
+  const carbonEmissionChartRef = useRef<HTMLDivElement>(null);
+  const gaugeChartRef = useRef<HTMLDivElement>(null);
+  const emissionCategoryChartRef = useRef<HTMLDivElement>(null);
 
   // Handlers
   const handleViewRecommendations = (exceedingScopes: string[]) => {
@@ -88,7 +93,17 @@ const DashboardPage = () => {
     }
   };
 
-  // Loading state
+  const handleGeneratePdf = () => {
+    const elements = [
+      metricSectionRef.current,
+      carbonEmissionChartRef.current,
+      gaugeChartRef.current,
+      emissionCategoryChartRef.current,
+    ].filter(Boolean) as HTMLElement[];
+
+    generatePdf(elements);
+  };
+
   if (loading || !userId || !selectedYear) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -103,6 +118,7 @@ const DashboardPage = () => {
         <PageHeader title="Dashboard" />
         <div>
           <div className="flex items-center gap-2">
+            <Button onClick={handleGeneratePdf}>Export Report to PDF</Button>
             <ThresholdSettings />
             <span className="font-semibold">Year: </span>
             <Select value={yearFilter} onValueChange={handleYearFilterChange}>
@@ -127,7 +143,7 @@ const DashboardPage = () => {
       />
 
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-6">
+        <div className="md:col-span-2 space-y-6" ref={metricSectionRef}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
               <div
@@ -155,7 +171,10 @@ const DashboardPage = () => {
             ))}
           </div>
 
-          <div className="bg-white p-4 shadow-md rounded-lg">
+          <div
+            className="bg-white p-4 shadow-md rounded-lg"
+            ref={carbonEmissionChartRef}
+          >
             <h3 className="text-lg font-semibold text-gray-700 mb-4">
               Yearly Carbon Emission&apos;s Progress
             </h3>
@@ -170,7 +189,10 @@ const DashboardPage = () => {
         </div>
 
         <div className="flex flex-col space-y-6">
-          <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col">
+          <div
+            className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"
+            ref={gaugeChartRef}
+          >
             <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">
               Net Emission Limit Indicator
             </h3>
@@ -193,7 +215,10 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <div className="bg-white p-4 shadow-md rounded-lg pb-0">
+          <div
+            className="bg-white p-4 shadow-md rounded-lg pb-0"
+            ref={emissionCategoryChartRef}
+          >
             <div className="flex justify-between items-center pb-0">
               <h3 className="text-lg font-semibold text-gray-700 flex-shrink-0">
                 Emissions By Category

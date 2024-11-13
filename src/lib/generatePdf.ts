@@ -1,6 +1,7 @@
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
+// Generate PDF from an array of HTML elements
 export const generatePdf = async (elements: HTMLElement[]) => {
   const pdf = new jsPDF();
   
@@ -8,17 +9,15 @@ export const generatePdf = async (elements: HTMLElement[]) => {
     const canvas = await html2canvas(elements[i]);
     const imgData = canvas.toDataURL("image/png");
     
-    // Add the chart/image to the PDF
+    // Set up the page layout and add the image to the PDF
     const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
     const imgWidth = pageWidth * 0.9;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
+    
+    // Position image and add a new page for each element if needed
     pdf.addImage(imgData, "PNG", (pageWidth - imgWidth) / 2, 20, imgWidth, imgHeight);
-
-    // Add a new page if there are more elements
     if (i < elements.length - 1) pdf.addPage();
   }
-
-  pdf.save("report.pdf");
+  
+  pdf.save("dashboard_report.pdf");
 };
