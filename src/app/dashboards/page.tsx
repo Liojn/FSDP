@@ -95,8 +95,8 @@ const DashboardPage = () => {
   // State for metrics data (Cards)
   const [metricsData, setMetricsData] = useState<MetricData[]>([
     { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
-    { title: "Total Carbon Emissions", value: "Loading...", unit: "KG CO₂" },
-    { title: "Total Net Emissions", value: "Loading...", unit: "KG CO₂" },
+    { title: "Total Net Carbon Emissions", value: "Loading...", unit: "KG CO₂" },
+    { title: "Total Carbon Neutral Emissions", value: "Loading...", unit: "KG CO₂" },
   ]);
 
   // Initialize thresholds state
@@ -188,12 +188,12 @@ const DashboardPage = () => {
                       unit: "kWh",
                     },
                     {
-                      title: "Total Carbon Emissions",
+                      title: "Total Net Carbon Emissions",
                       value: data["carbonAverage in CO2E"].toFixed(0),
                       unit: "KG CO₂",
                     },
                     {
-                      title: "Total Net Emissions",
+                      title: "Total Carbon Neutral Emissions",
                       value: data["netAverage in CO2E"].toFixed(0),
                       unit: "KG CO₂",
                     },
@@ -238,12 +238,12 @@ const DashboardPage = () => {
                       unit: "kWh",
                     },
                     {
-                      title: "Total Carbon Emissions",
+                      title: "Total Net Carbon Emissions",
                       value: data["carbonAverage in CO2E"].toFixed(0),
                       unit: "KG CO₂",
                     },
                     {
-                      title: "Total Net Emissions",
+                      title: "Total Carbon Neutral Emissions",
                       value: data["netAverage in CO2E"].toFixed(0),
                       unit: "KG CO₂",
                     },
@@ -304,8 +304,8 @@ const DashboardPage = () => {
     const metricToScope: { [key: string]: "Scope 1" | "Scope 2" | "Scope 3" } =
       {
         "Total Energy Consumption": "Scope 1",
-        "Total Carbon Emissions": "Scope 2",
-        "Total Net Emissions": "Scope 3",
+        "Total Net Carbon Emissions": "Scope 2",
+        "Total Carbon Neutral Emissions": "Scope 3",
       };
 
     metrics.forEach((metric) => {
@@ -352,11 +352,11 @@ const DashboardPage = () => {
   // Mapping of titles to icons for the dashboard
   const getIconForMetric = (title: string) => {
     switch (title) {
-      case "Total Carbon Emissions":
+      case "Total Net Carbon Emissions":
         return <Flame className="w-8 h-8 text-orange-500" strokeWidth={3} />;
       case "Total Energy Consumption":
         return <Zap className="w-8 h-8 text-yellow-500" strokeWidth={3} />;
-      case "Total Net Emissions":
+      case "Total Carbon Neutral Emissions":
         return <Leaf className="w-8 h-8 text-green-500" strokeWidth={3} />;
       default:
         return null; // Or a default icon
@@ -412,7 +412,7 @@ const DashboardPage = () => {
               <div
                 key={index}
                 onClick={() => {
-                  if (metric.title === "Total Carbon Emissions") {
+                  if (metric.title === "Total Net Carbon Emissions") {
                     setIsScopeModalOpen(true);
                   }
                 }}
@@ -427,7 +427,7 @@ const DashboardPage = () => {
                   unit={metric.unit}
                   icon={getIconForMetric(metric.title)} // Pass the icon dynamically
                   className={`bg-white p-4 shadow-md rounded-lg ${
-                    metric.title === "Total Carbon Emissions"
+                    metric.title === "Total Net Carbon Emissions"
                       ? "hover:cursor-pointer hover:bg-gray-50"
                       : ""
                   }`}
@@ -468,9 +468,6 @@ const DashboardPage = () => {
             </h3>
             <div className="flex-1 flex flex-col">
               <div className="bg-white flex-1 flex justify-center items-center pb-4">
-                {currentYearEmissions !== null &&
-                targetGoal !== null &&
-                previousYearEmissions !== null ? (
                   <GaugeChartComponent
                     currentYearEmissions={currentYearEmissions || 0}
                     previousYearEmissions={previousYearEmissions || 0}
@@ -478,9 +475,6 @@ const DashboardPage = () => {
                     initialYearGoal={firstYearGoal || 10000}
                     isEarliestYear={isEarliestYear || false}
                   />
-                ) : (
-                  <div>Loading gauge data...</div>
-                )}
               </div>
             </div>
           </div>
