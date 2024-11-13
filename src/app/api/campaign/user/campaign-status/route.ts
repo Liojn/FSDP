@@ -76,7 +76,6 @@ export async function GET(request: NextRequest) {
         size: company.size,
         email: company.email,
         contactPerson: company.contactPerson,
-        targetReduction: participation.targetReduction,
         currentProgress: participation.currentProgress,
         joinedAt: participation.joinedAt
       }
