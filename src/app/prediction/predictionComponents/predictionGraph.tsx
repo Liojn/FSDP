@@ -83,6 +83,21 @@ const MONTHS = [
   "November",
   "December",
 ];
+const PROJECTION_YEARS = 100;
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
   ({ data }, ref) => {
