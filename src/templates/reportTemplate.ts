@@ -1,5 +1,3 @@
-// src/templates/reportTemplate.ts
-
 export function generateHTMLReport(content: string, generatedDate: string): string {
   return `
     <!DOCTYPE html>
@@ -36,15 +34,27 @@ export function generateHTMLReport(content: string, generatedDate: string): stri
             font-size: 14px;
             line-height: 1.6;
           }
+          h1 {
+            font-size: 28px;
+            margin-top: 40px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+          }
           h2 {
             font-size: 24px;
-            border-bottom: 2px solid #ddd;
+            margin-top: 30px;
+            border-bottom: 1px solid #ddd;
             padding-bottom: 5px;
-            margin-top: 40px;
           }
-          ul {
-            list-style-type: disc;
+          h3 {
+            font-size: 20px;
+            margin-top: 20px;
+          }
+          ul, ol {
             margin-left: 20px;
+          }
+          p {
+            margin-bottom: 15px;
           }
           .page-number:after {
             content: counter(page);

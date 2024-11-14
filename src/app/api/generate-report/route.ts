@@ -5,9 +5,9 @@ import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 import { MetricData } from "@/types";
 import Anthropic from "@anthropic-ai/sdk";
-import puppeteer from 'puppeteer-core'; // Import puppeteer-core
-import { generateHTMLReport } from '@/templates/reportTemplate'; // Import the HTML template
-
+import puppeteer from 'puppeteer'; // Changed from 'puppeteer-core' to 'puppeteer'
+import { generateHTMLReport } from '@/templates/reportTemplate';
+import { marked } from 'marked'; // Import the marked library
 
 // Initialize the Anthropic AI client
 const anthropic = new Anthropic({
@@ -46,9 +46,11 @@ const generatePrompt = async (metrics: MetricData) => {
   const livestockCount = metrics.livestock?.count ?? 0;
   const livestockEmissions = metrics.livestock?.emissions ?? 0;
 
-  const aiPrompt = `Generate a comprehensive sustainability report with the following structure and using only the data provided:
+  const aiPrompt = `Generate a comprehensive sustainability report with the following structure and using only the data provided.
 
-OVERVIEW
+Please format the report using Markdown syntax with clear headers for each section.
+
+# Overview
 - Analyze the current total emissions of ${(scopeEmissions.scope1 + scopeEmissions.scope2 + scopeEmissions.scope3).toFixed(2)} tons CO₂e
 - Break down emissions by scope:
   * Scope 1: ${scopeEmissions.scope1.toFixed(2)} tons CO₂e
@@ -59,14 +61,14 @@ OVERVIEW
 - Review agricultural operations: ${cropsArea} hectares with ${cropsFertilizer} tons fertilizer usage
 - Analyze livestock impact: ${livestockCount} animals producing ${livestockEmissions} tons CO₂e
 
-PREDICTIONS
+# Predictions
 - Project emissions trends for next 12 months based on current data
 - Forecast energy consumption patterns considering ${previousYearComparison}% year-over-year change
 - Estimate future waste generation trajectory
 - Project agricultural impact considering current crop area and fertilizer usage
 - Calculate expected livestock emissions based on current herd size
 
-RECOMMENDATIONS
+# Recommendations
 - Provide 3 actionable solutions prioritized by:
   * Emission reduction potential
   * Implementation feasibility
@@ -78,7 +80,7 @@ RECOMMENDATIONS
   * Livestock management
 - Detail implementation timeline and resource requirements
 
-Present the report in a clear, professional format without any introductory phrases or conclusions. Focus on data-driven insights and actionable recommendations.`;
+Present the report in a clear, professional format using Markdown. Do not include any introductory phrases or conclusions. Focus on data-driven insights and actionable recommendations.`;
 
   return aiPrompt;
 };
@@ -110,15 +112,13 @@ export async function POST(request: NextRequest) {
 
     const assistantReply = (msg.content[0] as any).text;
 
-    // Generate HTML content
-    const generatedDate = new Date().toLocaleDateString();
-    const htmlContent = generateHTMLReport(assistantReply, generatedDate);
-
+    // Parse the assistant's reply from Markdown to HTML
+    const htmlContent = generateHTMLReport(await marked(assistantReply), new Date().toLocaleDateString());
 
     const browser = await puppeteer.launch({
-  args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  headless: true,
-});
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: true,
+    });
     const page = await browser.newPage();
 
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
