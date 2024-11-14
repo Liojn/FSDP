@@ -40,10 +40,9 @@ Provide the recommendations in plaintext format.
 function addRecommendationsToPDF(pdf: jsPDF, recommendationsText: string) {
   pdf.addPage();
   pdf.setFontSize(20);
-  pdf.text("Sustainability Recommendations", 20, 30);
+  pdf.text("Sustainability Recommendations", 20, 40);
 
-  let yPosition = 60;
-
+  let yPosition = 80;
   const lines = pdf.splitTextToSize(
     recommendationsText,
     pdf.internal.pageSize.getWidth() - 40
@@ -52,11 +51,29 @@ function addRecommendationsToPDF(pdf: jsPDF, recommendationsText: string) {
   lines.forEach((line: string) => {
     if (yPosition > pdf.internal.pageSize.getHeight() - 30) {
       pdf.addPage();
-      yPosition = 30;
+      yPosition = 40;
     }
     pdf.text(line, 20, yPosition);
     yPosition += 15;
   });
+}
+
+function addHeader(pdf: jsPDF) {
+  pdf.setFontSize(24);
+  pdf.text("Sustainability Report", 20, 40);
+  pdf.setFontSize(14);
+  const date = new Date().toLocaleDateString();
+  pdf.text(`Generated on: ${date}`, 20, 60);
+}
+
+function addFooter(pdf: jsPDF, pageNumber: number, totalPages: number) {
+  pdf.setFontSize(12);
+  pdf.text(
+    `Page ${pageNumber} of ${totalPages}`,
+    pdf.internal.pageSize.getWidth() / 2,
+    pdf.internal.pageSize.getHeight() - 20,
+    { align: "center" }
+  );
 }
 
 export async function POST(req: Request) {
@@ -76,21 +93,48 @@ export async function POST(req: Request) {
       format: "a4",
     });
 
-    pdf.setFontSize(24);
-    pdf.text("Sustainability Report", 20, 40);
-    pdf.setFontSize(14);
-    const date = new Date().toLocaleDateString();
-    pdf.text(`Generated on: ${date}`, 20, 60);
+    const totalPages = imageDataUrls.length + 1; // +1 for recommendations page
+    let currentPageNumber = 1;
+
+    // Add header on the first page only
+    addHeader(pdf);
+    addFooter(pdf, currentPageNumber, totalPages);
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    // Adjust image to fill full page width, keeping aspect ratio consistent
+    const imgWidth = pageWidth - 40; // margins of 20px on each side
+    const imgHeight = imgWidth * 0.5625; // 16:9 aspect ratio
 
     for (let i = 0; i < imageDataUrls.length; i++) {
-      if (i > 0) pdf.addPage();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const imgWidth = pageWidth - 40;
-      const imgHeight = (imgWidth * 9) / 16;
-      pdf.addImage(imageDataUrls[i], "PNG", 20, 80, imgWidth, imgHeight);
+      if (i > 0) {
+        pdf.addPage();
+        currentPageNumber++;
+      }
+
+      // Center image vertically on each page
+      const imgYPosition = (pageHeight - imgHeight) / 2;
+
+      pdf.addImage(
+        imageDataUrls[i],
+        "PNG",
+        20,
+        imgYPosition,
+        imgWidth,
+        imgHeight,
+        undefined,
+        "NONE"
+      );
+
+      addFooter(pdf, currentPageNumber, totalPages);
     }
 
+    // Add recommendations on a new page
     const aiRecommendations = await getAIRecommendations();
+    pdf.addPage();
+    currentPageNumber++;
+    addFooter(pdf, currentPageNumber, totalPages);
     addRecommendationsToPDF(pdf, aiRecommendations);
 
     const pdfDataUri = pdf.output("datauristring");

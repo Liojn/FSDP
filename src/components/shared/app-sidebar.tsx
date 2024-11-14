@@ -28,11 +28,9 @@ import {
 
 import {
   BadgeCheck,
-  Bell,
   ChartColumn,
   ChevronsUpDown,
   LayoutDashboard,
-  Lightbulb,
   LogOut,
   Medal,
   PencilLine,
@@ -118,13 +116,6 @@ const AppSidebar = React.memo(function AppSidebar() {
           >
             <BadgeCheck className="size-4" />
             Account
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="flex cursor-pointer items-center gap-2 py-2 text-stone-400 hover:text-white"
-            onClick={() => console.log("Opening notifications...")}
-          >
-            <Bell className="size-4" />
-            Notifications
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator className="border-stone-800" />
