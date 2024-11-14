@@ -118,18 +118,31 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
 
     const renderYearlyChart = () => {
       console.log("Rendering chart with chartData:", chartData);
-      if (chartData.length === 0) {
+
+            // Modify the filtering condition to exclude data points with all zero values
+      const validChartData = chartData.filter((dataPoint) => 
+        dataPoint.year !== undefined &&
+        dataPoint.year !== null &&
+        (
+          dataPoint.totalEmissions !== 0 ||
+          dataPoint.absorption !== 0 ||
+          dataPoint.netEmissions !== 0 ||
+          dataPoint.cumulativeYTDNetEmissions !== 0 ||
+          dataPoint.targetEmissions !== 0
+        )
+      );
+
+      if (validChartData.length === 0) {
         return (
           <div className="h-64 flex items-center justify-center">
             <p>No data available</p>
           </div>
         );
       }
-
       return (
         <ResponsiveContainer width="100%" height={400}>
           <LineChart
-            data={chartData}
+            data={validChartData}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
@@ -231,3 +244,5 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
 EmissionsChart.displayName = "EmissionsChart";
 
 export default EmissionsChart;
+
+
