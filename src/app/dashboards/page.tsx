@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useData } from "@/context/DataContext"; // Use your context to get the data
 import { Flame, Leaf, Loader2, Zap } from "lucide-react";
@@ -23,6 +23,15 @@ import RecommendationAlert from "@/app/dashboards/components/RecommendationAlert
 import { useDashboardData } from "@/app/dashboards/hooks/useDashboardData";
 
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import EmissionsChart from "../prediction/predictionComponents/predictionGraph";
 import NetZeroGraph from "../prediction/netZeroGraph/netZeroGraph";
 import html2canvas from "html2canvas";
@@ -55,12 +64,15 @@ const DashboardPage = () => {
   const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showChartsForExport, setShowChartsForExport] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
+  const controllerRef = useRef<AbortController | null>(null);
   const { data, isLoading } = useData(); // Access data and isLoading from context
   const emissionsChartRef = useRef(null);
   const netZeroGraphRef = useRef(null);
 
   // References for PDF content
-
   const metricSectionRef = useRef<HTMLDivElement>(null);
   const carbonEmissionChartRef = useRef<HTMLDivElement>(null);
   const gaugeChartRef = useRef<HTMLDivElement>(null);
@@ -102,17 +114,21 @@ const DashboardPage = () => {
   };
 
   const handleGenerateReport = async () => {
-    console.log("Generate report button clicked");
-    console.log("isLoading:", isLoading);
-    console.log("data:", data);
-
     if (isLoading || !data) return;
-    console.log("Data available for report generation");
-
     setShowChartsForExport(true);
+    setExportProgress(10);
+    setIsCancelled(false);
+
+    const controller = new AbortController();
+    controllerRef.current = controller;
 
     try {
       setTimeout(async () => {
+        if (isCancelled) {
+          return;
+        }
+        setExportProgress(30);
+
         const capturedElements = [
           metricSectionRef.current,
           carbonEmissionChartRef.current,
@@ -125,16 +141,26 @@ const DashboardPage = () => {
         const imageDataUrls = [];
 
         for (const element of capturedElements) {
+          if (isCancelled) {
+            return;
+          }
           if (element) {
             try {
               const canvas = await html2canvas(element);
               const imageData = canvas.toDataURL("image/png");
               imageDataUrls.push(imageData);
             } catch (error) {
-              console.error("Error capturing chart:", error);
+              if (error instanceof Error && error.name !== "AbortError") {
+                console.error("Error capturing chart:", error);
+              }
             }
           }
         }
+
+        if (isCancelled) {
+          return;
+        }
+        setExportProgress(60);
 
         const response = await fetch("/api/generate-report", {
           method: "POST",
@@ -144,20 +170,23 @@ const DashboardPage = () => {
           body: JSON.stringify({
             imageDataUrls,
           }),
+          signal: controller.signal,
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.details || "Failed to generate report");
+          throw new Error("Failed to generate report");
         }
+
+        if (isCancelled) {
+          return;
+        }
+        setExportProgress(80);
 
         const { pdfDataUri } = await response.json();
 
-        // Convert data URI to Blob
         const blob = await (await fetch(pdfDataUri)).blob();
         const url = URL.createObjectURL(blob);
 
-        // Trigger download
         const link = document.createElement("a");
         link.href = url;
         link.download = "sustainability_report.pdf";
@@ -165,14 +194,31 @@ const DashboardPage = () => {
         link.click();
         document.body.removeChild(link);
 
+        setExportProgress(100);
         setShowChartsForExport(false);
+        setTimeout(() => {
+          setExportProgress(0);
+          setIsAlertDialogOpen(false); // Close the dialog after the report is finished downloading
+        }, 2000);
       }, 1000);
     } catch (error) {
-      console.error("Error generating report:", error);
-      alert("Failed to generate report. Please try again.");
+      if (error instanceof Error && error.name !== "AbortError") {
+        console.error("Error generating report:", error);
+        alert("Failed to generate report. Please try again.");
+      }
       setShowChartsForExport(false);
+      setExportProgress(0);
     }
   };
+
+  useEffect(() => {
+    if (isCancelled && controllerRef.current) {
+      controllerRef.current.abort();
+      setShowChartsForExport(false);
+      setExportProgress(0);
+    }
+  }, [isCancelled]);
+
   if (loading || !userId || !selectedYear) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -188,13 +234,33 @@ const DashboardPage = () => {
 
         <div className="flex flex-col md:flex-row md:items-center gap-5 space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center gap-5">
-            <Button
-              onClick={handleGenerateReport}
-              disabled={isLoading || !data}
-              className="bg-emerald-500 text-emerald-50 hover:bg-emerald-600 w-full md:w-auto"
+            <AlertDialog
+              open={isAlertDialogOpen}
+              onOpenChange={setIsAlertDialogOpen}
             >
-              Export Report to PDF
-            </Button>
+              <AlertDialogTrigger asChild>
+                <Button
+                  onClick={() => {
+                    setIsAlertDialogOpen(true);
+                    handleGenerateReport();
+                  }}
+                  disabled={isLoading || !data}
+                  className="bg-emerald-500 text-emerald-50 hover:bg-emerald-600 w-full md:w-auto"
+                >
+                  Export Report to PDF
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Exporting Report</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Please wait while your sustainability report is being
+                    generated.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <Progress value={exportProgress} className="mt-4" />
+              </AlertDialogContent>
+            </AlertDialog>
 
             <div className="flex justify-center md:justify-start w-full md:w-auto">
               <ThresholdSettings />
@@ -226,7 +292,6 @@ const DashboardPage = () => {
 
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6" ref={metricSectionRef}>
-          {/* Main Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
               <div
@@ -254,7 +319,6 @@ const DashboardPage = () => {
             ))}
           </div>
 
-          {/* Carbon Emission Chart */}
           <div
             className="bg-white p-4 shadow-md rounded-lg"
             ref={carbonEmissionChartRef}
@@ -272,7 +336,6 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Gauge Chart */}
         <div className="flex flex-col space-y-6">
           <div
             className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"
@@ -300,7 +363,6 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Emission Category Chart */}
           <div
             className="bg-white p-4 shadow-md rounded-lg pb-0"
             ref={emissionCategoryChartRef}
@@ -323,7 +385,6 @@ const DashboardPage = () => {
 
       {showChartsForExport && (
         <div style={{ position: "absolute", top: -9999, left: -9999 }}>
-          {/* Render hidden charts for PDF export */}
           <div ref={carbonEmissionChartRef}>
             <CarbonEmissionChart
               monthlyEmissions={monthlyEmissions}
