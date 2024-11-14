@@ -21,12 +21,12 @@ import ScopeModal from "@/app/dashboards/popup/scopeModal";
 import ThresholdSettings from "@/app/dashboards/components/ThresholdSettings";
 import RecommendationAlert from "@/app/dashboards/components/RecommendationAlert";
 import { useDashboardData } from "@/app/dashboards/hooks/useDashboardData";
-import { generateSustainabilityReport } from "@/lib/generatePdf";
 
 import { Button } from "@/components/ui/button";
 import EmissionsChart from "../prediction/predictionComponents/predictionGraph";
 import NetZeroGraph from "../prediction/netZeroGraph/netZeroGraph";
 import html2canvas from "html2canvas";
+import { userGoals } from "../prediction/page";
 
 const DashboardPage = () => {
   const router = useRouter();
@@ -112,7 +112,6 @@ const DashboardPage = () => {
     setShowChartsForExport(true);
 
     try {
-      // Wait for charts to be visible
       setTimeout(async () => {
         const capturedElements = [
           metricSectionRef.current,
@@ -125,7 +124,6 @@ const DashboardPage = () => {
 
         const imageDataUrls = [];
 
-        // Capture all charts
         for (const element of capturedElements) {
           if (element) {
             try {
@@ -138,30 +136,6 @@ const DashboardPage = () => {
           }
         }
 
-        // Prepare metrics data for the report
-        const metricsData = {
-          energy: {
-            consumption: data.energyConsumption,
-            previousYearComparison: data.energyYOY,
-          },
-          waste: {
-            quantity: data.wasteGeneration,
-          },
-          crops: {
-            area: data.cropArea,
-            fertilizer: data.fertilizerUse,
-          },
-          livestock: {
-            count: data.livestockCount,
-            emissions: data.livestockEmissions,
-          },
-          emissions: {
-            total: data.totalEmissions,
-            byCategory: data.emissionsByCategory || {},
-          },
-        };
-
-        // Call the report generation API
         const response = await fetch("/api/generate-report", {
           method: "POST",
           headers: {
@@ -169,7 +143,6 @@ const DashboardPage = () => {
           },
           body: JSON.stringify({
             imageDataUrls,
-            metrics: metricsData,
           }),
         });
 
@@ -178,21 +151,28 @@ const DashboardPage = () => {
           throw new Error(error.details || "Failed to generate report");
         }
 
-        const { pdfUrl } = await response.json();
+        const { pdfDataUri } = await response.json();
 
-        // Open the PDF in a new tab
-        window.open(pdfUrl, "_blank");
+        // Convert data URI to Blob
+        const blob = await (await fetch(pdfDataUri)).blob();
+        const url = URL.createObjectURL(blob);
+
+        // Trigger download
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "sustainability_report.pdf";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
 
         setShowChartsForExport(false);
       }, 1000);
     } catch (error) {
       console.error("Error generating report:", error);
-      // You might want to show an error message to the user
       alert("Failed to generate report. Please try again.");
       setShowChartsForExport(false);
     }
   };
-
   if (loading || !userId || !selectedYear) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -344,30 +324,35 @@ const DashboardPage = () => {
       {showChartsForExport && (
         <div style={{ position: "absolute", top: -9999, left: -9999 }}>
           {/* Render hidden charts for PDF export */}
-          <CarbonEmissionChart
-            monthlyEmissions={monthlyEmissions}
-            averageAbsorbed={averageAbsorbed}
-            onMonthClick={handleMonthClick}
-          />
-          <GaugeChartComponent
-            currentYearEmissions={currentYearEmissions ?? 0}
-            previousYearEmissions={previousYearEmissions ?? 0}
-            targetReduction={targetGoal}
-            initialYearGoal={firstYearGoal || 10000}
-            isEarliestYear={isEarliestYear || false}
-          />
-          <EmissionCategoryChart
-            categoryData={categoryEmissionsData}
-            month={selectedMonth}
-            onCategoryClick={handleCategoryClick}
-          />
-
-          <EmissionsChart
-            ref={emissionsChartRef}
-            data={data || undefined}
-            isLoading={isLoading}
-          />
-          <NetZeroGraph data={data || undefined} isLoading={isLoading} />
+          <div ref={carbonEmissionChartRef}>
+            <CarbonEmissionChart
+              monthlyEmissions={monthlyEmissions}
+              averageAbsorbed={averageAbsorbed}
+              onMonthClick={handleMonthClick}
+            />
+          </div>
+          <div ref={gaugeChartRef}>
+            <GaugeChartComponent
+              currentYearEmissions={currentYearEmissions ?? 0}
+              previousYearEmissions={previousYearEmissions ?? 0}
+              targetReduction={targetGoal}
+              initialYearGoal={firstYearGoal || 10000}
+              isEarliestYear={isEarliestYear || false}
+            />
+          </div>
+          <div ref={emissionCategoryChartRef}>
+            <EmissionCategoryChart
+              categoryData={categoryEmissionsData}
+              month={selectedMonth}
+              onCategoryClick={handleCategoryClick}
+            />
+          </div>
+          <div ref={emissionsChartRef}>
+            <EmissionsChart />
+          </div>
+          <div ref={netZeroGraphRef}>
+            <NetZeroGraph userGoals={userGoals} />
+          </div>
         </div>
       )}
 
