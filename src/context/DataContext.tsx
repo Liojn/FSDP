@@ -1,12 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
+import React, { createContext, useContext, useState, ReactNode } from "react";
 
 // MonthlyData and other types based on your previous code
 interface MonthlyData {
@@ -41,7 +35,6 @@ interface NetZeroAnalysis {
 
 interface DataContextType {
   data: MonthlyData | null;
-  isLoading: boolean;
   chartData: DataPoint[];
   netZeroAnalysis: NetZeroAnalysis | null;
   setData: (data: MonthlyData) => void;
@@ -54,20 +47,12 @@ interface DataProviderProps {
   children: ReactNode;
 }
 
-// API fetch function
-const fetchData = async (): Promise<MonthlyData> => {
-  const response = await fetch("/api/your-endpoint"); // Replace with actual API endpoint
-  return response.json();
-};
-
 // Transformation functions
 const getLatestTarget = (emissionTargets: {
   [key: number]: number;
 }): number => {
   const years = Object.keys(emissionTargets).map(Number);
-  if (years.length === 0) return 0.9; // Default 90% if no targets
-  const latestYear = Math.max(...years);
-  return emissionTargets[latestYear];
+  return years.length === 0 ? 0.9 : emissionTargets[Math.max(...years)];
 };
 
 const prepareYearlyData = (data: MonthlyData): DataPoint[] => {
@@ -95,12 +80,10 @@ const prepareYearlyData = (data: MonthlyData): DataPoint[] => {
     const totalAbsorption = data.totalMonthlyAbsorption
       .slice(i, i + validMonths.length)
       .reduce((sum, val) => sum + (val || 0), 0);
-
     latestAnnualAbsorption = (totalAbsorption / validMonths.length) * 12;
 
     const netEmissions = totalEmissions - totalAbsorption;
     cumulativeNetEmissions += netEmissions;
-
     const targetEmissions =
       previousYearEmissions *
       (1 - (data.emissionTargets[year] || latestTarget));
@@ -146,34 +129,20 @@ const analyzeNetZeroYears = (chartData: DataPoint[]): NetZeroAnalysis => {
 
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [data, setData] = useState<MonthlyData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [chartData, setChartData] = useState<DataPoint[]>([]);
   const [netZeroAnalysis, setNetZeroAnalysis] =
     useState<NetZeroAnalysis | null>(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        const fetchedData = await fetchData();
-        setData(fetchedData);
-        const processedData = prepareYearlyData(fetchedData);
-        setChartData(processedData);
-        setNetZeroAnalysis(analyzeNetZeroYears(processedData));
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+  React.useEffect(() => {
+    if (data) {
+      const processedData = prepareYearlyData(data);
+      setChartData(processedData);
+      setNetZeroAnalysis(analyzeNetZeroYears(processedData));
+    }
+  }, [data]);
 
   return (
-    <DataContext.Provider
-      value={{ data, isLoading, chartData, netZeroAnalysis, setData }}
-    >
+    <DataContext.Provider value={{ data, chartData, netZeroAnalysis, setData }}>
       {children}
     </DataContext.Provider>
   );

@@ -83,25 +83,11 @@ const MONTHS = [
   "November",
   "December",
 ];
-const PROJECTION_YEARS = 100;
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
 
 const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
   ({ data }, ref) => {
     const { isLoading, netZeroAnalysis: initialNetZeroAnalysis } = useData();
+    console.log("isLoading from useData:", isLoading);
     const [netZeroAnalysis, setNetZeroAnalysis] = useState<NetZeroAnalysis>(
       initialNetZeroAnalysis || {
         cumulativeNetZeroYear: null,
@@ -274,6 +260,7 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
     };
 
     useEffect(() => {
+      console.log("Data received for chart:", data);
       if (!data) return;
 
       const yearlyData = prepareYearlyData();
@@ -386,7 +373,7 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
 
     if (isLoading) {
       return (
-        <Card className="w-full" ref={ref}>
+        <Card className="w-full">
           <CardContent className="p-6">
             <div className="h-64 flex items-center justify-center">
               <p>Loading chart data...</p>
