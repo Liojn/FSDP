@@ -3,34 +3,17 @@
 
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
-import { jsPDF } from 'jspdf';
 import { MetricData } from "@/types";
 import Anthropic from "@anthropic-ai/sdk";
+import puppeteer from 'puppeteer-core'; // Import puppeteer-core
+import { generateHTMLReport } from '@/templates/reportTemplate'; // Import the HTML template
+import path from 'path';
+import fs from 'fs';
 
 // Initialize the Anthropic AI client
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || "",
 });
-
-// Function to add a header to the PDF
-function addHeader(pdf: jsPDF) {
-  pdf.setFontSize(24);
-  pdf.text("Sustainability Report", 20, 40);
-  pdf.setFontSize(14);
-  const date = new Date().toLocaleDateString();
-  pdf.text(`Generated on: ${date}`, 20, 60);
-}
-
-// Function to add a footer to the PDF
-function addFooter(pdf: jsPDF, pageNumber: number, totalPages: number) {
-  pdf.setFontSize(12);
-  pdf.text(
-    `Page ${pageNumber} of ${totalPages}`,
-    pdf.internal.pageSize.getWidth() / 2,
-    pdf.internal.pageSize.getHeight() - 20,
-    { align: "center" }
-  );
-}
 
 // Function to calculate scope-based emissions with added safety checks for livestock data
 function calculateScopeEmissions(metrics: MetricData) {
@@ -127,21 +110,49 @@ export async function POST(request: NextRequest) {
 
     const assistantReply = (msg.content[0] as any).text;
 
-    const pdf = new jsPDF();
-    addHeader(pdf);
+    // Generate HTML content
+    const generatedDate = new Date().toLocaleDateString();
+    const htmlContent = generateHTMLReport(assistantReply, generatedDate);
 
-    // Add report content with consistent formatting
-    addContent(pdf, assistantReply);
+    // Launch Puppeteer
+    const browser = await puppeteer.launch({
+      headless: true,
+      // Specify the path to Chromium executable if necessary
+      // executablePath: '/path/to/chromium',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
 
-    // Add footer for each page
-    const totalPages = pdf.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      pdf.setPage(i);
-      addFooter(pdf, i, totalPages);
-    }
+    const page = await browser.newPage();
 
-    const pdfArrayBuffer = pdf.output('arraybuffer');
-    return new NextResponse(pdfArrayBuffer, {
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+    // Generate PDF from the page content
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '60px',
+        bottom: '60px',
+        left: '40px',
+        right: '40px',
+      },
+      // Uncomment below to use Puppeteer's header and footer templates
+      /*
+      displayHeaderFooter: true,
+      headerTemplate: `
+        <div style="font-size:10px; text-align:center; width:100%;">
+          <span>Sustainability Report</span>
+        </div>`,
+      footerTemplate: `
+        <div style="font-size:10px; text-align:center; width:100%;">
+          <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+        </div>`,
+      */
+    });
+
+    await browser.close();
+
+    return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
@@ -154,40 +165,3 @@ export async function POST(request: NextRequest) {
     return new NextResponse(JSON.stringify({ error: "Error generating report" }), { status: 500 });
   }
 }
-
-// Function to add content with structured formatting
-function addContent(pdf: jsPDF, content: string) {
-  pdf.setFont("courier", "normal"); // Use a monospaced font for consistent spacing
-  pdf.setFontSize(12);
-  
-  const sectionTitles = ["OVERVIEW", "PREDICTIONS", "RECOMMENDATIONS"];
-  const lines = content.split("\n");
-
-  let yPosition = 80;
-
-  lines.forEach((line) => {
-    if (sectionTitles.includes(line.trim().toUpperCase())) {
-      pdf.setFontSize(16);
-      pdf.setFont("courier", "bold");
-      yPosition += 10;
-    } else if (line.trim().startsWith("-")) {
-      pdf.setFontSize(12);
-      pdf.setFont("courier", "normal");
-      pdf.text("•", 25, yPosition);
-      pdf.text(line.replace("-", "").trim(), 30, yPosition);
-      yPosition += 10;
-    } else {
-      pdf.setFontSize(12);
-      pdf.setFont("courier", "normal");
-      pdf.text(line.trim(), 20, yPosition);
-      yPosition += 7;
-    }
-
-    if (yPosition > pdf.internal.pageSize.getHeight() - 30) {
-      pdf.addPage();
-      yPosition = 40;
-      addFooter(pdf, pdf.getNumberOfPages(), pdf.getNumberOfPages());
-    }
-  });
-}
-
