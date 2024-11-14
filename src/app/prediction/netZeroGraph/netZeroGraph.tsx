@@ -69,7 +69,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
     [key: number]: number;
   }): number => {
     const years = Object.keys(emissionTargets).map(Number);
-    if (years.length === 0) return 0.9;
+    if (years.length === 0) return 0.1;
     const latestYear = Math.max(...years);
     return emissionTargets[latestYear];
   };
@@ -79,7 +79,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
     currentEmissions: number,
     targetPercentage: number
   ): [number, number, number] => {
-    const targetEmissions = initialEmissions * 0.9; // 10% of initial emissions
+    const targetEmissions = initialEmissions * 0.1; // 10% of initial emissions
     const yearsToNetZero = Math.ceil(
       Math.log(targetEmissions / currentEmissions) /
         Math.log(1 - targetPercentage)
@@ -92,7 +92,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
     initialEmissions: number,
     currentEmissions: number
   ): [number] => {
-    const targetEmissions = initialEmissions * 0.9;
+    const targetEmissions = initialEmissions * 0.1;
     const minTargetPercentage =
       1 -
       Math.exp(

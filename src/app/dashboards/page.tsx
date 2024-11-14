@@ -22,6 +22,7 @@ import ThresholdSettings from "@/app/dashboards/components/ThresholdSettings";
 import RecommendationAlert from "@/app/dashboards/components/RecommendationAlert";
 import { useDashboardData } from "@/app/dashboards/hooks/useDashboardData";
 import { generateSustainabilityReport } from "@/lib/generatePdf";
+
 import { Button } from "@/components/ui/button";
 import EmissionsChart from "../prediction/predictionComponents/predictionGraph";
 import NetZeroGraph from "../prediction/netZeroGraph/netZeroGraph";
@@ -101,40 +102,95 @@ const DashboardPage = () => {
   };
 
   const handleGenerateReport = async () => {
-    console.log("Generate report button clicked"); // Add this line for debugging
+    console.log("Generate report button clicked");
     console.log("isLoading:", isLoading);
     console.log("data:", data);
-    if (isLoading || !data) return; // Ensure that data is fully loaded
-    console.log("It got past here"); // Add this line for debugging
+
+    if (isLoading || !data) return;
+    console.log("Data available for report generation");
+
     setShowChartsForExport(true);
 
-    setTimeout(async () => {
-      const capturedElements = [
-        metricSectionRef.current,
-        carbonEmissionChartRef.current,
-        gaugeChartRef.current,
-        emissionCategoryChartRef.current,
-        emissionsChartRef.current,
-        netZeroGraphRef.current,
-      ];
+    try {
+      // Wait for charts to be visible
+      setTimeout(async () => {
+        const capturedElements = [
+          metricSectionRef.current,
+          carbonEmissionChartRef.current,
+          gaugeChartRef.current,
+          emissionCategoryChartRef.current,
+          emissionsChartRef.current,
+          netZeroGraphRef.current,
+        ];
 
-      const imageDataUrls = [];
+        const imageDataUrls = [];
 
-      for (const element of capturedElements) {
-        if (element) {
-          try {
-            const canvas = await html2canvas(element);
-            const imageData = canvas.toDataURL("image/png");
-            imageDataUrls.push(imageData);
-          } catch (error) {
-            console.error("Error capturing chart:", error);
+        // Capture all charts
+        for (const element of capturedElements) {
+          if (element) {
+            try {
+              const canvas = await html2canvas(element);
+              const imageData = canvas.toDataURL("image/png");
+              imageDataUrls.push(imageData);
+            } catch (error) {
+              console.error("Error capturing chart:", error);
+            }
           }
         }
-      }
 
-      await generateSustainabilityReport(imageDataUrls); // Pass image URLs directly
+        // Prepare metrics data for the report
+        const metricsData = {
+          energy: {
+            consumption: data.energyConsumption,
+            previousYearComparison: data.energyYOY,
+          },
+          waste: {
+            quantity: data.wasteGeneration,
+          },
+          crops: {
+            area: data.cropArea,
+            fertilizer: data.fertilizerUse,
+          },
+          livestock: {
+            count: data.livestockCount,
+            emissions: data.livestockEmissions,
+          },
+          emissions: {
+            total: data.totalEmissions,
+            byCategory: data.emissionsByCategory || {},
+          },
+        };
+
+        // Call the report generation API
+        const response = await fetch("/api/generate-report", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            imageDataUrls,
+            metrics: metricsData,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.details || "Failed to generate report");
+        }
+
+        const { pdfUrl } = await response.json();
+
+        // Open the PDF in a new tab
+        window.open(pdfUrl, "_blank");
+
+        setShowChartsForExport(false);
+      }, 1000);
+    } catch (error) {
+      console.error("Error generating report:", error);
+      // You might want to show an error message to the user
+      alert("Failed to generate report. Please try again.");
       setShowChartsForExport(false);
-    }, 1000); // Adjust delay as necessary
+    }
   };
 
   if (loading || !userId || !selectedYear) {

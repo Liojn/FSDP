@@ -86,7 +86,13 @@ const MONTHS = [
 
 const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
   ({ data }, ref) => {
-    const { isLoading, netZeroAnalysis: initialNetZeroAnalysis } = useData();
+    const {
+      isLoading,
+      netZeroAnalysis: initialNetZeroAnalysis,
+      data: contextData,
+    } = useData();
+    console.log("Data from useData context:", contextData);
+
     console.log("isLoading from useData:", isLoading);
     const [netZeroAnalysis, setNetZeroAnalysis] = useState<NetZeroAnalysis>(
       initialNetZeroAnalysis || {
@@ -141,6 +147,8 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
     };
 
     const prepareYearlyData = (): DataPoint[] => {
+      console.log("prepareYearlyData called.");
+      console.log("Data in prepareYearlyData:", data);
       if (
         !data?.totalMonthlyEmissions?.length ||
         !data?.totalMonthlyAbsorption?.length
@@ -158,7 +166,9 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
 
       // Process historical data
       for (let i = 0; i < data.totalMonthlyEmissions.length; i += 12) {
+        console.log(`Processing year index: ${i}`);
         const yearSlice = data.totalMonthlyEmissions.slice(i, i + 12);
+        console.log("Year slice:", yearSlice);
         if (yearSlice.length === 0) break;
 
         const year =
@@ -258,15 +268,19 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
         ytdNetEmissions: currentYearData?.cumulativeYTDNetEmissions || null,
       };
     };
-
     useEffect(() => {
-      console.log("Data received for chart:", data);
-      if (!data) return;
+      console.log("Data received for chart (useEffect):", data);
+      if (!data) {
+        console.log("No data received, returning early.");
+        return;
+      }
 
       const yearlyData = prepareYearlyData();
+      console.log("Yearly data calculated:", yearlyData);
       setChartData(yearlyData);
 
       const analysis = analyzeNetZeroYears(yearlyData);
+      console.log("Net zero analysis result:", analysis);
       setNetZeroAnalysis(analysis);
       setShowNetZeroAlert(
         analysis.cumulativeNetZeroYear !== null &&
@@ -301,6 +315,7 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
     };
 
     const renderYearlyChart = () => {
+      console.log("Rendering chart with chartData:", chartData);
       if (chartData.length === 0) {
         return (
           <div className="h-64 flex items-center justify-center">
