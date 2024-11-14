@@ -114,10 +114,8 @@ const DashboardPage = () => {
   };
 
   const handleGenerateReport = async () => {
-    if (isLoading || !data) return;
-    setShowChartsForExport(true);
-    setExportProgress(10);
     setIsCancelled(false);
+    setExportProgress(10);
 
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -128,39 +126,7 @@ const DashboardPage = () => {
           return;
         }
         setExportProgress(30);
-
-        const capturedElements = [
-          metricSectionRef.current,
-          carbonEmissionChartRef.current,
-          gaugeChartRef.current,
-          emissionCategoryChartRef.current,
-          emissionsChartRef.current,
-          netZeroGraphRef.current,
-        ];
-
-        const imageDataUrls = [];
-
-        for (const element of capturedElements) {
-          if (isCancelled) {
-            return;
-          }
-          if (element) {
-            try {
-              const canvas = await html2canvas(element);
-              const imageData = canvas.toDataURL("image/png");
-              imageDataUrls.push(imageData);
-            } catch (error) {
-              if (error instanceof Error && error.name !== "AbortError") {
-                console.error("Error capturing chart:", error);
-              }
-            }
-          }
-        }
-
-        if (isCancelled) {
-          return;
-        }
-        setExportProgress(60);
+        console.log("Metrics data being sent:", data);
 
         const response = await fetch("/api/generate-report", {
           method: "POST",
@@ -168,7 +134,7 @@ const DashboardPage = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            imageDataUrls,
+            metrics: data, // Send only necessary data if required
           }),
           signal: controller.signal,
         });
@@ -183,7 +149,6 @@ const DashboardPage = () => {
         setExportProgress(80);
 
         const { pdfDataUri } = await response.json();
-
         const blob = await (await fetch(pdfDataUri)).blob();
         const url = URL.createObjectURL(blob);
 
@@ -195,7 +160,6 @@ const DashboardPage = () => {
         document.body.removeChild(link);
 
         setExportProgress(100);
-        setShowChartsForExport(false);
         setTimeout(() => {
           setExportProgress(0);
           setIsAlertDialogOpen(false); // Close the dialog after the report is finished downloading
@@ -206,7 +170,6 @@ const DashboardPage = () => {
         console.error("Error generating report:", error);
         alert("Failed to generate report. Please try again.");
       }
-      setShowChartsForExport(false);
       setExportProgress(0);
     }
   };
@@ -244,7 +207,6 @@ const DashboardPage = () => {
                     setIsAlertDialogOpen(true);
                     handleGenerateReport();
                   }}
-                  disabled={isLoading || !data}
                   className="bg-emerald-500 text-emerald-50 hover:bg-emerald-600 w-full md:w-auto"
                 >
                   Export Report to PDF

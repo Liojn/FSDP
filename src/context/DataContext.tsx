@@ -42,8 +42,62 @@ interface DataContextType {
   setIsLoading: (isLoading: boolean) => void;
 }
 
+const PROJECTION_YEARS = 100;
+
 // Create the DataContext
 const DataContext = createContext<DataContextType | undefined>(undefined);
+const calculateMonthlyNetZeroPoint = (
+  data: DataPoint[]
+): { year: number | null; month: number | null } => {
+  let previousPoint: DataPoint | null = null;
+
+  for (const point of data) {
+    if (point.cumulativeYTDNetEmissions !== undefined) {
+      if (
+        previousPoint &&
+        previousPoint.cumulativeYTDNetEmissions! > 0 &&
+        point.cumulativeYTDNetEmissions <= 0
+      ) {
+        const totalDays = 365;
+        const daysToZero =
+          (Math.abs(previousPoint.cumulativeYTDNetEmissions!) /
+            (point.cumulativeYTDNetEmissions -
+              previousPoint.cumulativeYTDNetEmissions!)) *
+          totalDays;
+
+        const month = Math.floor(daysToZero / (totalDays / 12));
+
+        return {
+          year: previousPoint.year || null,
+          month: Math.min(month, 11), // Ensure month index is within 0-11
+        };
+      }
+      previousPoint = point;
+    }
+  }
+  return { year: null, month: null };
+};
+
+const analyzeNetZeroYears = (chartData: DataPoint[]): NetZeroAnalysis => {
+  if (!chartData.length) {
+    return {
+      cumulativeNetZeroYear: null,
+      cumulativeNetZeroMonth: null,
+      ytdNetEmissions: null,
+    };
+  }
+
+  const { year: netZeroYear, month: netZeroMonth } =
+    calculateMonthlyNetZeroPoint(chartData);
+  const currentYear = new Date().getFullYear();
+  const currentYearData = chartData.find((d) => d.year === currentYear);
+
+  return {
+    cumulativeNetZeroYear: netZeroYear,
+    cumulativeNetZeroMonth: netZeroMonth,
+    ytdNetEmissions: currentYearData?.cumulativeYTDNetEmissions || null,
+  };
+};
 
 interface DataProviderProps {
   children: ReactNode;
@@ -105,11 +159,12 @@ const prepareYearlyData = (data: MonthlyData): DataPoint[] => {
     previousYearEmissions = totalEmissions;
   }
 
+  // Add projections for future years
   const projectedData: DataPoint[] = [];
   if (historicalData.length > 0 && cumulativeNetEmissions > 0) {
     let projectedEmissions = previousYearEmissions;
 
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= PROJECTION_YEARS; i++) {
       const projectedYear = lastDataYear + i;
       const targetPercentage =
         data.emissionTargets[projectedYear] || latestTarget;
@@ -134,22 +189,6 @@ const prepareYearlyData = (data: MonthlyData): DataPoint[] => {
   }
 
   return [...historicalData, ...projectedData];
-};
-
-const analyzeNetZeroYears = (chartData: DataPoint[]): NetZeroAnalysis => {
-  let cumulativeNetZeroYear = null;
-  let cumulativeNetZeroMonth = null;
-  let ytdNetEmissions: number | null = null;
-
-  const lastPoint = chartData[chartData.length - 1];
-  if (lastPoint) {
-    ytdNetEmissions = lastPoint.cumulativeYTDNetEmissions ?? null;
-    if (ytdNetEmissions && ytdNetEmissions <= 0) {
-      cumulativeNetZeroYear = lastPoint.year ?? null;
-      cumulativeNetZeroMonth = 11; // Assume December
-    }
-  }
-  return { cumulativeNetZeroYear, cumulativeNetZeroMonth, ytdNetEmissions };
 };
 
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {

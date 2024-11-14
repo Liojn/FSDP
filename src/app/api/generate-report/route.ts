@@ -1,63 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/api/generate-report/route.ts
 
-import { NextResponse } from "next/server";
-import { jsPDF } from "jspdf";
+import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { jsPDF } from 'jspdf';
+import { MetricData } from "@/types";
 import Anthropic from "@anthropic-ai/sdk";
 
+// Initialize the Anthropic AI client
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || "",
 });
 
-async function getAIRecommendations() {
-  const prompt = `
-As an AI assistant, please generate three (3) specific, actionable recommendations that will help a company reduce its environmental impact and improve its sustainability performance. The recommendations should focus on areas where significant improvements can be made and be relevant to common sustainability challenges faced by companies.
 
-Provide the recommendations in plaintext format.
-`;
-
-  const response = await anthropic.messages.create({
-    model: "claude-3-haiku-20240307",
-    max_tokens: 1000,
-    temperature: 0.7,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: prompt,
-          },
-        ],
-      },
-    ],
-  });
-
-  const assistantReply = (response.content[0] as any).text;
-  return assistantReply;
-}
-
-function addRecommendationsToPDF(pdf: jsPDF, recommendationsText: string) {
-  pdf.addPage();
-  pdf.setFontSize(20);
-  pdf.text("Sustainability Recommendations", 20, 40);
-
-  let yPosition = 80;
-  const lines = pdf.splitTextToSize(
-    recommendationsText,
-    pdf.internal.pageSize.getWidth() - 40
-  );
-
-  lines.forEach((line: string) => {
-    if (yPosition > pdf.internal.pageSize.getHeight() - 30) {
-      pdf.addPage();
-      yPosition = 40;
-    }
-    pdf.text(line, 20, yPosition);
-    yPosition += 15;
-  });
-}
-
+// Function to add a header to the PDF
 function addHeader(pdf: jsPDF) {
   pdf.setFontSize(24);
   pdf.text("Sustainability Report", 20, 40);
@@ -66,6 +22,7 @@ function addHeader(pdf: jsPDF) {
   pdf.text(`Generated on: ${date}`, 20, 60);
 }
 
+// Function to add a footer to the PDF
 function addFooter(pdf: jsPDF, pageNumber: number, totalPages: number) {
   pdf.setFontSize(12);
   pdf.text(
@@ -76,84 +33,164 @@ function addFooter(pdf: jsPDF, pageNumber: number, totalPages: number) {
   );
 }
 
-export async function POST(req: Request) {
-  try {
-    const { imageDataUrls } = await req.json();
+// Function to calculate scope-based emissions with added safety checks for livestock data
+function calculateScopeEmissions(metrics: MetricData) {
+  console.log("Metrics data:", metrics);
 
-    if (!imageDataUrls) {
-      return NextResponse.json(
-        { error: "Images are required" },
-        { status: 400 }
-      );
+  // Ensure `livestock` is defined with default values if missing
+  const livestockData = metrics.livestock || { count: 0, emissions: 0 };
+
+  console.log("Livestock data:", livestockData); // Print livestock data for debugging
+
+  const scope1 = 
+    (livestockData.emissions || 0) + 
+    (metrics.emissions?.byCategory?.equipment || 0);
+
+  const scope2 = (metrics.energy?.consumption || 0) * 0.0005; // Convert kWh to CO2e tons (approximate)
+
+  const totalEmissions = metrics.emissions?.total || 0;
+  const scope3 = totalEmissions - (scope1 + scope2);
+
+  return {
+    scope1,
+    scope2,
+    scope3: Math.max(0, scope3),
+  };
+}
+
+
+// Sample `generatePrompt` usage, now calling `calculateScopeEmissions`
+const generatePrompt = async (metrics: MetricData) => {
+  console.log("Metrics in generatePrompt:", metrics); // Debug log
+  const scopeEmissions = calculateScopeEmissions(metrics);
+
+  const aiPrompt = `Generate a comprehensive sustainability report with the following structure and using only the data provided:
+
+OVERVIEW
+- Analyze the current total emissions of ${scopeEmissions.scope1 + scopeEmissions.scope2 + scopeEmissions.scope3} tons CO₂e
+- Break down emissions by scope:
+  * Scope 1: ${scopeEmissions.scope1.toFixed(2)} tons CO₂e
+  * Scope 2: ${scopeEmissions.scope2.toFixed(2)} tons CO₂e
+  * Scope 3: ${scopeEmissions.scope3.toFixed(2)} tons CO₂e
+- Evaluate energy consumption trend of ${metrics.energy.consumption} kWh (${metrics.energy.previousYearComparison}% change)
+- Assess current waste management: ${metrics.waste.quantity} tons
+- Review agricultural operations: ${metrics.crops.area} hectares with ${metrics.crops.fertilizer} tons fertilizer usage
+- Analyze livestock impact: ${metrics.livestock.count} animals producing ${metrics.livestock.emissions} tons CO₂e
+
+PREDICTIONS
+- Project emissions trends for next 12 months based on current data
+- Forecast energy consumption patterns considering ${metrics.energy.previousYearComparison}% year-over-year change
+- Estimate future waste generation trajectory
+- Project agricultural impact considering current crop area and fertilizer usage
+- Calculate expected livestock emissions based on current herd size
+
+RECOMMENDATIONS
+- Provide 3 actionable solutions prioritized by:
+  * Emission reduction potential
+  * Implementation feasibility
+  * Return on investment
+- Include specific targets for:
+  * Energy efficiency improvements
+  * Waste reduction goals
+  * Agricultural optimization
+  * Livestock management
+- Detail implementation timeline and resource requirements
+
+Present the report in a clear, professional format without any introductory phrases or conclusions. Focus on data-driven insights and actionable recommendations.`;
+
+  return aiPrompt;
+};
+
+
+// API route handler for POST requests
+export async function POST(request: NextRequest) {
+  try {
+    // Get the data from the request body
+// Extract metrics from the request body
+    const { metrics } = (await request.json()) as { metrics: MetricData };
+
+    if (!metrics) {
+      console.error("Metrics data is missing from request");
+      return NextResponse.json({ error: "Metrics data is missing" }, { status: 400 });
     }
 
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "px",
-      format: "a4",
+    console.log("Metrics data received:", metrics);
+
+    const aiPromptContent = await generatePrompt(metrics);
+
+
+    const prompt = `\n\nHuman: ${aiPromptContent}\n\nAssistant:`;
+
+    // Call the Anthropic API to get the report content
+    const msg = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307", // Use the appropriate model
+      max_tokens: 1000,
+      temperature: 0.7,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: prompt,
+            },
+          ],
+        },
+      ],
     });
 
-    const totalPages = imageDataUrls.length + 1; // +1 for recommendations page
-    let currentPageNumber = 1;
+// After receiving the response
+console.log("Received response from Anthropic API");
+console.log("Full response:", msg); // Log the full response to see its structure
 
-    // Add header on the first page only
+// Extract the assistant's reply from the appropriate property
+// Adjust the property path based on your findings in the logged response
+const assistantReply = (msg.content[0] as any).text;
+console.log("Assistant Reply:", assistantReply);
+
+    // Create a PDF using jsPDF
+    const pdf = new jsPDF();
+
+    // Add header
     addHeader(pdf);
-    addFooter(pdf, currentPageNumber, totalPages);
 
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+    // Add the report content
+    let yPosition = 80;
+    const lines = pdf.splitTextToSize(
+      assistantReply,
+      pdf.internal.pageSize.getWidth() - 40
+    );
 
-    // Adjust image to fill full page width, keeping aspect ratio consistent
-    const imgWidth = pageWidth - 40; // margins of 20px on each side
-    const imgHeight = imgWidth * 0.5625; // 16:9 aspect ratio
-
-    for (let i = 0; i < imageDataUrls.length; i++) {
-      if (i > 0) {
+    lines.forEach((line: string) => {
+      if (yPosition > pdf.internal.pageSize.getHeight() - 30) {
         pdf.addPage();
-        currentPageNumber++;
+        yPosition = 40;
       }
+      pdf.text(line, 20, yPosition);
+      yPosition += 15;
+    });
 
-      // Center image vertically on each page
-      const imgYPosition = (pageHeight - imgHeight) / 2;
-
-      pdf.addImage(
-        imageDataUrls[i],
-        "PNG",
-        20,
-        imgYPosition,
-        imgWidth,
-        imgHeight,
-        undefined,
-        "NONE"
-      );
-
-      addFooter(pdf, currentPageNumber, totalPages);
+    // Add footer
+    const totalPages = pdf.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      addFooter(pdf, i, totalPages);
     }
 
-    // Add recommendations on a new page
-    const aiRecommendations = await getAIRecommendations();
-    pdf.addPage();
-    currentPageNumber++;
-    addFooter(pdf, currentPageNumber, totalPages);
-    addRecommendationsToPDF(pdf, aiRecommendations);
+    // Generate the PDF as an ArrayBuffer
+    const pdfArrayBuffer = pdf.output('arraybuffer');
 
-    const pdfDataUri = pdf.output("datauristring");
-
-    return NextResponse.json(
-      {
-        success: true,
-        pdfDataUri,
+    // Return the PDF file in the response
+    return new NextResponse(pdfArrayBuffer, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="sustainability_report.pdf"',
       },
-      { status: 200 }
-    );
+    });
+
   } catch (error) {
-    console.error("Report generation error:", error);
-    return NextResponse.json(
-      {
-        error: "Failed to generate report",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+    console.error("Error generating report:", error);
+    return new NextResponse(JSON.stringify({ error: "Error generating report" }), { status: 500 });
   }
 }

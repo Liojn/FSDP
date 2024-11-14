@@ -1,7 +1,4 @@
-// Remove any references to 'data' from props
-// Use 'contextData' or 'chartData' from the context
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef } from "react";
 import {
   LineChart,
   Line,
@@ -68,7 +65,7 @@ const MONTHS = [
   "December",
 ];
 
-const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
+const EmissionsChart = forwardRef<HTMLDivElement, EmissionsChartProps>(
   (props, ref) => {
     const {
       isLoading,
@@ -77,18 +74,36 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
       chartData,
     } = useData();
 
-    console.log("Data from useData context:", contextData);
-    console.log("isLoading from useData:", isLoading);
+    // Initial Logs
+    console.log("=== EmissionsChart Render ===");
+    console.log("Props:", props);
+    console.log("Context Data:", contextData);
+    console.log("isLoading:", isLoading);
+    console.log("netZeroAnalysis:", netZeroAnalysis);
+    console.log("chartData Length:", chartData?.length);
+    useEffect(() => {
+      console.log("Chart Data:", chartData);
+    }, [chartData]);
 
     const [showNetZeroAlert, setShowNetZeroAlert] = useState(false);
 
     useEffect(() => {
-      setShowNetZeroAlert(
+      console.log(">>> useEffect: Updating showNetZeroAlert");
+      console.log("netZeroAnalysis:", netZeroAnalysis);
+
+      const shouldShowAlert =
         netZeroAnalysis !== null &&
-          netZeroAnalysis.cumulativeNetZeroYear !== null &&
-          netZeroAnalysis.cumulativeNetZeroMonth !== null
-      );
+        netZeroAnalysis.cumulativeNetZeroYear !== null &&
+        netZeroAnalysis.cumulativeNetZeroMonth !== null;
+
+      console.log("Computed shouldShowAlert:", shouldShowAlert);
+      setShowNetZeroAlert(shouldShowAlert);
     }, [netZeroAnalysis]);
+
+    // Log after state update (note: state updates are asynchronous)
+    useEffect(() => {
+      console.log(">>> showNetZeroAlert state updated to:", showNetZeroAlert);
+    }, [showNetZeroAlert]);
 
     const CustomTooltip: React.FC<TooltipProps> = ({
       active,
@@ -117,28 +132,37 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
     };
 
     const renderYearlyChart = () => {
-      console.log("Rendering chart with chartData:", chartData);
+      console.log(">>> renderYearlyChart: chartData:", chartData);
 
-            // Modify the filtering condition to exclude data points with all zero values
-      const validChartData = chartData.filter((dataPoint) => 
-        dataPoint.year !== undefined &&
-        dataPoint.year !== null &&
-        (
-          dataPoint.totalEmissions !== 0 ||
-          dataPoint.absorption !== 0 ||
-          dataPoint.netEmissions !== 0 ||
-          dataPoint.cumulativeYTDNetEmissions !== 0 ||
-          dataPoint.targetEmissions !== 0
-        )
-      );
+      // Modify the filtering condition to exclude data points with all zero values
+      const validChartData = chartData.filter((dataPoint) => {
+        const isValid =
+          dataPoint.year !== undefined &&
+          dataPoint.year !== null &&
+          (dataPoint.totalEmissions !== 0 ||
+            dataPoint.absorption !== 0 ||
+            dataPoint.netEmissions !== 0 ||
+            dataPoint.cumulativeYTDNetEmissions !== 0 ||
+            dataPoint.targetEmissions !== 0);
+
+        if (!isValid) {
+          console.log("Filtered out DataPoint:", dataPoint);
+        }
+
+        return isValid;
+      });
+
+      console.log(">>> validChartData Length:", validChartData.length);
 
       if (validChartData.length === 0) {
+        console.log("No valid data available for the chart.");
         return (
           <div className="h-64 flex items-center justify-center">
             <p>No data available</p>
           </div>
         );
       }
+
       return (
         <ResponsiveContainer width="100%" height={400}>
           <LineChart
@@ -202,6 +226,7 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
     };
 
     if (isLoading) {
+      console.log(">>> EmissionsChart: isLoading is true");
       return (
         <Card className="w-full">
           <CardContent className="p-6">
@@ -211,6 +236,29 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
           </CardContent>
         </Card>
       );
+    }
+
+    // Log condition values before rendering
+    console.log(">>> Before Rendering JSX:");
+    console.log("showNetZeroAlert:", showNetZeroAlert);
+    console.log("netZeroAnalysis:", netZeroAnalysis);
+
+    if (netZeroAnalysis) {
+      console.log(
+        "cumulativeNetZeroYear:",
+        netZeroAnalysis.cumulativeNetZeroYear
+      );
+      console.log(
+        "cumulativeNetZeroMonth:",
+        netZeroAnalysis.cumulativeNetZeroMonth
+      );
+      if (netZeroAnalysis.cumulativeNetZeroMonth !== null) {
+        console.log(
+          "Projected Carbon Neutrality:",
+          MONTHS[netZeroAnalysis.cumulativeNetZeroMonth],
+          netZeroAnalysis.cumulativeNetZeroYear
+        );
+      }
     }
 
     return (
@@ -244,5 +292,3 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
 EmissionsChart.displayName = "EmissionsChart";
 
 export default EmissionsChart;
-
-
