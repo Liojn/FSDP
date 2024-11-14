@@ -5,7 +5,7 @@ interface ModalProps {
   isVisible: boolean;
   category: string | null;
   userId: string;
-  month?: number;
+  month?: string | number;
   year: number;
   onClose: () => void;
 }
@@ -26,16 +26,33 @@ const Modal: React.FC<ModalProps> = ({
   useEffect(() => {
     if (!isVisible || !category) return;
 
-    if (month !== undefined && month !== selectedMonth) {
-      setSelectedMonth(month);
+    // Convert `month` to a number if it is a string, or set it to `null` if `month` is undefined
+    const parsedMonth: number | null =
+      typeof month === 'string'
+        ? parseInt(month, 10)
+        : typeof month === 'number'
+        ? month
+        : null;
+
+    // Check if `parsedMonth` is a valid number, or set to null if it's NaN
+    if (typeof parsedMonth === 'number' && !isNaN(parsedMonth)) {
+      setSelectedMonth(parsedMonth);
+    } else {
+      setSelectedMonth(null);
+      console.error("Invalid month value:", month);
     }
+  }, [isVisible, category, month]);
+
+  // Separate useEffect for API call
+  useEffect(() => {
+    if (!isVisible || !category || selectedMonth === null) return;
 
     const fetchCategoryData = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const endpoint = selectedMonth
+        const endpoint = selectedMonth !== null
           ? `/api/dashboards/popup/${userId}?year=${year}&month=${selectedMonth}`
           : `/api/dashboards/popup/${userId}?year=${year}`;
 
@@ -254,3 +271,4 @@ const Modal: React.FC<ModalProps> = ({
 };
 
 export default Modal;
+
