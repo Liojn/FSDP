@@ -346,7 +346,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
                 <br />
                 To hit net zero emissions by <strong>2050</strong>, you have to
                 reduce your emissions by at least{" "}
-                <strong>{minTargetPercentage?.toFixed(0)}</strong> per year for
+                <strong>{minTargetPercentage?.toFixed(0)}%</strong> per year for
                 future years.
               </AlertDescription>
             </Alert>
