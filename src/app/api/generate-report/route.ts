@@ -7,8 +7,7 @@ import { MetricData } from "@/types";
 import Anthropic from "@anthropic-ai/sdk";
 import puppeteer from 'puppeteer-core'; // Import puppeteer-core
 import { generateHTMLReport } from '@/templates/reportTemplate'; // Import the HTML template
-import path from 'path';
-import fs from 'fs';
+
 
 // Initialize the Anthropic AI client
 const anthropic = new Anthropic({
@@ -84,6 +83,7 @@ Present the report in a clear, professional format without any introductory phra
   return aiPrompt;
 };
 
+
 // Main handler for the PDF generation request
 export async function POST(request: NextRequest) {
   try {
@@ -114,14 +114,11 @@ export async function POST(request: NextRequest) {
     const generatedDate = new Date().toLocaleDateString();
     const htmlContent = generateHTMLReport(assistantReply, generatedDate);
 
-    // Launch Puppeteer
-    const browser = await puppeteer.launch({
-      headless: true,
-      // Specify the path to Chromium executable if necessary
-      // executablePath: '/path/to/chromium',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
 
+    const browser = await puppeteer.launch({
+  args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  headless: true,
+});
     const page = await browser.newPage();
 
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
@@ -136,18 +133,6 @@ export async function POST(request: NextRequest) {
         left: '40px',
         right: '40px',
       },
-      // Uncomment below to use Puppeteer's header and footer templates
-      /*
-      displayHeaderFooter: true,
-      headerTemplate: `
-        <div style="font-size:10px; text-align:center; width:100%;">
-          <span>Sustainability Report</span>
-        </div>`,
-      footerTemplate: `
-        <div style="font-size:10px; text-align:center; width:100%;">
-          <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
-        </div>`,
-      */
     });
 
     await browser.close();
