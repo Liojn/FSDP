@@ -62,24 +62,37 @@ function calculateScopeEmissions(metrics: MetricData) {
 // Sample `generatePrompt` usage, now calling `calculateScopeEmissions`
 const generatePrompt = async (metrics: MetricData) => {
   console.log("Metrics in generatePrompt:", metrics); // Debug log
+
   const scopeEmissions = calculateScopeEmissions(metrics);
 
+  // Safely access energy properties
+  const energyConsumption = metrics.energy?.consumption ?? 0;
+  const previousYearComparison = metrics.energy?.previousYearComparison ?? 0;
+
+  // Safely access other properties as well
+  const wasteQuantity = metrics.waste?.quantity ?? 0;
+  const cropsArea = metrics.crops?.area ?? 0;
+  const cropsFertilizer = metrics.crops?.fertilizer ?? 0;
+  const livestockCount = metrics.livestock?.count ?? 0;
+  const livestockEmissions = metrics.livestock?.emissions ?? 0;
+
+  // Proceed to use these variables in your AI prompt
   const aiPrompt = `Generate a comprehensive sustainability report with the following structure and using only the data provided:
 
 OVERVIEW
-- Analyze the current total emissions of ${scopeEmissions.scope1 + scopeEmissions.scope2 + scopeEmissions.scope3} tons CO₂e
+- Analyze the current total emissions of ${(scopeEmissions.scope1 + scopeEmissions.scope2 + scopeEmissions.scope3).toFixed(2)} tons CO₂e
 - Break down emissions by scope:
   * Scope 1: ${scopeEmissions.scope1.toFixed(2)} tons CO₂e
   * Scope 2: ${scopeEmissions.scope2.toFixed(2)} tons CO₂e
   * Scope 3: ${scopeEmissions.scope3.toFixed(2)} tons CO₂e
-- Evaluate energy consumption trend of ${metrics.energy.consumption} kWh (${metrics.energy.previousYearComparison}% change)
-- Assess current waste management: ${metrics.waste.quantity} tons
-- Review agricultural operations: ${metrics.crops.area} hectares with ${metrics.crops.fertilizer} tons fertilizer usage
-- Analyze livestock impact: ${metrics.livestock.count} animals producing ${metrics.livestock.emissions} tons CO₂e
+- Evaluate energy consumption trend of ${energyConsumption} kWh (${previousYearComparison}% change)
+- Assess current waste management: ${wasteQuantity} tons
+- Review agricultural operations: ${cropsArea} hectares with ${cropsFertilizer} tons fertilizer usage
+- Analyze livestock impact: ${livestockCount} animals producing ${livestockEmissions} tons CO₂e
 
 PREDICTIONS
 - Project emissions trends for next 12 months based on current data
-- Forecast energy consumption patterns considering ${metrics.energy.previousYearComparison}% year-over-year change
+- Forecast energy consumption patterns considering ${previousYearComparison}% year-over-year change
 - Estimate future waste generation trajectory
 - Project agricultural impact considering current crop area and fertilizer usage
 - Calculate expected livestock emissions based on current herd size
@@ -100,6 +113,7 @@ Present the report in a clear, professional format without any introductory phra
 
   return aiPrompt;
 };
+
 
 
 // API route handler for POST requests

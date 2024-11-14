@@ -36,9 +36,89 @@ import EmissionsChart from "../prediction/predictionComponents/predictionGraph";
 import NetZeroGraph from "../prediction/netZeroGraph/netZeroGraph";
 import html2canvas from "html2canvas";
 import { userGoals } from "../prediction/page";
+import { MetricData } from "@/types";
+import useSWR from "swr";
 
+// Utility function to convert kilograms to tons
+const kgToTons = (kg: number) => kg / 1000;
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+// Function to map metrics array to MetricData object
+const mapMetricsArrayToObject = (metricsArray: any[]): MetricData => {
+  // Initialize the MetricData object with default values
+  const metricObject: MetricData = {
+    energy: {
+      consumption: 0,
+      previousYearComparison: 0,
+    },
+    waste: {
+      quantity: 0,
+    },
+    crops: {
+      area: 0,
+      fertilizer: 0,
+    },
+    livestock: {
+      count: 0,
+      emissions: 0,
+    },
+    emissions: {
+      total: 0,
+      byCategory: {},
+    },
+  };
+
+  metricsArray.forEach((metric) => {
+    const value = parseFloat(metric.value) || 0;
+    switch (metric.title) {
+      case "Total Energy Consumption":
+        metricObject.energy.consumption = value;
+        break;
+
+      case "Energy Comparison to Previous Year":
+        metricObject.energy.previousYearComparison = value;
+        break;
+
+      case "Waste Quantity":
+        metricObject.waste.quantity = value;
+        break;
+
+      case "Crops Area":
+        metricObject.crops.area = value;
+        break;
+
+      case "Crops Fertilizer Used":
+        metricObject.crops.fertilizer = value;
+        break;
+
+      case "Livestock Count":
+        metricObject.livestock.count = value;
+        break;
+
+      case "Livestock Emissions":
+        metricObject.livestock.emissions = kgToTons(value); // Convert kg to tons
+        break;
+
+      case "Total Net Carbon Emissions":
+        metricObject.emissions.total = kgToTons(value); // Convert kg to tons
+        break;
+
+      case "Total Carbon Neutral Emissions":
+        // Assuming this is part of emissions by category
+        metricObject.emissions.byCategory.carbonNeutral = kgToTons(value);
+        break;
+
+      // Add other cases as needed
+      default:
+        console.warn(`Unhandled metric title: ${metric.title}`);
+        break;
+    }
+  });
+
+  return metricObject;
+};
 const DashboardPage = () => {
   const router = useRouter();
+
   const {
     loading,
     yearFilter,
@@ -59,7 +139,11 @@ const DashboardPage = () => {
     handleYearFilterChange,
     handleMonthClick,
   } = useDashboardData();
-
+  console.log("RIGHTHERE", userId);
+  const { data: metricsDataToUse, error: metricsError } = useSWR<MetricData>(
+    userId ? `/api/metrics/${userId}` : null,
+    fetcher
+  );
   const [showModal, setShowModal] = useState(false);
   const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -68,7 +152,7 @@ const DashboardPage = () => {
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
-  const { data, isLoading } = useData(); // Access data and isLoading from context
+
   const emissionsChartRef = useRef(null);
   const netZeroGraphRef = useRef(null);
 
@@ -112,8 +196,16 @@ const DashboardPage = () => {
         return null;
     }
   };
+  console.log("Metrics data received on client:", metricsDataToUse);
 
   const handleGenerateReport = async () => {
+    if (!metricsDataToUse) {
+      console.error("Metrics data is undefined.");
+      return;
+    }
+
+    console.log("Metrics Data being sent:", metricsDataToUse);
+
     setIsCancelled(false);
     setExportProgress(10);
 
@@ -126,7 +218,6 @@ const DashboardPage = () => {
           return;
         }
         setExportProgress(30);
-        console.log("Metrics data being sent:", data);
 
         const response = await fetch("/api/generate-report", {
           method: "POST",
@@ -134,7 +225,7 @@ const DashboardPage = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            metrics: data, // Send only necessary data if required
+            metrics: metricsDataToUse, // Use metricsDataToUse directly
           }),
           signal: controller.signal,
         });
@@ -148,9 +239,8 @@ const DashboardPage = () => {
         }
         setExportProgress(80);
 
-        const { pdfDataUri } = await response.json();
-        const blob = await (await fetch(pdfDataUri)).blob();
-        const url = URL.createObjectURL(blob);
+        const pdfBlob = await response.blob();
+        const url = URL.createObjectURL(pdfBlob);
 
         const link = document.createElement("a");
         link.href = url;
@@ -162,7 +252,7 @@ const DashboardPage = () => {
         setExportProgress(100);
         setTimeout(() => {
           setExportProgress(0);
-          setIsAlertDialogOpen(false); // Close the dialog after the report is finished downloading
+          setIsAlertDialogOpen(false);
         }, 2000);
       }, 1000);
     } catch (error) {
