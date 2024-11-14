@@ -128,7 +128,13 @@ const DashboardPage = () => {
         }
       }
 
-      await generateSustainabilityReport(imageDataUrls);
+      // Pass the captured elements as expected by the function
+      await generateSustainabilityReport(
+        capturedElements,
+        netZeroGraphRef,
+        emissionsChartRef
+      );
+
       setShowChartsForExport(false);
     }, 500); // Adjust delay if needed
   };
@@ -306,11 +312,7 @@ const DashboardPage = () => {
             data={data || undefined}
             isLoading={isLoading}
           />
-          <NetZeroGraph
-            ref={netZeroGraphRef}
-            data={data}
-            isLoading={isLoading}
-          />
+          <NetZeroGraph data={data || undefined} isLoading={isLoading} />
         </div>
       )}
 
