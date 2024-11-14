@@ -1,7 +1,7 @@
 "use client";
 import { PageHeader } from "@/components/shared/page-header";
 import { useData, MonthlyData } from "@/context/DataContext";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import NetZeroGraph from "./netZeroGraph/netZeroGraph";
 import EmissionsChart from "./predictionComponents/predictionGraph";
 
@@ -11,15 +11,16 @@ export interface UserGoals {
   percentageReduction: number;
 }
 
+export const userGoals: UserGoals = {
+  annualEmissionsTarget: 10000,
+  targetYear: 2030,
+  percentageReduction: 50,
+};
+
 export default function PredictionPage() {
   const netZeroGraphRef = useRef<HTMLDivElement>(null);
   const emissionsChartRef = useRef<HTMLDivElement>(null);
   const { setData, setIsLoading } = useData();
-  const [userGoals] = useState<UserGoals>({
-    annualEmissionsTarget: 10000,
-    targetYear: 2030,
-    percentageReduction: 50,
-  });
 
   useEffect(() => {
     const fetchHistoricalData = async () => {
