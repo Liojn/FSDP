@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
 // MonthlyData and other types based on your previous code
-interface MonthlyData {
+export interface MonthlyData {
   equipment: number[];
   livestock: number[];
   crops: number[];
@@ -14,7 +14,7 @@ interface MonthlyData {
   emissionTargets: { [key: number]: number };
 }
 
-interface DataPoint {
+export interface DataPoint {
   year?: number;
   month?: number;
   name?: string;
@@ -27,7 +27,7 @@ interface DataPoint {
   targetEmissions?: number;
 }
 
-interface NetZeroAnalysis {
+export interface NetZeroAnalysis {
   cumulativeNetZeroYear: number | null;
   cumulativeNetZeroMonth: number | null;
   ytdNetEmissions: number | null;
@@ -38,6 +38,8 @@ interface DataContextType {
   chartData: DataPoint[];
   netZeroAnalysis: NetZeroAnalysis | null;
   setData: (data: MonthlyData) => void;
+  isLoading: boolean;
+  setIsLoading: (isLoading: boolean) => void;
 }
 
 // Create the DataContext
@@ -103,9 +105,21 @@ const prepareYearlyData = (data: MonthlyData): DataPoint[] => {
     previousYearEmissions = totalEmissions;
   }
 
-  // Add projections (simplified version)
-  for (let i = 1; i <= 10; i++) {
-    // Simplified for brevity; complete based on your logic
+  // Add projections for future years without adding them to historicalData
+  if (historicalData.length > 0 && cumulativeNetEmissions > 0) {
+    let projectedEmissions = previousYearEmissions;
+    for (let i = 1; i <= 10; i++) {
+      const projectedYear = lastDataYear + i;
+      const targetPercentage =
+        data.emissionTargets[projectedYear] || latestTarget;
+      projectedEmissions *= 1 - targetPercentage;
+
+      const projectedNetEmissions = projectedEmissions - latestAnnualAbsorption;
+      cumulativeNetEmissions += projectedNetEmissions;
+
+      // Break out of the loop if cumulative emissions reach zero or less
+      if (cumulativeNetEmissions <= 0) break;
+    }
   }
 
   return historicalData;
@@ -133,16 +147,28 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [netZeroAnalysis, setNetZeroAnalysis] =
     useState<NetZeroAnalysis | null>(null);
 
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
   React.useEffect(() => {
     if (data) {
       const processedData = prepareYearlyData(data);
       setChartData(processedData);
       setNetZeroAnalysis(analyzeNetZeroYears(processedData));
+      setIsLoading(false);
     }
   }, [data]);
 
   return (
-    <DataContext.Provider value={{ data, chartData, netZeroAnalysis, setData }}>
+    <DataContext.Provider
+      value={{
+        data,
+        chartData,
+        netZeroAnalysis,
+        setData,
+        isLoading,
+        setIsLoading,
+      }}
+    >
       {children}
     </DataContext.Provider>
   );

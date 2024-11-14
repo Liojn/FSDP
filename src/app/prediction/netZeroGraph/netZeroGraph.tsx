@@ -14,7 +14,7 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useData } from "@/context/DataContext"; // Import the context
-
+import { UserGoals } from "../page"; // Ensure this path is correct
 interface MonthlyData {
   equipment: number[];
   livestock: number[];
@@ -37,6 +37,7 @@ interface DataPoint {
 interface NetZeroGraphProps {
   data?: MonthlyData;
   isLoading?: boolean;
+  userGoals: UserGoals;
 }
 
 const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
@@ -58,6 +59,12 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
     null
   );
 
+  console.log("NetZeroGraph rendered");
+  console.log("Received propsData:", propsData);
+  console.log("Received contextData:", contextData);
+  console.log("Using data:", data);
+  console.log("Sample chart data:", chartData.slice(0, 5));
+
   const getLatestTarget = (emissionTargets: {
     [key: number]: number;
   }): number => {
@@ -72,7 +79,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
     currentEmissions: number,
     targetPercentage: number
   ): [number, number, number] => {
-    const targetEmissions = initialEmissions * 0.1; // 10% of initial emissions
+    const targetEmissions = initialEmissions * 0.9; // 10% of initial emissions
     const yearsToNetZero = Math.ceil(
       Math.log(targetEmissions / currentEmissions) /
         Math.log(1 - targetPercentage)
@@ -85,7 +92,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
     initialEmissions: number,
     currentEmissions: number
   ): [number] => {
-    const targetEmissions = initialEmissions * 0.1;
+    const targetEmissions = initialEmissions * 0.9;
     const minTargetPercentage =
       1 -
       Math.exp(
@@ -96,7 +103,10 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
   };
 
   const prepareYearlyData = (): DataPoint[] => {
-    if (!data?.totalMonthlyEmissions?.length) return [];
+    if (!data?.totalMonthlyEmissions?.length) {
+      console.log("No monthly emissions data available in `data`");
+      return [];
+    }
 
     const currentYear = new Date().getFullYear();
     const historicalData: DataPoint[] = [];
@@ -104,6 +114,8 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
     let previousYearEmissions = 0;
     let currentYearEmissions = 0;
     const latestTarget = getLatestTarget(data.emissionTargets);
+
+    console.log("Preparing yearly data with latest target:", latestTarget);
 
     const initialEmissions = data.totalMonthlyEmissions
       .slice(0, 12)
@@ -151,6 +163,8 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
       historicalData.push(yearData);
     }
 
+    console.log("Historical data prepared:", historicalData);
+
     if (yearsToNetZero && netZeroYear && netZeroTarget !== null) {
       let projectedEmissions = currentYearEmissions;
       for (let year = lastDataYear + 1; year <= netZeroYear; year++) {
@@ -166,14 +180,26 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
 
         historicalData.push(projectedData);
       }
+      console.log(
+        "Projected data prepared:",
+        historicalData.slice(historicalData.length - 5)
+      );
     }
 
     return historicalData;
   };
 
   useEffect(() => {
-    if (!data) return;
+    if (!data) {
+      console.log("Data is null or undefined");
+      return;
+    }
     const yearlyData = prepareYearlyData();
+
+    if (!yearlyData.length) {
+      console.log("Yearly data preparation returned empty");
+      return;
+    }
 
     const lastActualDataPoint = yearlyData
       .filter((point) => !point.isProjected)
@@ -200,10 +226,14 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
       setNetZeroTarget(target);
       setTargetPercentage(targetPercentage * 100);
       setMinTargetPercentage(minPercentage * 100);
+
+      console.log("Calculated values:", { years, year, target, minPercentage });
     }
 
     setChartData(yearlyData);
+    console.log("Set chart data:", yearlyData);
   }, [data]);
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -231,6 +261,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
   };
 
   const renderYearlyChart = () => {
+    console.log("Rendering chart with data:", chartData);
     if (chartData.length === 0) {
       return (
         <div className="h-64 flex items-center justify-center">
@@ -278,6 +309,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
   };
 
   if (isLoading) {
+    console.log("Component is loading");
     return (
       <Card className="w-full">
         <CardContent className="p-6">
@@ -310,7 +342,8 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
                 <br />
                 Based on current reduction goals set, it would take you approx{" "}
                 <strong>{yearsToNetZero}</strong> years to reach net zero
-                Emissions by <strong>{netZeroYear}</strong>.<br />
+                emissions by <strong>{netZeroYear}</strong>.
+                <br />
                 To hit net zero emissions by <strong>2050</strong>, you have to
                 reduce your emissions by at least{" "}
                 <strong>{minTargetPercentage?.toFixed(0)}</strong> per year for

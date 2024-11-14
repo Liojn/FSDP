@@ -101,10 +101,14 @@ const DashboardPage = () => {
   };
 
   const handleGenerateReport = async () => {
+    console.log("Generate report button clicked"); // Add this line for debugging
+    console.log("isLoading:", isLoading);
+    console.log("data:", data);
+    if (isLoading || !data) return; // Ensure that data is fully loaded
+    console.log("It got past here"); // Add this line for debugging
     setShowChartsForExport(true);
 
     setTimeout(async () => {
-      // Capture each chart separately once rendered
       const capturedElements = [
         metricSectionRef.current,
         carbonEmissionChartRef.current,
@@ -128,15 +132,9 @@ const DashboardPage = () => {
         }
       }
 
-      // Pass the captured elements as expected by the function
-      await generateSustainabilityReport(
-        capturedElements,
-        netZeroGraphRef,
-        emissionsChartRef
-      );
-
+      await generateSustainabilityReport(imageDataUrls); // Pass image URLs directly
       setShowChartsForExport(false);
-    }, 500); // Adjust delay if needed
+    }, 1000); // Adjust delay as necessary
   };
 
   if (loading || !userId || !selectedYear) {
@@ -156,6 +154,7 @@ const DashboardPage = () => {
           <div className="flex flex-col md:flex-row md:items-center gap-5">
             <Button
               onClick={handleGenerateReport}
+              disabled={isLoading || !data}
               className="bg-emerald-500 text-emerald-50 hover:bg-emerald-600 w-full md:w-auto"
             >
               Export Report to PDF

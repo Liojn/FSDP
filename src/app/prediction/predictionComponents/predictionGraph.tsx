@@ -68,7 +68,7 @@ interface TooltipItemProps {
   payload: DataPoint;
 }
 
-const PROJECTION_YEARS = 10;
+const PROJECTION_YEARS = 100;
 const MONTHS = [
   "January",
   "February",
