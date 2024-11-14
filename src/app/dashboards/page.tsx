@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useData } from "@/context/DataContext"; // Use your context to get the data
 import { Flame, Leaf, Loader2, Zap } from "lucide-react";
 import {
   Select,
@@ -10,20 +11,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import { PageHeader } from "@/components/shared/page-header";
 import { MetricCard } from "@/components/shared/metric-card";
-import CarbonEmissionChart from "./charts/carbonEmissionChart";
-import GaugeChartComponent from "./charts/gaugeGoal";
-import EmissionCategoryChart from "./charts/emissionCategory";
-import Modal from "./popup/modal";
-import ScopeModal from "./popup/scopeModal";
-import ThresholdSettings from "./components/ThresholdSettings";
-import RecommendationAlert from "./components/RecommendationAlert";
-
-import { useDashboardData } from "./hooks/useDashboardData";
+import CarbonEmissionChart from "@/app/dashboards/charts/carbonEmissionChart";
+import GaugeChartComponent from "@/app/dashboards/charts/gaugeGoal";
+import EmissionCategoryChart from "@/app/dashboards/charts/emissionCategory";
+import Modal from "@/app/dashboards/popup/modal";
+import ScopeModal from "@/app/dashboards/popup/scopeModal";
+import ThresholdSettings from "@/app/dashboards/components/ThresholdSettings";
+import RecommendationAlert from "@/app/dashboards/components/RecommendationAlert";
+import { useDashboardData } from "@/app/dashboards/hooks/useDashboardData";
 import { generateSustainabilityReport } from "@/lib/generatePdf";
 import { Button } from "@/components/ui/button";
+import EmissionsChart from "../prediction/predictionComponents/predictionGraph";
+import NetZeroGraph from "../prediction/netZeroGraph/netZeroGraph";
+import html2canvas from "html2canvas";
 
 const DashboardPage = () => {
   const router = useRouter();
@@ -51,8 +53,13 @@ const DashboardPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showChartsForExport, setShowChartsForExport] = useState(false);
+  const { data, isLoading } = useData(); // Access data and isLoading from context
+  const emissionsChartRef = useRef(null);
+  const netZeroGraphRef = useRef(null);
 
   // References for PDF content
+
   const metricSectionRef = useRef<HTMLDivElement>(null);
   const carbonEmissionChartRef = useRef<HTMLDivElement>(null);
   const gaugeChartRef = useRef<HTMLDivElement>(null);
@@ -93,6 +100,39 @@ const DashboardPage = () => {
     }
   };
 
+  const handleGenerateReport = async () => {
+    setShowChartsForExport(true);
+
+    setTimeout(async () => {
+      // Capture each chart separately once rendered
+      const capturedElements = [
+        metricSectionRef.current,
+        carbonEmissionChartRef.current,
+        gaugeChartRef.current,
+        emissionCategoryChartRef.current,
+        emissionsChartRef.current,
+        netZeroGraphRef.current,
+      ];
+
+      const imageDataUrls = [];
+
+      for (const element of capturedElements) {
+        if (element) {
+          try {
+            const canvas = await html2canvas(element);
+            const imageData = canvas.toDataURL("image/png");
+            imageDataUrls.push(imageData);
+          } catch (error) {
+            console.error("Error capturing chart:", error);
+          }
+        }
+      }
+
+      await generateSustainabilityReport(imageDataUrls);
+      setShowChartsForExport(false);
+    }, 500); // Adjust delay if needed
+  };
+
   if (loading || !userId || !selectedYear) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -103,18 +143,27 @@ const DashboardPage = () => {
 
   return (
     <div className="pt-0 p-4 space-y-6">
-      <div className="pt-0 flex justify-between items-center">
+      <div className="pt-0 flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
         <PageHeader title="Dashboard" />
-        <div>
-          <div className="flex items-center gap-2">
-            <Button onClick={generateSustainabilityReport}>
+
+        <div className="flex flex-col md:flex-row md:items-center gap-5 space-y-4 md:space-y-0">
+          <div className="flex flex-col md:flex-row md:items-center gap-5">
+            <Button
+              onClick={handleGenerateReport}
+              className="bg-emerald-500 text-emerald-50 hover:bg-emerald-600 w-full md:w-auto"
+            >
               Export Report to PDF
             </Button>
 
-            <ThresholdSettings />
-            <span className="font-semibold">Year: </span>
+            <div className="flex justify-center md:justify-start w-full md:w-auto">
+              <ThresholdSettings />
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <span className="font-semibold">Year:</span>
             <Select value={yearFilter} onValueChange={handleYearFilterChange}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full md:w-[180px]">
                 <SelectValue placeholder="Select Year" />
               </SelectTrigger>
               <SelectContent>
@@ -136,6 +185,7 @@ const DashboardPage = () => {
 
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6" ref={metricSectionRef}>
+          {/* Main Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
               <div
@@ -163,6 +213,7 @@ const DashboardPage = () => {
             ))}
           </div>
 
+          {/* Carbon Emission Chart */}
           <div
             className="bg-white p-4 shadow-md rounded-lg"
             ref={carbonEmissionChartRef}
@@ -180,6 +231,7 @@ const DashboardPage = () => {
           </div>
         </div>
 
+        {/* Gauge Chart */}
         <div className="flex flex-col space-y-6">
           <div
             className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"
@@ -194,9 +246,9 @@ const DashboardPage = () => {
                 targetGoal !== null &&
                 previousYearEmissions !== null ? (
                   <GaugeChartComponent
-                    currentYearEmissions={currentYearEmissions}
-                    previousYearEmissions={previousYearEmissions}
-                    targetReduction={targetGoal}
+                    currentYearEmissions={currentYearEmissions ?? 0}
+                    previousYearEmissions={previousYearEmissions ?? 0}
+                    targetReduction={targetGoal ?? 0}
                     initialYearGoal={firstYearGoal || 10000}
                     isEarliestYear={isEarliestYear || false}
                   />
@@ -207,6 +259,7 @@ const DashboardPage = () => {
             </div>
           </div>
 
+          {/* Emission Category Chart */}
           <div
             className="bg-white p-4 shadow-md rounded-lg pb-0"
             ref={emissionCategoryChartRef}
@@ -226,6 +279,40 @@ const DashboardPage = () => {
           </div>
         </div>
       </div>
+
+      {showChartsForExport && (
+        <div style={{ position: "absolute", top: -9999, left: -9999 }}>
+          {/* Render hidden charts for PDF export */}
+          <CarbonEmissionChart
+            monthlyEmissions={monthlyEmissions}
+            averageAbsorbed={averageAbsorbed}
+            onMonthClick={handleMonthClick}
+          />
+          <GaugeChartComponent
+            currentYearEmissions={currentYearEmissions ?? 0}
+            previousYearEmissions={previousYearEmissions ?? 0}
+            targetReduction={targetGoal}
+            initialYearGoal={firstYearGoal || 10000}
+            isEarliestYear={isEarliestYear || false}
+          />
+          <EmissionCategoryChart
+            categoryData={categoryEmissionsData}
+            month={selectedMonth}
+            onCategoryClick={handleCategoryClick}
+          />
+
+          <EmissionsChart
+            ref={emissionsChartRef}
+            data={data || undefined}
+            isLoading={isLoading}
+          />
+          <NetZeroGraph
+            ref={netZeroGraphRef}
+            data={data}
+            isLoading={isLoading}
+          />
+        </div>
+      )}
 
       {showModal && (
         <Modal
