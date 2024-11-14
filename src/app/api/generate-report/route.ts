@@ -12,7 +12,6 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || "",
 });
 
-
 // Function to add a header to the PDF
 function addHeader(pdf: jsPDF) {
   pdf.setFontSize(24);
@@ -35,12 +34,7 @@ function addFooter(pdf: jsPDF, pageNumber: number, totalPages: number) {
 
 // Function to calculate scope-based emissions with added safety checks for livestock data
 function calculateScopeEmissions(metrics: MetricData) {
-  console.log("Metrics data:", metrics);
-
-  // Ensure `livestock` is defined with default values if missing
   const livestockData = metrics.livestock || { count: 0, emissions: 0 };
-
-  console.log("Livestock data:", livestockData); // Print livestock data for debugging
 
   const scope1 = 
     (livestockData.emissions || 0) + 
@@ -58,25 +52,18 @@ function calculateScopeEmissions(metrics: MetricData) {
   };
 }
 
-
-// Sample `generatePrompt` usage, now calling `calculateScopeEmissions`
+// Generate the prompt content using the provided metrics
 const generatePrompt = async (metrics: MetricData) => {
-  console.log("Metrics in generatePrompt:", metrics); // Debug log
-
   const scopeEmissions = calculateScopeEmissions(metrics);
 
-  // Safely access energy properties
   const energyConsumption = metrics.energy?.consumption ?? 0;
   const previousYearComparison = metrics.energy?.previousYearComparison ?? 0;
-
-  // Safely access other properties as well
   const wasteQuantity = metrics.waste?.quantity ?? 0;
   const cropsArea = metrics.crops?.area ?? 0;
   const cropsFertilizer = metrics.crops?.fertilizer ?? 0;
   const livestockCount = metrics.livestock?.count ?? 0;
   const livestockEmissions = metrics.livestock?.emissions ?? 0;
 
-  // Proceed to use these variables in your AI prompt
   const aiPrompt = `Generate a comprehensive sustainability report with the following structure and using only the data provided:
 
 OVERVIEW
@@ -114,87 +101,46 @@ Present the report in a clear, professional format without any introductory phra
   return aiPrompt;
 };
 
-
-
-// API route handler for POST requests
+// Main handler for the PDF generation request
 export async function POST(request: NextRequest) {
   try {
-    // Get the data from the request body
-// Extract metrics from the request body
     const { metrics } = (await request.json()) as { metrics: MetricData };
 
     if (!metrics) {
-      console.error("Metrics data is missing from request");
       return NextResponse.json({ error: "Metrics data is missing" }, { status: 400 });
     }
 
-    console.log("Metrics data received:", metrics);
-
     const aiPromptContent = await generatePrompt(metrics);
 
-
     const prompt = `\n\nHuman: ${aiPromptContent}\n\nAssistant:`;
-
-    // Call the Anthropic API to get the report content
     const msg = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307", // Use the appropriate model
+      model: "claude-3-haiku-20240307",
       max_tokens: 1000,
       temperature: 0.7,
       messages: [
         {
           role: "user",
-          content: [
-            {
-              type: "text",
-              text: prompt,
-            },
-          ],
+          content: [{ type: "text", text: prompt }],
         },
       ],
     });
 
-// After receiving the response
-console.log("Received response from Anthropic API");
-console.log("Full response:", msg); // Log the full response to see its structure
+    const assistantReply = (msg.content[0] as any).text;
 
-// Extract the assistant's reply from the appropriate property
-// Adjust the property path based on your findings in the logged response
-const assistantReply = (msg.content[0] as any).text;
-console.log("Assistant Reply:", assistantReply);
-
-    // Create a PDF using jsPDF
     const pdf = new jsPDF();
-
-    // Add header
     addHeader(pdf);
 
-    // Add the report content
-    let yPosition = 80;
-    const lines = pdf.splitTextToSize(
-      assistantReply,
-      pdf.internal.pageSize.getWidth() - 40
-    );
+    // Add report content with consistent formatting
+    addContent(pdf, assistantReply);
 
-    lines.forEach((line: string) => {
-      if (yPosition > pdf.internal.pageSize.getHeight() - 30) {
-        pdf.addPage();
-        yPosition = 40;
-      }
-      pdf.text(line, 20, yPosition);
-      yPosition += 15;
-    });
-
-    // Add footer
+    // Add footer for each page
     const totalPages = pdf.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       pdf.setPage(i);
       addFooter(pdf, i, totalPages);
     }
 
-    // Generate the PDF as an ArrayBuffer
     const pdfArrayBuffer = pdf.output('arraybuffer');
-
-    // Return the PDF file in the response
     return new NextResponse(pdfArrayBuffer, {
       status: 200,
       headers: {
@@ -208,3 +154,40 @@ console.log("Assistant Reply:", assistantReply);
     return new NextResponse(JSON.stringify({ error: "Error generating report" }), { status: 500 });
   }
 }
+
+// Function to add content with structured formatting
+function addContent(pdf: jsPDF, content: string) {
+  pdf.setFont("courier", "normal"); // Use a monospaced font for consistent spacing
+  pdf.setFontSize(12);
+  
+  const sectionTitles = ["OVERVIEW", "PREDICTIONS", "RECOMMENDATIONS"];
+  const lines = content.split("\n");
+
+  let yPosition = 80;
+
+  lines.forEach((line) => {
+    if (sectionTitles.includes(line.trim().toUpperCase())) {
+      pdf.setFontSize(16);
+      pdf.setFont("courier", "bold");
+      yPosition += 10;
+    } else if (line.trim().startsWith("-")) {
+      pdf.setFontSize(12);
+      pdf.setFont("courier", "normal");
+      pdf.text("•", 25, yPosition);
+      pdf.text(line.replace("-", "").trim(), 30, yPosition);
+      yPosition += 10;
+    } else {
+      pdf.setFontSize(12);
+      pdf.setFont("courier", "normal");
+      pdf.text(line.trim(), 20, yPosition);
+      yPosition += 7;
+    }
+
+    if (yPosition > pdf.internal.pageSize.getHeight() - 30) {
+      pdf.addPage();
+      yPosition = 40;
+      addFooter(pdf, pdf.getNumberOfPages(), pdf.getNumberOfPages());
+    }
+  });
+}
+

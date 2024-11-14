@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useData } from "@/context/DataContext"; // Use your context to get the data
 import { Flame, Leaf, Loader2, Zap } from "lucide-react";
 import {
   Select,
@@ -32,90 +31,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import EmissionsChart from "../prediction/predictionComponents/predictionGraph";
-import NetZeroGraph from "../prediction/netZeroGraph/netZeroGraph";
-import html2canvas from "html2canvas";
-import { userGoals } from "../prediction/page";
 import { MetricData } from "@/types";
 import useSWR from "swr";
 
-// Utility function to convert kilograms to tons
-const kgToTons = (kg: number) => kg / 1000;
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 // Function to map metrics array to MetricData object
-const mapMetricsArrayToObject = (metricsArray: any[]): MetricData => {
-  // Initialize the MetricData object with default values
-  const metricObject: MetricData = {
-    energy: {
-      consumption: 0,
-      previousYearComparison: 0,
-    },
-    waste: {
-      quantity: 0,
-    },
-    crops: {
-      area: 0,
-      fertilizer: 0,
-    },
-    livestock: {
-      count: 0,
-      emissions: 0,
-    },
-    emissions: {
-      total: 0,
-      byCategory: {},
-    },
-  };
 
-  metricsArray.forEach((metric) => {
-    const value = parseFloat(metric.value) || 0;
-    switch (metric.title) {
-      case "Total Energy Consumption":
-        metricObject.energy.consumption = value;
-        break;
-
-      case "Energy Comparison to Previous Year":
-        metricObject.energy.previousYearComparison = value;
-        break;
-
-      case "Waste Quantity":
-        metricObject.waste.quantity = value;
-        break;
-
-      case "Crops Area":
-        metricObject.crops.area = value;
-        break;
-
-      case "Crops Fertilizer Used":
-        metricObject.crops.fertilizer = value;
-        break;
-
-      case "Livestock Count":
-        metricObject.livestock.count = value;
-        break;
-
-      case "Livestock Emissions":
-        metricObject.livestock.emissions = kgToTons(value); // Convert kg to tons
-        break;
-
-      case "Total Net Carbon Emissions":
-        metricObject.emissions.total = kgToTons(value); // Convert kg to tons
-        break;
-
-      case "Total Carbon Neutral Emissions":
-        // Assuming this is part of emissions by category
-        metricObject.emissions.byCategory.carbonNeutral = kgToTons(value);
-        break;
-
-      // Add other cases as needed
-      default:
-        console.warn(`Unhandled metric title: ${metric.title}`);
-        break;
-    }
-  });
-
-  return metricObject;
-};
 const DashboardPage = () => {
   const router = useRouter();
 
@@ -140,27 +61,17 @@ const DashboardPage = () => {
     handleMonthClick,
   } = useDashboardData();
   console.log("RIGHTHERE", userId);
-  const { data: metricsDataToUse, error: metricsError } = useSWR<MetricData>(
+  const { data: metricsDataToUse } = useSWR<MetricData>(
     userId ? `/api/metrics/${userId}` : null,
     fetcher
   );
   const [showModal, setShowModal] = useState(false);
   const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showChartsForExport, setShowChartsForExport] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
-
-  const emissionsChartRef = useRef(null);
-  const netZeroGraphRef = useRef(null);
-
-  // References for PDF content
-  const metricSectionRef = useRef<HTMLDivElement>(null);
-  const carbonEmissionChartRef = useRef<HTMLDivElement>(null);
-  const gaugeChartRef = useRef<HTMLDivElement>(null);
-  const emissionCategoryChartRef = useRef<HTMLDivElement>(null);
 
   // Handlers
   const handleViewRecommendations = (exceedingScopes: string[]) => {
@@ -264,14 +175,6 @@ const DashboardPage = () => {
     }
   };
 
-  useEffect(() => {
-    if (isCancelled && controllerRef.current) {
-      controllerRef.current.abort();
-      setShowChartsForExport(false);
-      setExportProgress(0);
-    }
-  }, [isCancelled]);
-
   if (loading || !userId || !selectedYear) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -343,7 +246,7 @@ const DashboardPage = () => {
       />
 
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-6" ref={metricSectionRef}>
+        <div className="md:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
               <div
@@ -371,10 +274,7 @@ const DashboardPage = () => {
             ))}
           </div>
 
-          <div
-            className="bg-white p-4 shadow-md rounded-lg"
-            ref={carbonEmissionChartRef}
-          >
+          <div className="bg-white p-4 shadow-md rounded-lg">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">
               Yearly Carbon Emission&apos;s Progress
             </h3>
@@ -389,10 +289,7 @@ const DashboardPage = () => {
         </div>
 
         <div className="flex flex-col space-y-6">
-          <div
-            className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col"
-            ref={gaugeChartRef}
-          >
+          <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col">
             <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">
               Net Emission Limit Indicator
             </h3>
@@ -402,9 +299,9 @@ const DashboardPage = () => {
                 targetGoal !== null &&
                 previousYearEmissions !== null ? (
                   <GaugeChartComponent
-                    currentYearEmissions={currentYearEmissions ?? 0}
-                    previousYearEmissions={previousYearEmissions ?? 0}
-                    targetReduction={targetGoal ?? 0}
+                    currentYearEmissions={currentYearEmissions}
+                    previousYearEmissions={previousYearEmissions}
+                    targetReduction={targetGoal}
                     initialYearGoal={firstYearGoal || 10000}
                     isEarliestYear={isEarliestYear || false}
                   />
@@ -415,10 +312,7 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          <div
-            className="bg-white p-4 shadow-md rounded-lg pb-0"
-            ref={emissionCategoryChartRef}
-          >
+          <div className="bg-white p-4 shadow-md rounded-lg pb-0">
             <div className="flex justify-between items-center pb-0">
               <h3 className="text-lg font-semibold text-gray-700 flex-shrink-0">
                 Emissions By Category
@@ -434,40 +328,6 @@ const DashboardPage = () => {
           </div>
         </div>
       </div>
-
-      {showChartsForExport && (
-        <div style={{ position: "absolute", top: -9999, left: -9999 }}>
-          <div ref={carbonEmissionChartRef}>
-            <CarbonEmissionChart
-              monthlyEmissions={monthlyEmissions}
-              averageAbsorbed={averageAbsorbed}
-              onMonthClick={handleMonthClick}
-            />
-          </div>
-          <div ref={gaugeChartRef}>
-            <GaugeChartComponent
-              currentYearEmissions={currentYearEmissions ?? 0}
-              previousYearEmissions={previousYearEmissions ?? 0}
-              targetReduction={targetGoal}
-              initialYearGoal={firstYearGoal || 10000}
-              isEarliestYear={isEarliestYear || false}
-            />
-          </div>
-          <div ref={emissionCategoryChartRef}>
-            <EmissionCategoryChart
-              categoryData={categoryEmissionsData}
-              month={selectedMonth}
-              onCategoryClick={handleCategoryClick}
-            />
-          </div>
-          <div ref={emissionsChartRef}>
-            <EmissionsChart />
-          </div>
-          <div ref={netZeroGraphRef}>
-            <NetZeroGraph userGoals={userGoals} />
-          </div>
-        </div>
-      )}
 
       {showModal && (
         <Modal
