@@ -14,7 +14,7 @@ export interface UserGoals {
 export default function PredictionPage() {
   const netZeroGraphRef = useRef<HTMLDivElement>(null);
   const emissionsChartRef = useRef<HTMLDivElement>(null);
-  const { setData, setIsLoading, isLoading } = useData();
+  const { setData, setIsLoading } = useData();
   const [userGoals] = useState<UserGoals>({
     annualEmissionsTarget: 10000,
     targetYear: 2030,
@@ -96,6 +96,7 @@ export default function PredictionPage() {
     </div>
   );
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function setError(arg0: string) {
   throw new Error("Function not implemented.");
 }

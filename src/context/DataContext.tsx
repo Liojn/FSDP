@@ -105,9 +105,10 @@ const prepareYearlyData = (data: MonthlyData): DataPoint[] => {
     previousYearEmissions = totalEmissions;
   }
 
-  // Add projections for future years without adding them to historicalData
+  const projectedData: DataPoint[] = [];
   if (historicalData.length > 0 && cumulativeNetEmissions > 0) {
     let projectedEmissions = previousYearEmissions;
+
     for (let i = 1; i <= 10; i++) {
       const projectedYear = lastDataYear + i;
       const targetPercentage =
@@ -117,12 +118,22 @@ const prepareYearlyData = (data: MonthlyData): DataPoint[] => {
       const projectedNetEmissions = projectedEmissions - latestAnnualAbsorption;
       cumulativeNetEmissions += projectedNetEmissions;
 
-      // Break out of the loop if cumulative emissions reach zero or less
+      projectedData.push({
+        year: projectedYear,
+        totalEmissions: projectedEmissions,
+        absorption: latestAnnualAbsorption,
+        netEmissions: projectedNetEmissions,
+        cumulativeYTDNetEmissions: cumulativeNetEmissions,
+        isProjected: true,
+        monthsPresent: 12,
+        targetEmissions: projectedEmissions,
+      });
+
       if (cumulativeNetEmissions <= 0) break;
     }
   }
 
-  return historicalData;
+  return [...historicalData, ...projectedData];
 };
 
 const analyzeNetZeroYears = (chartData: DataPoint[]): NetZeroAnalysis => {

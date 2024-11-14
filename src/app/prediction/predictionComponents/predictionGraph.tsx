@@ -1,3 +1,6 @@
+// Remove any references to 'data' from props
+// Use 'contextData' or 'chartData' from the context
+
 import React, { useState, useEffect } from "react";
 import {
   LineChart,
@@ -14,19 +17,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useData } from "@/context/DataContext"; // Import useData hook
 
-interface MonthlyData {
-  equipment: number[];
-  livestock: number[];
-  crops: number[];
-  waste: number[];
-  totalMonthlyEmissions: number[];
-  totalMonthlyAbsorption: number[];
-  netMonthlyEmissions: number[];
-  emissionTargets: { [key: number]: number };
-}
-
 interface EmissionsChartProps {
-  data?: MonthlyData;
   isLoading?: boolean;
 }
 
@@ -42,12 +33,6 @@ interface DataPoint {
   monthsPresent?: number;
   targetEmissions?: number;
   [key: string]: unknown;
-}
-
-interface NetZeroAnalysis {
-  cumulativeNetZeroYear: number | null;
-  cumulativeNetZeroMonth: number | null;
-  ytdNetEmissions: number | null;
 }
 
 interface TooltipProps {
@@ -68,7 +53,6 @@ interface TooltipItemProps {
   payload: DataPoint;
 }
 
-const PROJECTION_YEARS = 100;
 const MONTHS = [
   "January",
   "February",
@@ -85,208 +69,26 @@ const MONTHS = [
 ];
 
 const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
-  ({ data }, ref) => {
+  (props, ref) => {
     const {
       isLoading,
-      netZeroAnalysis: initialNetZeroAnalysis,
+      netZeroAnalysis,
       data: contextData,
+      chartData,
     } = useData();
-    console.log("Data from useData context:", contextData);
 
+    console.log("Data from useData context:", contextData);
     console.log("isLoading from useData:", isLoading);
-    const [netZeroAnalysis, setNetZeroAnalysis] = useState<NetZeroAnalysis>(
-      initialNetZeroAnalysis || {
-        cumulativeNetZeroYear: null,
-        cumulativeNetZeroMonth: null,
-        ytdNetEmissions: null,
-      }
-    );
-    const [chartData, setChartData] = useState<DataPoint[]>([]);
+
     const [showNetZeroAlert, setShowNetZeroAlert] = useState(false);
 
-    const calculateMonthlyNetZeroPoint = (
-      data: DataPoint[]
-    ): { year: number | null; month: number | null } => {
-      let previousPoint: DataPoint | null = null;
-
-      for (const point of data) {
-        if (point.cumulativeYTDNetEmissions !== undefined) {
-          if (
-            previousPoint &&
-            previousPoint.cumulativeYTDNetEmissions! > 0 &&
-            point.cumulativeYTDNetEmissions <= 0
-          ) {
-            const totalDays = 365;
-            const daysToZero =
-              Math.abs(
-                previousPoint.cumulativeYTDNetEmissions! /
-                  (point.cumulativeYTDNetEmissions -
-                    previousPoint.cumulativeYTDNetEmissions!)
-              ) * totalDays;
-
-            const month = Math.floor(daysToZero / (totalDays / 12));
-
-            return {
-              year: previousPoint.year || null,
-              month: Math.min(month, 11), // Using 0-based month index
-            };
-          }
-          previousPoint = point;
-        }
-      }
-      return { year: null, month: null };
-    };
-
-    const getLatestTarget = (emissionTargets: {
-      [key: number]: number;
-    }): number => {
-      const years = Object.keys(emissionTargets).map(Number);
-      if (years.length === 0) return 0.9; // Default 90% if no targets
-      const latestYear = Math.max(...years);
-      return emissionTargets[latestYear];
-    };
-
-    const prepareYearlyData = (): DataPoint[] => {
-      console.log("prepareYearlyData called.");
-      console.log("Data in prepareYearlyData:", data);
-      if (
-        !data?.totalMonthlyEmissions?.length ||
-        !data?.totalMonthlyAbsorption?.length
-      ) {
-        return [];
-      }
-
-      const currentYear = new Date().getFullYear();
-      const historicalData: DataPoint[] = [];
-      let lastDataYear = currentYear;
-      let cumulativeNetEmissions = 0;
-      let previousYearEmissions = 0;
-      const latestTarget = getLatestTarget(data.emissionTargets);
-      let latestAnnualAbsorption = 0;
-
-      // Process historical data
-      for (let i = 0; i < data.totalMonthlyEmissions.length; i += 12) {
-        console.log(`Processing year index: ${i}`);
-        const yearSlice = data.totalMonthlyEmissions.slice(i, i + 12);
-        console.log("Year slice:", yearSlice);
-        if (yearSlice.length === 0) break;
-
-        const year =
-          currentYear -
-          (Math.floor(data.totalMonthlyEmissions.length / 12) -
-            Math.floor(i / 12) -
-            1);
-        const validMonths = yearSlice.filter(
-          (val) => val !== null && val !== undefined && val > 0
-        );
-
-        if (validMonths.length === 0) continue;
-
-        const totalEmissions = validMonths.reduce(
-          (sum, val) => sum + (val || 0),
-          0
-        );
-        const totalAbsorption = data.totalMonthlyAbsorption
-          .slice(i, i + validMonths.length)
-          .reduce((sum, val) => sum + (val || 0), 0);
-
-        latestAnnualAbsorption = (totalAbsorption / validMonths.length) * 12;
-
-        const netEmissions = totalEmissions - totalAbsorption;
-        cumulativeNetEmissions += netEmissions;
-
-        const targetEmissions =
-          previousYearEmissions *
-          (1 - (data.emissionTargets[year] || latestTarget));
-
-        const yearData: DataPoint = {
-          year,
-          totalEmissions,
-          absorption: totalAbsorption,
-          netEmissions,
-          cumulativeYTDNetEmissions: cumulativeNetEmissions,
-          isProjected: false,
-          monthsPresent: validMonths.length,
-          targetEmissions,
-        };
-
-        lastDataYear = year;
-        previousYearEmissions = totalEmissions;
-        historicalData.push(yearData);
-      }
-
-      // Add projections for future years
-      const projectedData: DataPoint[] = [];
-      if (historicalData.length > 0 && cumulativeNetEmissions > 0) {
-        let projectedEmissions = previousYearEmissions;
-
-        for (let i = 1; i <= PROJECTION_YEARS; i++) {
-          const projectedYear = lastDataYear + i;
-          const targetPercentage =
-            data.emissionTargets[projectedYear] || latestTarget;
-          projectedEmissions *= 1 - targetPercentage;
-
-          const projectedNetEmissions =
-            projectedEmissions - latestAnnualAbsorption;
-          cumulativeNetEmissions += projectedNetEmissions;
-
-          projectedData.push({
-            year: projectedYear,
-            totalEmissions: projectedEmissions,
-            absorption: latestAnnualAbsorption,
-            netEmissions: projectedNetEmissions,
-            cumulativeYTDNetEmissions: cumulativeNetEmissions,
-            isProjected: true,
-            monthsPresent: 12,
-            targetEmissions: projectedEmissions,
-          });
-
-          if (cumulativeNetEmissions <= 0) break;
-        }
-      }
-
-      return [...historicalData, ...projectedData];
-    };
-
-    const analyzeNetZeroYears = (chartData: DataPoint[]): NetZeroAnalysis => {
-      if (!chartData.length) {
-        return {
-          cumulativeNetZeroYear: null,
-          cumulativeNetZeroMonth: null,
-          ytdNetEmissions: null,
-        };
-      }
-
-      const { year: netZeroYear, month: netZeroMonth } =
-        calculateMonthlyNetZeroPoint(chartData);
-      const currentYear = new Date().getFullYear();
-      const currentYearData = chartData.find((d) => d.year === currentYear);
-
-      return {
-        cumulativeNetZeroYear: netZeroYear,
-        cumulativeNetZeroMonth: netZeroMonth,
-        ytdNetEmissions: currentYearData?.cumulativeYTDNetEmissions || null,
-      };
-    };
     useEffect(() => {
-      console.log("Data received for chart (useEffect):", data);
-      if (!data) {
-        console.log("No data received, returning early.");
-        return;
-      }
-
-      const yearlyData = prepareYearlyData();
-      console.log("Yearly data calculated:", yearlyData);
-      setChartData(yearlyData);
-
-      const analysis = analyzeNetZeroYears(yearlyData);
-      console.log("Net zero analysis result:", analysis);
-      setNetZeroAnalysis(analysis);
       setShowNetZeroAlert(
-        analysis.cumulativeNetZeroYear !== null &&
-          analysis.cumulativeNetZeroMonth !== null
+        netZeroAnalysis !== null &&
+          netZeroAnalysis.cumulativeNetZeroYear !== null &&
+          netZeroAnalysis.cumulativeNetZeroMonth !== null
       );
-    }, [data]);
+    }, [netZeroAnalysis]);
 
     const CustomTooltip: React.FC<TooltipProps> = ({
       active,
@@ -405,6 +207,7 @@ const EmissionsChart = React.forwardRef<HTMLDivElement, EmissionsChartProps>(
         </CardHeader>
         <CardContent>
           {showNetZeroAlert &&
+            netZeroAnalysis &&
             netZeroAnalysis.cumulativeNetZeroYear &&
             netZeroAnalysis.cumulativeNetZeroMonth !== null && (
               <Alert className="mb-4 bg-green-50">
