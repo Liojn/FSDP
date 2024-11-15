@@ -10,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import ThresholdAlert from "../dashboards/components/ThresholdAlert";
 import { useToast } from "@/hooks/use-toast";
 import {
   CategoryType,
@@ -71,7 +70,7 @@ export default function RecommendationClient({
   const [implementedRecommendations, setImplementedRecommendations] =
     useState<ImplementedRecommendationsState>({});
   const [activeCategory] = useState<CategoryType>(initialCategory);
-  const [activeScopes, setActiveScopes] = useState<string[]>(initialScopes);
+  const [activeScopes] = useState<string[]>(initialScopes);
   const [metrics] = useState<MetricData>(initialMetrics);
 
   const { data, error: fetchError } = useSWR(
@@ -124,18 +123,8 @@ export default function RecommendationClient({
     });
   }, []);
 
-  const handleViewRecommendations = useCallback((scope: string) => {
-    setActiveScopes([scope]);
-  }, []);
-
   return (
     <div className="space-y-6">
-      {/* Threshold Alert */}
-      <ThresholdAlert
-        metrics={metrics}
-        onViewRecommendations={handleViewRecommendations}
-      />
-
       <Card>
         <CardHeader>
           <CardTitle>Personalized Recommendations</CardTitle>

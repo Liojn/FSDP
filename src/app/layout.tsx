@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
-// Client-side component
-import ClientLayout from "./layouts/client-layout"; // Import the client layout component
+import ClientLayout from "./layouts/client-layout";
 import { Toaster } from "@/components/ui/toaster";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
+import { DataProvider } from "@/context/DataContext";
 
 export const metadata: Metadata = {
   title: "EcoFarm",
@@ -21,8 +21,12 @@ export default function RootLayout({
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}
       >
-        <ClientLayout>{children}</ClientLayout>
-        <Toaster />
+        <DataProvider>
+          {" "}
+          {/* Wrap children with DataProvider */}
+          <ClientLayout>{children}</ClientLayout>
+          <Toaster />
+        </DataProvider>
       </body>
     </html>
   );
