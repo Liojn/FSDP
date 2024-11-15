@@ -8,15 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  CompanyFormValues,
-  companyFormSchema,
-} from "../types";
+import { CompanyFormValues, companyFormSchema } from "../types";
 
 interface JoinCampaignFormProps {
-  onSubmit: (
-    companyValues: CompanyFormValues,
-  ) => Promise<void>;
+  onSubmit: (companyValues: CompanyFormValues) => Promise<void>;
   submitting: boolean;
 }
 
@@ -28,9 +23,6 @@ export function JoinCampaignForm({
     resolver: zodResolver(companyFormSchema),
     mode: "onChange",
   });
-
-
-
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -45,8 +37,6 @@ export function JoinCampaignForm({
       }
     }
   }, [companyForm]);
-
-
 
   return (
     <Card className="p-6">
@@ -66,17 +56,18 @@ export function JoinCampaignForm({
           <Label htmlFor="name" className="text-lime-700">
             Company Name
           </Label>
-          <Input disabled id="name" type="text" {...companyForm.register("name")} />
+          <Input
+            disabled
+            id="name"
+            type="text"
+            {...companyForm.register("name")}
+          />
           {companyForm.formState.errors.name && (
             <p className="text-red-500 text-sm">
               {companyForm.formState.errors.name.message}
             </p>
           )}
         </div>
-
-
-
-  
 
         <div className="space-y-2">
           <Label htmlFor="contactPerson" className="text-lime-700">

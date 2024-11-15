@@ -28,11 +28,9 @@ import {
 
 import {
   BadgeCheck,
-  Bell,
   ChartColumn,
   ChevronsUpDown,
   LayoutDashboard,
-  Lightbulb,
   LogOut,
   Medal,
   PencilLine,
@@ -48,8 +46,8 @@ const navigationItems = [
 ];
 
 const appConfig = {
-  name: "EcoFarm",
-  logo: "",
+  name: "AgriTech",
+  logo: "/LogoA.jpg",
 };
 
 // Memoize the entire component to prevent unnecessary re-renders
@@ -119,13 +117,6 @@ const AppSidebar = React.memo(function AppSidebar() {
             <BadgeCheck className="size-4" />
             Account
           </DropdownMenuItem>
-          <DropdownMenuItem
-            className="flex cursor-pointer items-center gap-2 py-2 text-stone-400 hover:text-white"
-            onClick={() => console.log("Opening notifications...")}
-          >
-            <Bell className="size-4" />
-            Notifications
-          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator className="border-stone-800" />
         <DropdownMenuItem
@@ -151,7 +142,7 @@ const AppSidebar = React.memo(function AppSidebar() {
                 alt={`${appConfig.name} Logo`}
                 width={20}
                 height={20}
-                className="size-5"
+                className="size-5 object-cover w-full h-full rounded-lg"
                 onError={() => setImageError(true)}
               />
             ) : (
