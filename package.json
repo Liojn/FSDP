@@ -69,6 +69,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/chart.js": "^2.9.41",
     "@types/compression": "^1.7.5",
+    "@types/connect": "^3.4.38",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^20",
     "@types/react": "^18",
