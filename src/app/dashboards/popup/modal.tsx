@@ -25,7 +25,6 @@ const Modal: React.FC<ModalProps> = ({ isVisible, category, userId, month, year,
     const fetchCategoryData = async () => {
       setLoading(true);
       setError(null);
-
       try {
         const endpoint = selectedMonth
           ? `/api/dashboards/popup/${userId}?year=${year}&month=${selectedMonth}`

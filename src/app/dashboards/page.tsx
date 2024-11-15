@@ -150,7 +150,7 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchMetricsData = async () => {
       if (selectedYear && userId) {
-        setLoading(true); // Set loading to true when starting to fetch
+        //setLoading(true); // Set loading to true when starting to fetch
         try {
           const companyId = userId;
           if (yearOptions.includes(selectedYear - 1)) {
@@ -176,7 +176,7 @@ const DashboardPage = () => {
         } catch (error) {
           console.error("Failed to fetch emission data:", error);
         } finally {
-          setLoading(false); // Set loading to false after fetching completes
+          //setLoading(false); // Set loading to false after fetching completes
         }
       }
     };
@@ -373,7 +373,7 @@ const DashboardPage = () => {
         <div className="flex flex-col space-y-6">
           <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col">
             <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">
-              Net Emission Limit Indicator
+              Emission's Goal Reduction Progress
             </h3>
             <div className="flex-1 flex flex-col">
               <div className="bg-white flex-1 flex justify-center items-center pb-4">
