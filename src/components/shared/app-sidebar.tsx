@@ -46,8 +46,8 @@ const navigationItems = [
 ];
 
 const appConfig = {
-  name: "EcoFarm",
-  logo: "",
+  name: "AgriTech",
+  logo: "/LogoA.jpg",
 };
 
 // Memoize the entire component to prevent unnecessary re-renders
@@ -142,7 +142,7 @@ const AppSidebar = React.memo(function AppSidebar() {
                 alt={`${appConfig.name} Logo`}
                 width={20}
                 height={20}
-                className="size-5"
+                className="size-5 object-cover w-full h-full rounded-lg"
                 onError={() => setImageError(true)}
               />
             ) : (
