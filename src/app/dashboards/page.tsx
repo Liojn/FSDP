@@ -291,7 +291,7 @@ const DashboardPage = () => {
         <div className="flex flex-col space-y-6">
           <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col">
             <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">
-              Net Emission Limit Indicator
+              Emission Reduction Progress
             </h3>
             <div className="flex-1 flex flex-col">
               <div className="bg-white flex-1 flex justify-center items-center pb-4">
