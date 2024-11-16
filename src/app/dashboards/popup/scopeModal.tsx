@@ -162,17 +162,17 @@ const ScopeModal = ({
     {
       name: "Scope 1",
       value: scope1Value,
-      description: "Direct emissions from fuel consumption and livestock",
+      description: "Direct emissions from FUEL and LIVESTOCK",
     },
     {
       name: "Scope 2",
       value: scope2Value,
-      description: "Indirect emissions from purchased electricity",
+      description: "Indirect emissions from purchased ELECTRICITY",
     },
     {
       name: "Scope 3",
       value: scope3Value,
-      description: "Other indirect emissions from waste and crop management",
+      description: "Other indirect emissions from WASTE and CROP management",
     },
   ];
 
@@ -180,7 +180,7 @@ const ScopeModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 relative">
+      <div className="bg-white rounded-lg p-5 max-w-2xl w-full mx-4 relative">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl"
@@ -188,7 +188,7 @@ const ScopeModal = ({
           ×
         </button>
 
-        <div className="mb-6">
+        <div className="mb-3">
           <h2 className="text-xl font-bold">
             Carbon Emissions Breakdown {year}
             {month ? `/${month}` : ""}
@@ -198,7 +198,7 @@ const ScopeModal = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
           {scopeData.map((scope, index) => (
             <div key={scope.name} className="p-4 border rounded-lg shadow-sm">
               <h3 className="font-semibold text-sm mb-2">{scope.name}</h3>
@@ -237,17 +237,22 @@ const ScopeModal = ({
           </ResponsiveContainer>
         </div>
 
-        <div className="mt-6 space-y-4">
+        <div className="mt-2 space-y-4">
           <div>
-            <h4 className="font-semibold mb-2">Emissions Breakdown</h4>
-            <div className="space-y-2 text-sm text-gray-600">
-              {scopeData.map((scope) => (
+            <h4 className="font-bold text-xl mb-4">Emissions Breakdown</h4>
+            <div className="space-y-4 text-base">
+              {scopeData.map((scope, index) => (
                 <div
                   key={scope.name}
-                  className="flex justify-between items-center"
+                  className="flex hover:bg-gray-50 rounded-lg"
                 >
-                  <span className="font-medium">{scope.name}:</span>
-                  <span>{scope.description}</span>
+                  <span className="font-semibold text-gray-800 text-lg">{scope.name}:</span>
+                  <span 
+                    className="font-semibold text-lg ml-2"
+                    style={{ color: COLORS[index] }}
+                  >
+                    {scope.description}
+                  </span>
                 </div>
               ))}
             </div>
