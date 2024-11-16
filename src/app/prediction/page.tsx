@@ -86,7 +86,7 @@ export default function PredictionPage() {
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div className="pt-0 flex justify-between items-center mb-4">
-        <PageHeader title="NET ZERO Prediction" />
+        <PageHeader title="Prediction" />
       </div>
       <div className="" ref={netZeroGraphRef}>
         <NetZeroGraph userGoals={userGoals} />
