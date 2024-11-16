@@ -72,6 +72,9 @@ const DashboardPage = () => {
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
+  const [clickedMonthIndex, setClickedMonthIndex] = useState<number | null>(
+    null
+  );
 
   // Handlers
   const handleViewRecommendations = (exceedingScopes: string[]) => {
@@ -83,6 +86,11 @@ const DashboardPage = () => {
       .map((scope) => `scopes=${encodeURIComponent(scope)}`)
       .join("&");
     router.push(`/recommendation?${query}`);
+  };
+
+  const handleMonthSelection = (monthIndex: number) => {
+    setClickedMonthIndex(monthIndex);
+    handleMonthClick(monthIndex);
   };
 
   const handleCategoryClick = (category: string) => {
@@ -282,7 +290,8 @@ const DashboardPage = () => {
               <CarbonEmissionChart
                 monthlyEmissions={monthlyEmissions}
                 averageAbsorbed={averageAbsorbed}
-                onMonthClick={handleMonthClick}
+                onMonthClick={handleMonthSelection}
+                clickedMonthIndex={clickedMonthIndex} // Pass the state as a prop
               />
             </div>
           </div>
