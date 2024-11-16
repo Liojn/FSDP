@@ -69,7 +69,7 @@ const EmissionsChart = forwardRef<HTMLDivElement, EmissionsChartProps>(
   (props, ref) => {
     const {
       isLoading,
-      netZeroAnalysis,
+      carbonNeutralAnalysis,
       data: contextData,
       chartData,
     } = useData();
@@ -79,31 +79,31 @@ const EmissionsChart = forwardRef<HTMLDivElement, EmissionsChartProps>(
     console.log("Props:", props);
     console.log("Context Data:", contextData);
     console.log("isLoading:", isLoading);
-    console.log("netZeroAnalysis:", netZeroAnalysis);
+    console.log("carbonNeutralAnalysis:", carbonNeutralAnalysis);
     console.log("chartData Length:", chartData?.length);
     useEffect(() => {
       console.log("Chart Data:", chartData);
     }, [chartData]);
 
-    const [showNetZeroAlert, setShowNetZeroAlert] = useState(false);
+    const [showCarbonNeutralAlert, setShowCarbonNeutralAlert] = useState(false);
 
     useEffect(() => {
-      console.log(">>> useEffect: Updating showNetZeroAlert");
-      console.log("netZeroAnalysis:", netZeroAnalysis);
+      console.log(">>> useEffect: Updating showCarbonNeutralAlert");
+      console.log("carbonNeutralAnalysis:", carbonNeutralAnalysis);
 
       const shouldShowAlert =
-        netZeroAnalysis !== null &&
-        netZeroAnalysis.cumulativeNetZeroYear !== null &&
-        netZeroAnalysis.cumulativeNetZeroMonth !== null;
+        carbonNeutralAnalysis !== null &&
+        carbonNeutralAnalysis.cumulativeCarbonNeutralYear !== null &&
+        carbonNeutralAnalysis.cumulativeCarbonNeutralMonth !== null;
 
       console.log("Computed shouldShowAlert:", shouldShowAlert);
-      setShowNetZeroAlert(shouldShowAlert);
-    }, [netZeroAnalysis]);
+      setShowCarbonNeutralAlert(shouldShowAlert);
+    }, [carbonNeutralAnalysis]);
 
     // Log after state update (note: state updates are asynchronous)
     useEffect(() => {
-      console.log(">>> showNetZeroAlert state updated to:", showNetZeroAlert);
-    }, [showNetZeroAlert]);
+      console.log(">>> showCarbonNeutralAlert state updated to:", showCarbonNeutralAlert);
+    }, [showCarbonNeutralAlert]);
 
     const CustomTooltip: React.FC<TooltipProps> = ({
       active,
@@ -216,7 +216,7 @@ const EmissionsChart = forwardRef<HTMLDivElement, EmissionsChartProps>(
               type="monotone"
               dataKey="cumulativeYTDNetEmissions"
               stroke="#722ed1"
-              name="Cumulative Carbon Neutral Emissions YTD"
+              name="Cumulative Carbon Neutral Emissions"
               strokeWidth={2}
               dot={{ r: 4 }}
             />
@@ -240,23 +240,23 @@ const EmissionsChart = forwardRef<HTMLDivElement, EmissionsChartProps>(
 
     // Log condition values before rendering
     console.log(">>> Before Rendering JSX:");
-    console.log("showNetZeroAlert:", showNetZeroAlert);
-    console.log("netZeroAnalysis:", netZeroAnalysis);
+    console.log("showCarbonNeutralAlert:", showCarbonNeutralAlert);
+    console.log("carbonNeutralAnalysis:", carbonNeutralAnalysis);
 
-    if (netZeroAnalysis) {
+    if (carbonNeutralAnalysis) {
       console.log(
-        "cumulativeNetZeroYear:",
-        netZeroAnalysis.cumulativeNetZeroYear
+        "cumulativeCarbonNeutralYear:",
+        carbonNeutralAnalysis.cumulativeCarbonNeutralYear
       );
       console.log(
-        "cumulativeNetZeroMonth:",
-        netZeroAnalysis.cumulativeNetZeroMonth
+        "cumulativeCarbonNeutralMonth:",
+        carbonNeutralAnalysis.cumulativeCarbonNeutralMonth
       );
-      if (netZeroAnalysis.cumulativeNetZeroMonth !== null) {
+      if (carbonNeutralAnalysis.cumulativeCarbonNeutralMonth !== null) {
         console.log(
           "Projected Carbon Neutrality:",
-          MONTHS[netZeroAnalysis.cumulativeNetZeroMonth],
-          netZeroAnalysis.cumulativeNetZeroYear
+          MONTHS[carbonNeutralAnalysis.cumulativeCarbonNeutralMonth],
+          carbonNeutralAnalysis.cumulativeCarbonNeutralYear
         );
       }
     }
@@ -267,18 +267,18 @@ const EmissionsChart = forwardRef<HTMLDivElement, EmissionsChartProps>(
           <CardTitle>Carbon Neutral Emission Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          {showNetZeroAlert &&
-            netZeroAnalysis &&
-            netZeroAnalysis.cumulativeNetZeroYear &&
-            netZeroAnalysis.cumulativeNetZeroMonth !== null && (
+          {showCarbonNeutralAlert &&
+            carbonNeutralAnalysis &&
+            carbonNeutralAnalysis.cumulativeCarbonNeutralYear &&
+            carbonNeutralAnalysis.cumulativeCarbonNeutralMonth !== null && (
               <Alert className="mb-4 bg-green-50">
                 <AlertTitle className="text-green-800">
                   Carbon Neutral Target
                 </AlertTitle>
                 <AlertDescription className="text-green-700">
-                  Projected to achieve carbon neutrality in{" "}
-                  {MONTHS[netZeroAnalysis.cumulativeNetZeroMonth]}{" "}
-                  {netZeroAnalysis.cumulativeNetZeroYear}
+                  Projected to achieve carbon neutrality in{" "} <strong>
+                  {MONTHS[carbonNeutralAnalysis.cumulativeCarbonNeutralMonth]}{" "}
+                  {carbonNeutralAnalysis.cumulativeCarbonNeutralYear}</strong>
                 </AlertDescription>
               </Alert>
             )}

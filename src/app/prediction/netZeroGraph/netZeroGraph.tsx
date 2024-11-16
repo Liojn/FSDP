@@ -74,33 +74,31 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
     return emissionTargets[latestYear];
   };
 
+  // use logarithmic equation to make the graph for a curved graph instead of a linear straight line graph
   const calculateYearsToNetZero = (
     initialEmissions: number,
     currentEmissions: number,
     targetPercentage: number
   ): [number, number, number] => {
     const targetEmissions = initialEmissions * 0.1; // 10% of initial emissions
-    const yearsToNetZero = Math.ceil(
-      Math.log(targetEmissions / currentEmissions) /
-        Math.log(1 - targetPercentage)
-    );
+    const yearsToNetZero = Math.ceil(Math.log(targetEmissions / currentEmissions) / 
+      Math.log(1 - targetPercentage)); // Manipulation from [targetEmission = (current * targetPercentage^(no. of years))]
     const netZeroYear = new Date().getFullYear() + yearsToNetZero;
     return [yearsToNetZero, netZeroYear, targetEmissions];
   };
 
+  // net zero goal by 2050
   const calculateMinimumPercentToNetZeroBy2050 = (
     initialEmissions: number,
     currentEmissions: number
   ): [number] => {
     const targetEmissions = initialEmissions * 0.1;
     const minTargetPercentage =
-      1 -
-      Math.exp(
-        Math.log(targetEmissions / currentEmissions) /
-          (2050 - new Date().getFullYear())
-      );
+      1 - Math.exp (Math.log(targetEmissions / currentEmissions) / 
+        (2050 - new Date().getFullYear())); // Manipulation from [targetEmission = (current * targetPercentage^(no. of years))]
     return [minTargetPercentage];
   };
+
 
   const prepareYearlyData = (): DataPoint[] => {
     if (!data?.totalMonthlyEmissions?.length) {
@@ -120,7 +118,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
     const initialEmissions = data.totalMonthlyEmissions
       .slice(0, 12)
       .reduce((sum, val) => sum + (val || 0), 0);
-    const netZeroEmissionTarget = initialEmissions * 0.1;
+    const netZeroEmissionTarget = initialEmissions * 0.1; // net zero is 90% reduction
 
     for (let i = 0; i < data.totalMonthlyEmissions.length; i += 12) {
       const yearSlice = data.totalMonthlyEmissions.slice(i, i + 12);
@@ -129,8 +127,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
       const year =
         currentYear -
         (Math.floor(data.totalMonthlyEmissions.length / 12) -
-          Math.floor(i / 12) -
-          1);
+          Math.floor(i / 12) - 1);
       const validMonths = yearSlice.filter(
         (val) => val !== null && val !== undefined && val > 0
       );
@@ -138,8 +135,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
       if (validMonths.length === 0) continue;
 
       const totalEmissions = validMonths.reduce(
-        (sum, val) => sum + (val || 0),
-        0
+        (sum, val) => sum + (val || 0), 0
       );
       const targetEmissions =
         previousYearEmissions *
@@ -299,7 +295,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
           />
           <ReferenceLine
             y={netZeroTarget ?? 0}
-            label="Carbon Neutral"
+            label="Net Zero"
             stroke="#52c41a"
             strokeDasharray="3 3"
           />

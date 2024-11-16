@@ -334,7 +334,7 @@ const DashboardPage = () => {
           isVisible={showModal}
           category={selectedCategory}
           userId={userId || ""}
-          month={selectedMonth !== null ? selectedMonth : undefined}
+          month={selectedMonth}
           year={selectedYear ?? new Date().getFullYear()}
           onClose={closeModal}
         />
