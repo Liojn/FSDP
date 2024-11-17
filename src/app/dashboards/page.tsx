@@ -35,13 +35,12 @@ import { MetricData } from "@/types";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
-// Function to map metrics array to MetricData object
 
 const DashboardPage = () => {
   const router = useRouter();
 
   const {
-    loading,
+    loading: initialLoading, // Renamed to be more specific
     yearFilter,
     yearOptions,
     selectedYear,
@@ -60,7 +59,7 @@ const DashboardPage = () => {
     handleYearFilterChange,
     handleMonthClick,
   } = useDashboardData();
-  console.log("RIGHTHERE", userId);
+
   const { data: metricsDataToUse } = useSWR<MetricData>(
     userId ? `/api/metrics/${userId}` : null,
     fetcher
@@ -76,7 +75,15 @@ const DashboardPage = () => {
     null
   );
 
-  // Handlers
+  // Only show loading screen on initial load
+  if (initialLoading || !userId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
+      </div>
+    );
+  }
+
   const handleViewRecommendations = (exceedingScopes: string[]) => {
     const scopes = exceedingScopes
       .map((scope) => scope.match(/(Scope [1-3])/)?.[1])
@@ -88,9 +95,11 @@ const DashboardPage = () => {
     router.push(`/recommendation?${query}`);
   };
 
-  const handleMonthSelection = (monthIndex: number) => {
-    setClickedMonthIndex(monthIndex);
-    handleMonthClick(monthIndex);
+  const handleMonthSelection = (monthIndex: string | number) => {
+    const monthIndexNumber =
+      typeof monthIndex === "string" ? parseInt(monthIndex, 10) : monthIndex;
+    setClickedMonthIndex(monthIndexNumber);
+    handleMonthClick(monthIndexNumber);
   };
 
   const handleCategoryClick = (category: string) => {
@@ -115,15 +124,12 @@ const DashboardPage = () => {
         return null;
     }
   };
-  console.log("Metrics data received on client:", metricsDataToUse);
 
   const handleGenerateReport = async () => {
     if (!metricsDataToUse) {
       console.error("Metrics data is undefined.");
       return;
     }
-
-    console.log("Metrics Data being sent:", metricsDataToUse);
 
     setIsCancelled(false);
     setExportProgress(10);
@@ -133,9 +139,7 @@ const DashboardPage = () => {
 
     try {
       setTimeout(async () => {
-        if (isCancelled) {
-          return;
-        }
+        if (isCancelled) return;
         setExportProgress(30);
 
         const response = await fetch("/api/generate-report", {
@@ -144,7 +148,7 @@ const DashboardPage = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            metrics: metricsDataToUse, // Use metricsDataToUse directly
+            metrics: metricsDataToUse,
           }),
           signal: controller.signal,
         });
@@ -153,9 +157,7 @@ const DashboardPage = () => {
           throw new Error("Failed to generate report");
         }
 
-        if (isCancelled) {
-          return;
-        }
+        if (isCancelled) return;
         setExportProgress(80);
 
         const pdfBlob = await response.blob();
@@ -182,14 +184,6 @@ const DashboardPage = () => {
       setExportProgress(0);
     }
   };
-
-  if (loading || !userId || !selectedYear) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
-      </div>
-    );
-  }
 
   return (
     <div className="pt-0 p-4 space-y-6">
@@ -291,7 +285,7 @@ const DashboardPage = () => {
                 monthlyEmissions={monthlyEmissions}
                 averageAbsorbed={averageAbsorbed}
                 onMonthClick={handleMonthSelection}
-                clickedMonthIndex={clickedMonthIndex} // Pass the state as a prop
+                clickedMonthIndex={clickedMonthIndex}
               />
             </div>
           </div>
