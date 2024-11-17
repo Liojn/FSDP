@@ -41,3 +41,24 @@ export interface MetricsUpdateParams {
   targetGoalData: TargetGoalResponse;
   emissionCategoryData: EmissionCategoryData[];
 }
+
+export interface DashboardData {
+  loading: boolean;
+  yearFilter: string;
+  yearOptions: number[];
+  selectedYear: number | null;
+  selectedMonth: number | string;
+  userId: string | null;
+  monthlyEmissions: number[];
+  averageAbsorbed: number | null;
+  currentYearEmissions: number | null;
+  previousYearEmissions: number | null;
+  targetGoal: number;
+  isEarliestYear: boolean;
+  firstYearGoal: number;
+  categoryEmissionsData: EmissionCategoryData[] | null;
+  metricsData: MetricData[];
+  exceedingScopes: string[];
+  handleYearFilterChange: (value: string) => void;
+  handleMonthClick: (month: string | number) => void;
+}

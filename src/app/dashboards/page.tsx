@@ -1,28 +1,18 @@
-"use client";
-
-import React, { useRef, useState } from "react";
+import React, { Suspense, lazy } from "react";
 import { useRouter } from "next/navigation";
-import { Flame, Leaf, Loader2, Zap } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { PageHeader } from "@/components/shared/page-header";
-import { MetricCard } from "@/components/shared/metric-card";
-import CarbonEmissionChart from "@/app/dashboards/charts/carbonEmissionChart";
-import GaugeChartComponent from "@/app/dashboards/charts/gaugeGoal";
-import EmissionCategoryChart from "@/app/dashboards/charts/emissionCategory";
-import Modal from "@/app/dashboards/popup/modal";
-import ScopeModal from "@/app/dashboards/popup/scopeModal";
-import ThresholdSettings from "@/app/dashboards/components/ThresholdSettings";
-import RecommendationAlert from "@/app/dashboards/components/RecommendationAlert";
-import { useDashboardData } from "@/app/dashboards/hooks/useDashboardData";
-
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+} from "../../components/ui/select";
+import { PageHeader } from "../../components/shared/page-header";
+import { MetricCard } from "../../components/shared/metric-card";
+import { Button } from "../../components/ui/button";
+import { Progress } from "../../components/ui/progress";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -30,17 +20,130 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { MetricData } from "@/types";
-import useSWR from "swr";
+} from "../../components/ui/alert-dialog";
+import { MetricData } from "./types";
+import { useDashboardData } from "./hooks/useDashboardData";
+import useSWR, { preload } from "swr";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+// Optimized fetcher with caching
+const fetcher = async (url: string) => {
+  // Check cache first
+  const cached = sessionStorage.getItem(url);
+  if (cached) {
+    const { data, timestamp } = JSON.parse(cached);
+    // Cache for 5 minutes
+    if (Date.now() - timestamp < 5 * 60 * 1000) {
+      return data;
+    }
+  }
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  // Store in cache
+  sessionStorage.setItem(
+    url,
+    JSON.stringify({
+      data,
+      timestamp: Date.now(),
+    })
+  );
+
+  return data;
+};
+
+// Preload data for faster initial load
+if (typeof window !== "undefined") {
+  const userId = localStorage.getItem("userId");
+  if (userId) {
+    preload(`/api/metrics/${userId}`, fetcher);
+  }
+}
+
+// Dynamically import heavy components with preload hints
+const CarbonEmissionChart = lazy(() => {
+  const Component = import("./charts/carbonEmissionChart");
+  // Add preload hint
+  Component.then(() => {
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "script";
+    link.href = "/charts/carbonEmissionChart.js";
+    document.head.appendChild(link);
+  });
+  return Component;
+});
+
+// Dynamically import other components
+const GaugeChartComponent = lazy(() => import("./charts/gaugeGoal"));
+const EmissionCategoryChart = lazy(() => import("./charts/emissionCategory"));
+const Modal = lazy(() => import("./popup/modal"));
+const ScopeModal = lazy(() => import("./popup/scopeModal"));
+const ThresholdSettings = lazy(() => import("./components/ThresholdSettings"));
+const RecommendationAlert = lazy(
+  () => import("./components/RecommendationAlert")
+);
+
+// Dynamically import icons with loading state
+const Icons = {
+  Flame: dynamic(() => import("lucide-react").then((mod) => mod.Flame), {
+    loading: () => (
+      <div className="w-8 h-8 bg-gray-200 animate-pulse rounded" />
+    ),
+    ssr: false,
+  }),
+  Zap: dynamic(() => import("lucide-react").then((mod) => mod.Zap), {
+    loading: () => (
+      <div className="w-8 h-8 bg-gray-200 animate-pulse rounded" />
+    ),
+    ssr: false,
+  }),
+  Leaf: dynamic(() => import("lucide-react").then((mod) => mod.Leaf), {
+    loading: () => (
+      <div className="w-8 h-8 bg-gray-200 animate-pulse rounded" />
+    ),
+    ssr: false,
+  }),
+};
+
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center p-8">
+    <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
+  </div>
+);
+
+interface MetricCardWrapperProps {
+  metric: MetricData;
+  icon: React.ReactNode;
+}
+
+const MetricCardWrapper = React.memo<MetricCardWrapperProps>(
+  ({ metric, icon }) => (
+    <MetricCard
+      title={metric.title}
+      value={
+        metric.value === "Loading..."
+          ? metric.value
+          : parseFloat(metric.value.toString()).toFixed(0)
+      }
+      unit={metric.unit}
+      icon={icon}
+      className={`bg-white p-4 shadow-md rounded-lg ${
+        metric.title === "Total Net Carbon Emissions"
+          ? "hover:cursor-pointer hover:bg-gray-50"
+          : ""
+      }`}
+    />
+  )
+);
+
+// Add display name to the component
+MetricCardWrapper.displayName = "MetricCardWrapper";
 
 const DashboardPage = () => {
   const router = useRouter();
-
   const {
-    loading: initialLoading, // Renamed to be more specific
+    loading: initialLoading,
     yearFilter,
     yearOptions,
     selectedYear,
@@ -62,20 +165,30 @@ const DashboardPage = () => {
 
   const { data: metricsDataToUse } = useSWR<MetricData>(
     userId ? `/api/metrics/${userId}` : null,
-    fetcher
-  );
-  const [showModal, setShowModal] = useState(false);
-  const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [exportProgress, setExportProgress] = useState(0);
-  const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
-  const [isCancelled, setIsCancelled] = useState(false);
-  const controllerRef = useRef<AbortController | null>(null);
-  const [clickedMonthIndex, setClickedMonthIndex] = useState<number | null>(
-    null
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000, // Cache for 1 minute
+      suspense: true, // Enable suspense mode
+      keepPreviousData: true, // Keep showing previous data while loading
+    }
   );
 
-  // Only show loading screen on initial load
+  const [showModal, setShowModal] = React.useState(false);
+  const [isScopeModalOpen, setIsScopeModalOpen] = React.useState(false);
+  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(
+    null
+  );
+  const [exportProgress, setExportProgress] = React.useState(0);
+  const [isAlertDialogOpen, setIsAlertDialogOpen] = React.useState(false);
+  const [isCancelled, setIsCancelled] = React.useState(false);
+  const controllerRef = React.useRef<AbortController | null>(null);
+  const [clickedMonthIndex, setClickedMonthIndex] = React.useState<
+    number | null
+  >(null);
+
+  // Early return for loading state
   if (initialLoading || !userId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -115,11 +228,17 @@ const DashboardPage = () => {
   const getIconForMetric = (title: string) => {
     switch (title) {
       case "Total Net Carbon Emissions":
-        return <Flame className="w-8 h-8 text-orange-500" strokeWidth={3} />;
+        return (
+          <Icons.Flame className="w-8 h-8 text-orange-500" strokeWidth={3} />
+        );
       case "Total Energy Consumption":
-        return <Zap className="w-8 h-8 text-yellow-500" strokeWidth={3} />;
+        return (
+          <Icons.Zap className="w-8 h-8 text-yellow-500" strokeWidth={3} />
+        );
       case "Total Carbon Neutral Emissions":
-        return <Leaf className="w-8 h-8 text-green-500" strokeWidth={3} />;
+        return (
+          <Icons.Leaf className="w-8 h-8 text-green-500" strokeWidth={3} />
+        );
       default:
         return null;
     }
@@ -169,6 +288,7 @@ const DashboardPage = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url); // Clean up the URL object
 
         setExportProgress(100);
         setTimeout(() => {
@@ -220,7 +340,9 @@ const DashboardPage = () => {
             </AlertDialog>
 
             <div className="flex justify-center md:justify-start w-full md:w-auto">
-              <ThresholdSettings />
+              <Suspense fallback={<LoadingSpinner />}>
+                <ThresholdSettings />
+              </Suspense>
             </div>
           </div>
 
@@ -242,10 +364,12 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      <RecommendationAlert
-        exceedingScopes={exceedingScopes}
-        onViewRecommendations={handleViewRecommendations}
-      />
+      <Suspense fallback={<LoadingSpinner />}>
+        <RecommendationAlert
+          exceedingScopes={exceedingScopes}
+          onViewRecommendations={handleViewRecommendations}
+        />
+      </Suspense>
 
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
@@ -259,19 +383,16 @@ const DashboardPage = () => {
                   }
                 }}
               >
-                <MetricCard
-                  title={metric.title}
-                  value={
-                    metric.value === "Loading..."
-                      ? metric.value
-                      : parseFloat(metric.value.toString()).toFixed(0)
+                <Suspense
+                  fallback={
+                    <div className="h-32 bg-gray-100 animate-pulse rounded-lg" />
                   }
-                  unit={metric.unit}
-                  icon={getIconForMetric(metric.title)}
-                  className={`bg-white p-4 shadow-md rounded-lg ${
-                    index === 1 ? "hover:cursor-pointer hover:bg-gray-50" : ""
-                  }`}
-                />
+                >
+                  <MetricCardWrapper
+                    metric={metric}
+                    icon={getIconForMetric(metric.title)}
+                  />
+                </Suspense>
               </div>
             ))}
           </div>
@@ -281,12 +402,18 @@ const DashboardPage = () => {
               Yearly Carbon Emission&apos;s Progress
             </h3>
             <div className="bg-white-200 h-full flex justify-center items-center min-h-[350px]">
-              <CarbonEmissionChart
-                monthlyEmissions={monthlyEmissions}
-                averageAbsorbed={averageAbsorbed}
-                onMonthClick={handleMonthSelection}
-                clickedMonthIndex={clickedMonthIndex}
-              />
+              <Suspense
+                fallback={
+                  <div className="w-full h-[350px] bg-gray-100 animate-pulse rounded-lg" />
+                }
+              >
+                <CarbonEmissionChart
+                  monthlyEmissions={monthlyEmissions}
+                  averageAbsorbed={averageAbsorbed}
+                  onMonthClick={handleMonthSelection}
+                  clickedMonthIndex={clickedMonthIndex}
+                />
+              </Suspense>
             </div>
           </div>
         </div>
@@ -298,19 +425,25 @@ const DashboardPage = () => {
             </h3>
             <div className="flex-1 flex flex-col">
               <div className="bg-white flex-1 flex justify-center items-center pb-4">
-                {currentYearEmissions !== null &&
-                targetGoal !== null &&
-                previousYearEmissions !== null ? (
-                  <GaugeChartComponent
-                    currentYearEmissions={currentYearEmissions}
-                    previousYearEmissions={previousYearEmissions}
-                    targetReduction={targetGoal}
-                    initialYearGoal={firstYearGoal || 10000}
-                    isEarliestYear={isEarliestYear || false}
-                  />
-                ) : (
-                  <div>Loading gauge data...</div>
-                )}
+                <Suspense
+                  fallback={
+                    <div className="w-full h-40 bg-gray-100 animate-pulse rounded-lg" />
+                  }
+                >
+                  {currentYearEmissions !== null &&
+                  targetGoal !== null &&
+                  previousYearEmissions !== null ? (
+                    <GaugeChartComponent
+                      currentYearEmissions={currentYearEmissions}
+                      previousYearEmissions={previousYearEmissions}
+                      targetReduction={targetGoal}
+                      initialYearGoal={firstYearGoal || 10000}
+                      isEarliestYear={isEarliestYear || false}
+                    />
+                  ) : (
+                    <div>Loading gauge data...</div>
+                  )}
+                </Suspense>
               </div>
             </div>
           </div>
@@ -322,34 +455,44 @@ const DashboardPage = () => {
               </h3>
             </div>
             <div className="flex-1 flex justify-center items-center">
-              <EmissionCategoryChart
-                categoryData={categoryEmissionsData}
-                month={selectedMonth}
-                onCategoryClick={handleCategoryClick}
-              />
+              <Suspense
+                fallback={
+                  <div className="w-full h-60 bg-gray-100 animate-pulse rounded-lg" />
+                }
+              >
+                <EmissionCategoryChart
+                  categoryData={categoryEmissionsData}
+                  month={selectedMonth}
+                  onCategoryClick={handleCategoryClick}
+                />
+              </Suspense>
             </div>
           </div>
         </div>
       </div>
 
       {showModal && (
-        <Modal
-          isVisible={showModal}
-          category={selectedCategory}
-          userId={userId || ""}
-          month={selectedMonth}
-          year={selectedYear ?? new Date().getFullYear()}
-          onClose={closeModal}
-        />
+        <Suspense fallback={<LoadingSpinner />}>
+          <Modal
+            isVisible={showModal}
+            category={selectedCategory}
+            userId={userId || ""}
+            month={selectedMonth}
+            year={selectedYear ?? new Date().getFullYear()}
+            onClose={closeModal}
+          />
+        </Suspense>
       )}
 
-      <ScopeModal
-        isOpen={isScopeModalOpen}
-        onClose={() => setIsScopeModalOpen(false)}
-        year={selectedYear || new Date().getFullYear()}
-        month={typeof selectedMonth === "number" ? selectedMonth : undefined}
-        userId={userId || ""}
-      />
+      <Suspense fallback={<LoadingSpinner />}>
+        <ScopeModal
+          isOpen={isScopeModalOpen}
+          onClose={() => setIsScopeModalOpen(false)}
+          year={selectedYear || new Date().getFullYear()}
+          month={typeof selectedMonth === "number" ? selectedMonth : undefined}
+          userId={userId || ""}
+        />
+      </Suspense>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+"use client";
 import React, { useEffect, useState } from "react";
 import {
   PieChart,
@@ -246,8 +247,10 @@ const ScopeModal = ({
                   key={scope.name}
                   className="flex hover:bg-gray-50 rounded-lg"
                 >
-                  <span className="font-semibold text-gray-800 text-lg">{scope.name}:</span>
-                  <span 
+                  <span className="font-semibold text-gray-800 text-lg">
+                    {scope.name}:
+                  </span>
+                  <span
                     className="font-semibold text-lg ml-2"
                     style={{ color: COLORS[index] }}
                   >
