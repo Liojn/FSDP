@@ -89,7 +89,7 @@ const DashboardPage = () => {
   };
 
   const handleMonthSelection = (monthIndex: number) => {
-    setClickedMonthIndex(monthIndex);
+    setClickedMonthIndex(monthIndex === clickedMonthIndex? null: monthIndex);
     handleMonthClick(monthIndex);
   };
 
