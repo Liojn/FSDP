@@ -21,7 +21,7 @@ const Modal: React.FC<ModalProps> = ({
   const [details, setDetails] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<string | number | null>(null);
+  const [selectedMonth] = useState<string | number | null>(null);
 
   useEffect(() => {
     if (!isVisible || !category) return;
@@ -32,13 +32,13 @@ const Modal: React.FC<ModalProps> = ({
 
       try {
         // Determine if we should include month in the endpoint
-        const shouldIncludeMonth = month !== '' && month !== undefined;
+        const shouldIncludeMonth = month !== "" && month !== undefined;
         const endpoint = shouldIncludeMonth
           ? `/api/dashboards/popup/${userId}?year=${year}&month=${month}`
           : `/api/dashboards/popup/${userId}?year=${year}`;
 
-        console.log('Fetching data with endpoint:', endpoint);
-        
+        console.log("Fetching data with endpoint:", endpoint);
+
         const response = await fetch(endpoint);
         if (!response.ok) throw new Error("Failed to fetch data");
 
@@ -94,7 +94,7 @@ const Modal: React.FC<ModalProps> = ({
     };
 
     fetchCategoryData();
-  }, [isVisible, category, userId, selectedMonth, year]);
+  }, [isVisible, category, userId, selectedMonth, year, month]);
 
   if (!isVisible) return null;
 
@@ -254,4 +254,3 @@ const Modal: React.FC<ModalProps> = ({
 };
 
 export default Modal;
-
