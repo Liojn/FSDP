@@ -29,7 +29,7 @@ ChartJS.register(
 type CarbonEmissionChartProps = {
   monthlyEmissions: number[];
   averageAbsorbed: number | null;
-  onMonthClick: (month: string | number) => void;
+  onMonthClick: (month: number) => void;
   clickedMonthIndex: number | string | null; // Updated to include string type
 };
 
