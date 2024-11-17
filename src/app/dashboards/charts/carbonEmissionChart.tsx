@@ -29,17 +29,15 @@ ChartJS.register(
 type CarbonEmissionChartProps = {
   monthlyEmissions: number[];
   averageAbsorbed: number | null;
-  onMonthClick: (monthIndex: number) => void;
-  clickedMonthIndex: number | null; // Add this prop
+  onMonthClick: (month: string | number) => void;
+  clickedMonthIndex: number | string | null; // Updated to include string type
 };
 
-//React.FC specify the type of props for a component
 const EmissionCategoryChart: React.FC<CarbonEmissionChartProps> = ({
   monthlyEmissions,
   onMonthClick,
   clickedMonthIndex,
 }) => {
-  // Example data for monthly emissions and labels
   const labels = [
     "Jan",
     "Feb",
@@ -55,21 +53,20 @@ const EmissionCategoryChart: React.FC<CarbonEmissionChartProps> = ({
     "Dec",
   ];
 
-  // Chart.js data object
-  const data: ChartData<"bar" | "line", number[], string> = {
+  const parsedIndex = parseInt(clickedMonthIndex as string, 10);
+  const data: ChartData<"bar", number[], string> = {
     labels,
     datasets: [
       {
         label: "Total Carbon Emission (kg CO2E)",
         data: monthlyEmissions,
         backgroundColor: monthlyEmissions.map((_, index) => {
-          if (index === clickedMonthIndex) {
-            return "#4BA387"; // Highlighted color
+          if (isNaN(parsedIndex)) {
+            return "#66CDAA"; // Default color when nothing is selected
           }
-          return "#66CDAA"; // Original color
+          return index === parsedIndex ? "#4BA387" : "#66CDAA";
         }),
         hoverBackgroundColor: "#448C7A",
-        type: "bar",
       },
     ],
   };
@@ -93,8 +90,8 @@ const EmissionCategoryChart: React.FC<CarbonEmissionChartProps> = ({
         false
       );
       if (activePoints.length > 0) {
-        const clickedMonthIndex = activePoints[0].index;
-        onMonthClick(clickedMonthIndex);
+        const selectedMonthIndex = activePoints[0].index;
+        onMonthClick(selectedMonthIndex);
       }
     },
     onHover: (event: any, elements: any[]) => {

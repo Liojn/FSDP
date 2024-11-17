@@ -247,6 +247,7 @@ export const useDashboardData = () => {
 
   const handleMonthClick = (month: string | number) => {
     setSelectedMonth(selectedMonth === month ? "" : month);
+    
   };
   //checking for modal api call
   // console.log('Rendering Modal with month:', {
