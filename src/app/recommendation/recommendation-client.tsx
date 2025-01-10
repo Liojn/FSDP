@@ -228,7 +228,7 @@ export default function RecommendationClient({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Personalized Recommendations</CardTitle>
+          <CardTitle>Personalised Recommendations</CardTitle>
           <CardDescription>
             AI-generated suggestions to improve your farm management
           </CardDescription>

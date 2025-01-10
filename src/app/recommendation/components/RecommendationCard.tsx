@@ -97,7 +97,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
                 size="sm"
                 className="ml-auto"
               >
-                <ClipboardList className="h-4 w-4 mr-2" />
+                <ClipboardList className="h-4 w-4" />
                 Track
               </Button>
             </div>
