@@ -4,7 +4,7 @@
 import { NextResponse } from "next/server";
 import { Recommendation, MetricData, CategoryType } from "@/types";
 import Anthropic from "@anthropic-ai/sdk";
-
+import connectToDatabase from "dbConfig";
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
@@ -27,6 +27,7 @@ interface ApiRecommendation {
 interface ApiResponse {
   recommendations: ApiRecommendation[];
 }
+
 
 const cleanAndParseJSON = (str: string): ApiResponse => {
   try {
@@ -132,7 +133,6 @@ ${weatherRisk
   ]
 }
 
-**Ensure that the entire response is valid JSON without any surrounding text or markdown.**
 `;
     // Log the generated prompt
   console.log("Generated AI Prompt:", aiPrompt);
@@ -155,11 +155,25 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log("Received Metrics:", metrics);
-    console.log("Received Weather Data:", weatherData);
+    // Connect to the database
+    const db = await connectToDatabase.connectToDatabase();
+    const collection = db.collection("recommendations");
 
+    // Check if recommendations for this user and scopes already exist
+    const existingRecommendations = await collection.findOne({
+      userId: metrics.userId,
+      scopes,
+    });
+
+    if (existingRecommendations) {
+      return NextResponse.json({
+        recommendations: existingRecommendations.recommendations,
+        source: "database",
+      });
+    }
+
+    // Generate recommendations via AI
     const prompt = await generatePrompt(metrics, weatherData, scopes);
-
     const msg = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",
       max_tokens: 1000,
@@ -173,10 +187,10 @@ export async function POST(req: Request) {
     });
 
     const assistantReply = (msg.content[0] as any).text;
-    const parsedResponse: ApiResponse = cleanAndParseJSON(assistantReply);
+    const parsedResponse = cleanAndParseJSON(assistantReply);
 
-    const recommendations: Recommendation[] =
-      parsedResponse.recommendations.map((rec, index) => ({
+    const recommendations: Recommendation[] = parsedResponse.recommendations.map(
+      (rec, index) => ({
         id: `rec_${index}`,
         title: rec.title,
         description: rec.description,
@@ -206,9 +220,17 @@ export async function POST(req: Request) {
         estimatedTimeframe: rec.implementationTimeline || "3-6 months",
         relatedMetrics: rec.sourceData ? [rec.sourceData] : [],
         dashboardLink: rec.dashboardLink || "",
-      }));
+      })
+    );
 
-    return NextResponse.json({ recommendations }, { status: 200 });
+    // Store recommendations in the database
+    await collection.updateOne(
+      { userId: metrics.userId, scopes },
+      { $set: { recommendations, updatedAt: new Date() } },
+      { upsert: true }
+    );
+
+    return NextResponse.json({ recommendations, source: "AI" });
   } catch (error) {
     return NextResponse.json(
       {

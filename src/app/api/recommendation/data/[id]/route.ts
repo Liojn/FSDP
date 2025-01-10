@@ -110,6 +110,7 @@ async function getMetrics(userId: string): Promise<MetricData> {
       (emissionRates?.waste_emissions?.[wasteData?.waste_type?.toLowerCase()] || 0);
 
     return {
+      userId,
       energy: {
         consumption: currentEnergyConsumption,
         previousYearComparison: Number(energyComparison.toFixed(2))

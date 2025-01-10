@@ -52,6 +52,7 @@ export interface RecommendationCardProps {
 
 // Metric Data Type (based on previous context)
 export interface MetricData {
+  userId: string;
   energy: {
     consumption: number;
     previousYearComparison: number;

@@ -6,6 +6,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // import Tooltip components
 import { RecommendationCardProps } from "@/types";
+import { Button } from "@/components/ui/button";
+import { ClipboardList } from "lucide-react"; // Import tracking icon
 
 const RecommendationCard: React.FC<RecommendationCardProps> = memo(
   ({ rec }) => {
@@ -81,11 +83,24 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
                   : ""}
               </span>
             </div>
-            {rec.relatedMetrics && rec.relatedMetrics.length > 0 && (
-              <p className="text-sm text-gray-500">
-                Related Metrics: {rec.relatedMetrics.join(", ")}
-              </p>
-            )}
+            <div className="flex justify-between items-center mt-4">
+              <div>
+                {rec.relatedMetrics && rec.relatedMetrics.length > 0 && (
+                  <p className="text-sm text-gray-500">
+                    Related Metrics: {rec.relatedMetrics.join(", ")}
+                  </p>
+                )}
+              </div>
+              <Button
+                onClick={() => console.log("Track clicked")}
+                variant="outline"
+                size="sm"
+                className="ml-auto"
+              >
+                <ClipboardList className="h-4 w-4 mr-2" />
+                Track
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+import {
+  saveRecommendationsToBackend,
+  fetchRecommendationsFromBackend,
+} from "@/services/recommendationService";
 
 import React, { useState, useCallback, useMemo, Suspense } from "react";
 import useSWR from "swr";
@@ -20,6 +24,11 @@ import {
 import RecommendationSkeleton from "./components/RecommendationSkeleton";
 import RecommendationCard from "./components/RecommendationCard";
 import ImplementationTracker from "./components/ImplementationTracker";
+
+/** =======================
+ *  ErrorBoundary Component
+ *  =======================
+ */
 class ErrorBoundary extends React.Component<{
   fallback: React.ReactNode;
   children: React.ReactNode;
@@ -35,6 +44,10 @@ class ErrorBoundary extends React.Component<{
   }
 }
 
+/** ====================
+ *  Interface Props
+ *  ====================
+ */
 interface RecommendationClientProps {
   initialMetrics: MetricData;
   initialCategory: CategoryType;
@@ -42,19 +55,95 @@ interface RecommendationClientProps {
   weatherData: any[]; // Add this property
 }
 
+/** ====================
+ *  Hybrid Cache
+ *  ====================
+ */
+const recommendationCache = new Map<string, Recommendation[]>();
+
+/**
+ * Attempt to get recommendations from localStorage
+ */
+function fetchFromLocalStorage(key: string): Recommendation[] | null {
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (err) {
+    console.error("Error reading from localStorage:", err);
+  }
+  return null;
+}
+
+/** ============================
+ *  RecommendationClient
+ *  ============================
+ */
 export default function RecommendationClient({
   initialMetrics,
   initialCategory,
   initialScopes = [],
-  weatherData = [], // Accept weatherData as a prop.
+  weatherData = [],
 }: RecommendationClientProps) {
   const { toast } = useToast();
+
   const [implementedRecommendations, setImplementedRecommendations] =
     useState<ImplementedRecommendationsState>({});
   const [activeCategory] = useState<CategoryType>(initialCategory);
   const [activeScopes] = useState<string[]>(initialScopes);
   const [metrics] = useState<MetricData>(initialMetrics);
 
+  /**
+   * Hybrid-caching + SWR fetcher function
+   * 1. Check in-memory cache.
+   * 2. If not found, check localStorage.
+   * 3. If still not found, fetch from backend, store in localStorage and in-memory cache.
+   */
+  const fetcher = async ({
+    url,
+    data,
+  }: {
+    url: string;
+    data: any;
+  }): Promise<{ recommendations: Recommendation[] }> => {
+    const cacheKey = JSON.stringify(data); // or a custom key
+
+    // 1. Check in-memory cache
+    if (recommendationCache.has(cacheKey)) {
+      console.log("Using in-memory cache for recommendations");
+      return {
+        recommendations: recommendationCache.get(cacheKey) as Recommendation[],
+      };
+    }
+
+    // 2. Check localStorage
+    const localStorageData = fetchFromLocalStorage(cacheKey);
+    if (localStorageData) {
+      console.log("Using localStorage cache for recommendations");
+      recommendationCache.set(cacheKey, localStorageData);
+      return { recommendations: localStorageData };
+    }
+
+    // 3. Fetch from backend
+    console.log("Fetching recommendations from backend...");
+    const backendData = await fetchRecommendationsFromBackend(url, data);
+
+    // Store in memory
+    recommendationCache.set(cacheKey, backendData);
+    // Also store in localStorage
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(backendData));
+    } catch (error) {
+      console.error("Error writing to localStorage:", error);
+    }
+
+    return { recommendations: backendData };
+  };
+
+  /**
+   * Use SWR to handle data fetching + revalidation
+   */
   const { data, error: fetchError } = useSWR(
     {
       url: "/api/recommendation",
@@ -69,22 +158,7 @@ export default function RecommendationClient({
         ),
       },
     },
-    async ({ url, data }) => {
-      console.log("Metrics being sent:", metrics);
-      console.log("WeatherData being sent:", weatherData);
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("API Error:", errorData);
-        throw new Error(errorData.error || "Failed to fetch recommendations");
-      }
-      return response.json();
-    },
+    fetcher, // custom fetcher
     {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
@@ -102,24 +176,53 @@ export default function RecommendationClient({
 
   console.log("Data from useSWR:", data);
 
-  // Filter recommendations by active scopes
+  /**
+   * Filter the recommendations by the user's active scopes
+   */
   const filteredRecommendations = useMemo(() => {
     const recommendations = data?.recommendations || [];
-    console.log("Recommendations:", recommendations);
-
     if (activeScopes.length === 0) return recommendations;
-    return recommendations.filter((rec: { scope: any }) =>
+    return recommendations.filter((rec: Recommendation) =>
       activeScopes.includes(rec.scope || "")
     );
   }, [data, activeScopes]);
 
-  const toggleRecommendation = useCallback((id: string) => {
-    setImplementedRecommendations((prev) => {
-      const newState = { ...prev };
-      newState[id] = !newState[id];
-      return newState;
-    });
-  }, []);
+  /**
+   * Toggle the “implemented” state of a recommendation
+   * and sync that change to the backend.
+   */
+  const toggleRecommendation = useCallback(
+    async (id: string) => {
+      setImplementedRecommendations((prev) => {
+        const newState = { ...prev };
+        newState[id] = !newState[id];
+        return newState;
+      });
+
+      // Sync the updated state to the backend (optional)
+      // Just an example: pass the entire list of implemented IDs
+      const implementedIds = Object.keys(implementedRecommendations).filter(
+        (key) => implementedRecommendations[key]
+      );
+      // We include the toggled ID as well if it is newly implemented
+      if (!implementedRecommendations[id]) {
+        implementedIds.push(id);
+      }
+
+      try {
+        await saveRecommendationsToBackend("userId", implementedIds);
+      } catch (error) {
+        console.error("Failed to sync implemented recommendations:", error);
+        toast({
+          variant: "destructive",
+          title: "Failed to Save",
+          description:
+            "We could not save your changes to the server. Please try again.",
+        });
+      }
+    },
+    [implementedRecommendations, toast]
+  );
 
   return (
     <div className="space-y-6">
@@ -191,6 +294,7 @@ export default function RecommendationClient({
                     >
                       <ImplementationTracker
                         recommendation={rec}
+                        // Example random progress just for UI demonstration
                         progress={Math.random() * 100}
                       />
                     </Suspense>
