@@ -15,36 +15,31 @@ const RecommendationPage = ({
 }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<any>(null);
+  // ADD this line to create weatherData state
+  const [weatherData, setWeatherData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Retrieve userId from localStorage
     const storedUserId = localStorage.getItem("userId");
     if (storedUserId) {
       setUserId(storedUserId);
 
-      // Fetch metrics from the API if userId exists
       fetch(`/api/recommendation/data/${storedUserId}`)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error("Error fetching metrics.");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          setMetrics(data);
+        .then((response) => response.json())
+        .then((fetchedData) => {
+          // Now that we've declared weatherData state, these work fine:
+          setMetrics(fetchedData.metrics);
+          setWeatherData(fetchedData.weatherData);
           setLoading(false);
         })
-        .catch((error) => {
-          console.error("Failed to fetch metrics:", error);
+        .catch(() => {
           setLoading(false);
         });
     } else {
-      setLoading(false); // Stop loading if no userId is found
+      setLoading(false);
     }
   }, []);
 
-  // Handle scopes from query parameters
   const scopesParam = searchParams?.scopes;
   const scopes = Array.isArray(scopesParam)
     ? scopesParam
@@ -75,6 +70,7 @@ const RecommendationPage = ({
         initialMetrics={metrics}
         initialCategory={CategoryType.OVERALL}
         initialScopes={scopes}
+        weatherData={weatherData} // Now recognized correctly
       />
     </div>
   );

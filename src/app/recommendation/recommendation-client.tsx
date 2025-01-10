@@ -35,36 +35,18 @@ class ErrorBoundary extends React.Component<{
   }
 }
 
-const recommendationFetcher = async ({
-  url,
-  data,
-}: {
-  url: string;
-  data: any;
-}): Promise<{ recommendations: Recommendation[] }> => {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error("API Error:", errorData);
-    throw new Error(errorData.error || "Failed to fetch recommendations");
-  }
-  return response.json();
-};
-
 interface RecommendationClientProps {
   initialMetrics: MetricData;
   initialCategory: CategoryType;
   initialScopes?: string[];
+  weatherData: any[]; // Add this property
 }
 
 export default function RecommendationClient({
   initialMetrics,
   initialCategory,
   initialScopes = [],
+  weatherData = [], // Accept weatherData as a prop.
 }: RecommendationClientProps) {
   const { toast } = useToast();
   const [implementedRecommendations, setImplementedRecommendations] =
@@ -81,12 +63,28 @@ export default function RecommendationClient({
         metrics,
         scopes: activeScopes,
         timeframe: "monthly",
+        weatherData,
         previousImplementations: Object.keys(implementedRecommendations).filter(
           (key) => implementedRecommendations[key]
         ),
       },
     },
-    recommendationFetcher,
+    async ({ url, data }) => {
+      console.log("Metrics being sent:", metrics);
+      console.log("WeatherData being sent:", weatherData);
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("API Error:", errorData);
+        throw new Error(errorData.error || "Failed to fetch recommendations");
+      }
+      return response.json();
+    },
     {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
@@ -110,7 +108,7 @@ export default function RecommendationClient({
     console.log("Recommendations:", recommendations);
 
     if (activeScopes.length === 0) return recommendations;
-    return recommendations.filter((rec) =>
+    return recommendations.filter((rec: { scope: any }) =>
       activeScopes.includes(rec.scope || "")
     );
   }, [data, activeScopes]);
@@ -145,7 +143,7 @@ export default function RecommendationClient({
             ) : (
               <div className="space-y-4">
                 {filteredRecommendations.length ? (
-                  filteredRecommendations.map((rec) => (
+                  filteredRecommendations.map((rec: Recommendation) => (
                     <RecommendationCard
                       key={rec.id}
                       rec={rec}
@@ -177,8 +175,11 @@ export default function RecommendationClient({
           <CardContent>
             <div className="space-y-4">
               {filteredRecommendations
-                .filter((rec) => implementedRecommendations[rec.id])
-                .map((rec) => (
+                .filter(
+                  (rec: { id: string | number }) =>
+                    implementedRecommendations[rec.id]
+                )
+                .map((rec: { id: React.Key | null | undefined }) => (
                   <ErrorBoundary
                     key={rec.id}
                     fallback={<div>Error loading tracker</div>}

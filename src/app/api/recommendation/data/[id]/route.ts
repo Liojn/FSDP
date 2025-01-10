@@ -7,21 +7,44 @@ import { NextRequest, NextResponse } from 'next/server';
 // Define a dynamic route handler that takes a `userId` parameter
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params;
-  
-  // Validate `id` as a valid MongoDB ObjectId
+
   if (!ObjectId.isValid(id)) {
-    return NextResponse.json({ error: 'Invalid User ID format' }, { status: 400 });
+    return NextResponse.json({ error: "Invalid User ID format" }, { status: 400 });
   }
 
   try {
-    // Fetch metrics using `getMetrics` function
-    const metrics = await getMetrics(id);
-    return NextResponse.json(metrics);
+    const [metrics, weatherData] = await Promise.all([
+      getMetrics(id),
+      fetchWeatherData(),
+    ]);
+
+    if (!weatherData || weatherData.length === 0) {
+      console.error("No weather data available");
+      return NextResponse.json({ error: "Weather data unavailable" }, { status: 400 });
+    }
+
+    console.log("Metrics Data:", metrics);
+    console.log("Weather Data:", weatherData);
+
+    return NextResponse.json({ metrics, weatherData });
   } catch (error) {
-    console.error("Error fetching data:", error); // Log detailed error
-    return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
+    console.error("Error:", error);
+    return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
   }
 }
+
+
+async function fetchWeatherData() {
+  try {
+    const db = await connectToDatabase.connectToDatabase();
+    const collection = db.collection("IndonesiaWeather");
+    return await collection.find({}).toArray();
+  } catch (error) {
+    console.error("Error fetching weather data:", error);
+    return [];
+  }
+}
+
 
 // Helper function to fetch and calculate metrics based on userId
 async function getMetrics(userId: string): Promise<MetricData> {
