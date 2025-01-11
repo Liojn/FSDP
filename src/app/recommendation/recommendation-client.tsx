@@ -219,7 +219,7 @@ export default function RecommendationClient({
               </div>
             ) : !data ? (
               <div className="mt-4">
-                <RecommendationSkeleton />
+                <RecommendationSkeleton /> {/* Show skeleton while loading */}
               </div>
             ) : (
               <div className="space-y-4">

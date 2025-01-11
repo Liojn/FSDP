@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-
 import React, { useEffect, useState } from "react";
 import RecommendationClient from "./recommendation-client";
-import { CategoryType } from "@/types";
+import { CategoryType, MetricData, WeatherData } from "@/types";
 import { PageHeader } from "@/components/shared/page-header";
+import RecommendationSkeleton from "./components/RecommendationSkeleton"; // Add skeleton component
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +13,9 @@ const RecommendationPage = ({
   searchParams?: { scopes?: string | string[] };
 }) => {
   const [userId, setUserId] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<any>(null);
-  const [weatherData, setWeatherData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState<MetricData>({} as MetricData);
+  const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
+  const [loading, setLoading] = useState(true); // Track loading state
 
   useEffect(() => {
     const storedUserId = localStorage.getItem("userId");
@@ -28,13 +27,13 @@ const RecommendationPage = ({
         .then((fetchedData) => {
           setMetrics(fetchedData.metrics);
           setWeatherData(fetchedData.weatherData);
-          setLoading(false);
+          setLoading(false); // Data fetched
         })
         .catch(() => {
-          setLoading(false);
+          setLoading(false); // Error occurred
         });
     } else {
-      setLoading(false);
+      setLoading(false); // No user ID found
     }
   }, []);
 
@@ -46,9 +45,11 @@ const RecommendationPage = ({
     : [];
 
   if (loading) {
+    // Show skeleton while loading
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
+      <div className="p-4 px-10">
+        <PageHeader title="AI-Curated Farm Management Recommendations" />
+        <RecommendationSkeleton /> {/* Skeleton loader */}
       </div>
     );
   }
@@ -65,7 +66,7 @@ const RecommendationPage = ({
     <div className="p-4 px-10">
       <PageHeader title="AI-Curated Farm Management Recommendations" />
       <RecommendationClient
-        userId={userId} // Add this property
+        userId={userId}
         initialMetrics={metrics}
         initialCategory={CategoryType.OVERALL}
         initialScopes={scopes}
