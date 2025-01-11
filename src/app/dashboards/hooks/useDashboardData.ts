@@ -149,7 +149,25 @@ export const useDashboardData = () => {
     };
 
     fetchMetricsData();
-  }, [selectedYear, selectedMonth, thresholds, userId, yearOptions]);
+  }, [selectedYear, thresholds, userId, yearOptions]);
+
+  // Fetch metrics data for the filtered DONUT CHART
+  useEffect(() => {
+    const fetchMetricsData = async () => {
+      if (selectedYear && userId) {
+        try {
+          const companyId = userId;
+          const fetchPromises = fetchEmissionCategory(companyId, selectedYear, selectedMonth);
+          const results = await fetchPromises;
+          setCategoryEmissionsData(results);
+        } catch (error) {
+          console.error("Failed to fetch emission data:", error);
+        }
+      }
+    };
+
+    fetchMetricsData();
+  }, [selectedMonth]);
 
   // Check thresholds
   const checkThresholds = (metrics: MetricData[]) => {
@@ -229,7 +247,14 @@ export const useDashboardData = () => {
 
   const handleMonthClick = (month: string | number) => {
     setSelectedMonth(selectedMonth === month ? "" : month);
+    
   };
+  //checking for modal api call
+  // console.log('Rendering Modal with month:', {
+  //   selectedMonth,
+  //   typeOfSelectedMonth: typeof selectedMonth,
+  //   monthProp: selectedMonth !== null ? selectedMonth : undefined
+  // });
 
   return {
     loading,
