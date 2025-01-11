@@ -27,7 +27,25 @@ interface TrackingPageProps {
 }
 
 export default function TrackingPage({ recommendationId }: TrackingPageProps) {
-  const [recommendation, setRecommendation] = useState<any>(null);
+  interface TrackingRecommendation {
+    title: string;
+    description: string;
+    difficulty: string;
+    priorityLevel: string;
+    estimatedTimeframe: string;
+    estimatedCost: number;
+    estimatedEmissionReduction: number;
+    implementationSteps: string[];
+    tracking: {
+      status: string;
+      progressPercentage: number;
+      metrics: { name: string; value: number; unit: string }[];
+      notes: string[];
+    };
+  }
+
+  const [recommendation, setRecommendation] =
+    useState<TrackingRecommendation | null>(null);
   const [newNote, setNewNote] = useState("");
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -39,13 +57,13 @@ export default function TrackingPage({ recommendationId }: TrackingPageProps) {
         if (!userId) throw new Error("User ID not found");
 
         const response = await fetch(
-          `/api/recommendation/${recommendationId}?userId=${userId}`
+          `/api/recommendation/data/${recommendationId}?userId=${userId}`
         );
         if (!response.ok) throw new Error("Failed to fetch recommendation");
 
         const data = await response.json();
         setRecommendation(data);
-      } catch (error) {
+      } catch {
         toast({
           variant: "destructive",
           title: "Error",
@@ -90,7 +108,7 @@ export default function TrackingPage({ recommendationId }: TrackingPageProps) {
         title: "Success",
         description: "Note added successfully",
       });
-    } catch (error) {
+    } catch {
       toast({
         variant: "destructive",
         title: "Error",
@@ -256,7 +274,10 @@ export default function TrackingPage({ recommendationId }: TrackingPageProps) {
                   </p>
                 </div>
                 {recommendation.tracking?.metrics?.map(
-                  (metric: any, index: number) => (
+                  (
+                    metric: { name: string; value: number; unit: string },
+                    index: number
+                  ) => (
                     <div key={index} className="p-4 bg-gray-50 rounded-lg">
                       <p className="text-sm text-gray-600 mb-1">
                         {metric.name}

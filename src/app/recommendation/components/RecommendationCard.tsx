@@ -8,6 +8,7 @@ import {
 import { RecommendationCardProps } from "@/types";
 import { Button } from "@/components/ui/button";
 import { ClipboardList } from "lucide-react"; // Import tracking icon
+import Link from "next/link";
 
 const RecommendationCard: React.FC<RecommendationCardProps> = memo(
   ({ rec }) => {
@@ -91,22 +92,18 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
                   </p>
                 )}
               </div>
-              <Button
-                onClick={() => console.log("Track clicked")}
-                variant="outline"
-                size="sm"
-                className="ml-auto"
-              >
-                <ClipboardList className="h-4 w-4" />
-                Track
-              </Button>
+              <Link href={`/recommendation/${rec.id}`} passHref>
+                <Button variant="outline" size="sm" className="ml-auto">
+                  <ClipboardList className="h-4 w-4" />
+                  Track
+                </Button>
+              </Link>
             </div>
           </div>
         </CardContent>
       </Card>
     );
   },
-  // Custom comparison function to prevent unnecessary re-renders
   (prevProps, nextProps) => {
     return (
       prevProps.rec.id === nextProps.rec.id &&

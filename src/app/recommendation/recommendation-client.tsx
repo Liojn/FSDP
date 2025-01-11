@@ -7,7 +7,7 @@ import {
   fetchRecommendationsFromBackend,
 } from "@/services/recommendationService";
 
-import React, { useState, useCallback, useMemo, Suspense } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import useSWR from "swr";
 import {
   Card,
@@ -25,26 +25,6 @@ import {
 } from "@/types";
 import RecommendationSkeleton from "./components/RecommendationSkeleton";
 import RecommendationCard from "./components/RecommendationCard";
-import ImplementationTracker from "./components/ImplementationTracker";
-
-/** =======================
- *  ErrorBoundary Component
- *  =======================
- */
-class ErrorBoundary extends React.Component<{
-  fallback: React.ReactNode;
-  children: React.ReactNode;
-}> {
-  state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  render() {
-    return this.state.hasError ? this.props.fallback : this.props.children;
-  }
-}
 
 /** ====================
  *  Interface Props
@@ -262,46 +242,6 @@ export default function RecommendationClient({
           </div>
         </CardContent>
       </Card>
-
-      {Object.keys(implementedRecommendations).filter(
-        (key) => implementedRecommendations[key]
-      ).length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Implementation Progress</CardTitle>
-            <CardDescription>
-              Track your sustainability initiatives
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {filteredRecommendations
-                .filter(
-                  (rec: { id: string | number }) =>
-                    implementedRecommendations[rec.id]
-                )
-                .map((rec: { id: React.Key | null | undefined }) => (
-                  <ErrorBoundary
-                    key={rec.id}
-                    fallback={<div>Error loading tracker</div>}
-                  >
-                    <Suspense
-                      fallback={
-                        <div className="h-20 animate-pulse bg-gray-100 rounded-lg" />
-                      }
-                    >
-                      <ImplementationTracker
-                        recommendation={rec}
-                        // Example random progress just for UI demonstration
-                        progress={Math.random() * 100}
-                      />
-                    </Suspense>
-                  </ErrorBoundary>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
