@@ -15,7 +15,6 @@ const RecommendationPage = ({
 }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<any>(null);
-  // ADD this line to create weatherData state
   const [weatherData, setWeatherData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,7 +26,6 @@ const RecommendationPage = ({
       fetch(`/api/recommendation/data/${storedUserId}`)
         .then((response) => response.json())
         .then((fetchedData) => {
-          // Now that we've declared weatherData state, these work fine:
           setMetrics(fetchedData.metrics);
           setWeatherData(fetchedData.weatherData);
           setLoading(false);
@@ -67,10 +65,11 @@ const RecommendationPage = ({
     <div className="p-4 px-10">
       <PageHeader title="AI-Curated Farm Management Recommendations" />
       <RecommendationClient
+        userId={userId} // Add this property
         initialMetrics={metrics}
         initialCategory={CategoryType.OVERALL}
         initialScopes={scopes}
-        weatherData={weatherData} // Now recognized correctly
+        weatherData={weatherData}
       />
     </div>
   );

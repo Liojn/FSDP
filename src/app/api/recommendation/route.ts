@@ -83,8 +83,7 @@ const generatePrompt = async (metrics: MetricData, weatherData: any[], scopes?: 
     risk: determineWeatherRisk(data.temperature, data.rainfall, data.wind_speed),
   }));
 
-  console.log("Metrics Data:", metrics);
-  console.log("Weather Data:", weatherData);
+
 
   const scopesText =
     scopes && scopes.length > 0

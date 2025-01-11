@@ -1,13 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/services/recommendationService.ts
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-/**
- * Save recommendations to the backend.
- * @param userId - The ID of the user.
- * @param recommendations - The list of recommendations to save.
- */
+// Save recommendations to the backend.
 export async function saveRecommendationsToBackend(
   userId: string,
   recommendations: any
@@ -43,21 +38,23 @@ export async function fetchRecommendationsFromBackend(
   scopes: string[]
 ): Promise<any | null> {
   try {
+    // Build query string only if scopes are present
     const queryString = scopes.length
       ? `?scopes=${scopes.join(",")}`
-      : ""; // Add scopes only if present
-    const response = await fetch(
-      `/api/recommendation/data/${userId}${queryString}`
-    );
+      : "";
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log("Recommendations fetched from backend:", data);
-      return data;
+    // Use the correct API route with userId
+    const response = await fetch(`/api/recommendation/data/${userId}${queryString}`);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Error fetching recommendations:", errorData);
+      return null;
     }
 
-    console.error("Failed to fetch recommendations from backend.");
-    return null;
+    const data = await response.json();
+    console.log("Recommendations fetched from backend:", data);
+    return data;
   } catch (error) {
     console.error("Error fetching recommendations from backend:", error);
     return null;

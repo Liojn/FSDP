@@ -1,3 +1,5 @@
+// recommendation-client.tsx
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import {
@@ -49,10 +51,11 @@ class ErrorBoundary extends React.Component<{
  *  ====================
  */
 interface RecommendationClientProps {
+  userId: string; // Added userId
   initialMetrics: MetricData;
   initialCategory: CategoryType;
   initialScopes?: string[];
-  weatherData: any[]; // Add this property
+  weatherData: any[];
 }
 
 /** ====================
@@ -81,18 +84,18 @@ function fetchFromLocalStorage(key: string): Recommendation[] | null {
  *  ============================
  */
 export default function RecommendationClient({
+  userId, // Destructure userId
   initialMetrics,
   initialCategory,
   initialScopes = [],
-  weatherData = [],
 }: RecommendationClientProps) {
   const { toast } = useToast();
 
   const [implementedRecommendations, setImplementedRecommendations] =
     useState<ImplementedRecommendationsState>({});
-  const [activeCategory] = useState<CategoryType>(initialCategory);
+  const [] = useState<CategoryType>(initialCategory);
   const [activeScopes] = useState<string[]>(initialScopes);
-  const [metrics] = useState<MetricData>(initialMetrics);
+  const [] = useState<MetricData>(initialMetrics);
 
   /**
    * Hybrid-caching + SWR fetcher function
@@ -101,13 +104,13 @@ export default function RecommendationClient({
    * 3. If still not found, fetch from backend, store in localStorage and in-memory cache.
    */
   const fetcher = async ({
-    url,
-    data,
+    userId,
+    scopes,
   }: {
-    url: string;
-    data: any;
+    userId: string;
+    scopes: string[];
   }): Promise<{ recommendations: Recommendation[] }> => {
-    const cacheKey = JSON.stringify(data); // or a custom key
+    const cacheKey = JSON.stringify({ userId, scopes }); // Unique key based on userId and scopes
 
     // 1. Check in-memory cache
     if (recommendationCache.has(cacheKey)) {
@@ -127,37 +130,32 @@ export default function RecommendationClient({
 
     // 3. Fetch from backend
     console.log("Fetching recommendations from backend...");
-    const backendData = await fetchRecommendationsFromBackend(url, data);
+    const backendData = await fetchRecommendationsFromBackend(userId, scopes);
+
+    if (!backendData) {
+      throw new Error("No recommendations fetched from backend.");
+    }
 
     // Store in memory
-    recommendationCache.set(cacheKey, backendData);
+    recommendationCache.set(cacheKey, backendData.recommendations);
     // Also store in localStorage
     try {
-      localStorage.setItem(cacheKey, JSON.stringify(backendData));
+      localStorage.setItem(
+        cacheKey,
+        JSON.stringify(backendData.recommendations)
+      );
     } catch (error) {
       console.error("Error writing to localStorage:", error);
     }
 
-    return { recommendations: backendData };
+    return { recommendations: backendData.recommendations };
   };
 
   /**
    * Use SWR to handle data fetching + revalidation
    */
   const { data, error: fetchError } = useSWR(
-    {
-      url: "/api/recommendation",
-      data: {
-        category: activeCategory,
-        metrics,
-        scopes: activeScopes,
-        timeframe: "monthly",
-        weatherData,
-        previousImplementations: Object.keys(implementedRecommendations).filter(
-          (key) => implementedRecommendations[key]
-        ),
-      },
-    },
+    userId ? { userId, scopes: activeScopes } : null, // Only fetch when userId exists
     fetcher, // custom fetcher
     {
       revalidateOnFocus: false,
@@ -210,7 +208,7 @@ export default function RecommendationClient({
       }
 
       try {
-        await saveRecommendationsToBackend("userId", implementedIds);
+        await saveRecommendationsToBackend(userId, implementedIds); // Use actual userId
       } catch (error) {
         console.error("Failed to sync implemented recommendations:", error);
         toast({
@@ -221,7 +219,7 @@ export default function RecommendationClient({
         });
       }
     },
-    [implementedRecommendations, toast]
+    [implementedRecommendations, toast, userId] // Include userId in dependencies
   );
 
   return (

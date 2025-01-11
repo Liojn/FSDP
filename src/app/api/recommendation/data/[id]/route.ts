@@ -1,32 +1,45 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ObjectId } from 'mongodb';
-import { MetricData } from "@/types";
+import { MetricData, ResponseData} from "@/types";
 import connectToDatabase from "dbConfig";
 import { NextRequest, NextResponse } from 'next/server';
 
-// Define a dynamic route handler that takes a `userId` parameter
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   const { id } = params;
+  const scopes = request.nextUrl.searchParams.get("scopes")?.split(",") || [];
 
   if (!ObjectId.isValid(id)) {
     return NextResponse.json({ error: "Invalid User ID format" }, { status: 400 });
   }
 
   try {
+    const db = await connectToDatabase.connectToDatabase();
+
+    // Fetch metrics and weather data
     const [metrics, weatherData] = await Promise.all([
       getMetrics(id),
       fetchWeatherData(),
     ]);
 
-    if (!weatherData || weatherData.length === 0) {
-      console.error("No weather data available");
-      return NextResponse.json({ error: "Weather data unavailable" }, { status: 400 });
+    // Fetch recommendations from the database based on userId and scopes
+    const recommendationsCollection = db.collection("recommendations");
+    const recommendations = await recommendationsCollection.findOne({
+      userId: id,
+      scopes: { $all: scopes.length > 0 ? scopes : [] },
+    });
+
+    const responseData: ResponseData = { metrics, weatherData };
+    console.log("Recommendations fetched from database:", recommendations);
+    if (recommendations) {
+      responseData.recommendations = recommendations.recommendations;
     }
 
-    console.log("Metrics Data:", metrics);
-    console.log("Weather Data:", weatherData);
-
-    return NextResponse.json({ metrics, weatherData });
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error("Error:", error);
     return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
@@ -44,6 +57,7 @@ async function fetchWeatherData() {
     return [];
   }
 }
+
 
 
 // Helper function to fetch and calculate metrics based on userId

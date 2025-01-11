@@ -43,6 +43,24 @@ export interface EmissionData {
   timestamp?: Date;
 }
 
+export interface WeatherData {
+  _id: {
+    $oid: string;
+  };
+  date: string;
+  temperature: number;
+  rainfall: number;
+  wind_speed: number;
+  location: string;
+}
+
+// Recommendation Response Data Interface
+export interface ResponseData {
+  metrics: MetricData;
+  weatherData: WeatherData;
+  recommendations?: Recommendation[];
+}
+
 // Recommendation Card Props
 export interface RecommendationCardProps {
   rec: Recommendation;
