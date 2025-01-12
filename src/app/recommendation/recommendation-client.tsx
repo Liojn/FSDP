@@ -24,7 +24,7 @@ import {
   MetricData,
 } from "@/types";
 import RecommendationSkeleton from "./components/RecommendationSkeleton";
-import RecommendationCard from "./components/RecommendationCard";
+import RecommendationCard from "@/app/recommendation/components/RecommendationCard";
 
 /** ====================
  *  Interface Props
@@ -68,6 +68,7 @@ export default function RecommendationClient({
   initialMetrics,
   initialCategory,
   initialScopes = [],
+  weatherData,
 }: RecommendationClientProps) {
   const { toast } = useToast();
 
@@ -86,10 +87,15 @@ export default function RecommendationClient({
   const fetcher = async ({
     userId,
     scopes,
+    metrics,
+    weatherData,
   }: {
     userId: string;
     scopes: string[];
+    metrics: MetricData;
+    weatherData: any[];
   }): Promise<{ recommendations: Recommendation[] }> => {
+    console.log("Fetcher received:", { userId, scopes, metrics, weatherData });
     const cacheKey = JSON.stringify({ userId, scopes }); // Unique key based on userId and scopes
 
     // 1. Check in-memory cache
@@ -112,31 +118,64 @@ export default function RecommendationClient({
     console.log("Fetching recommendations from backend...");
     const backendData = await fetchRecommendationsFromBackend(userId, scopes);
 
-    if (!backendData) {
-      throw new Error("No recommendations fetched from backend.");
+    if (backendData?.recommendations) {
+      recommendationCache.set(cacheKey, backendData.recommendations);
+      try {
+        localStorage.setItem(
+          cacheKey,
+          JSON.stringify(backendData.recommendations)
+        );
+      } catch (error) {
+        console.error("Error writing to localStorage:", error);
+      }
+      return { recommendations: backendData.recommendations };
     }
 
-    // Store in memory
-    recommendationCache.set(cacheKey, backendData.recommendations);
-    // Also store in localStorage
+    // 4. If not found in backend, generate recommendations via AI
+    console.log("Generating recommendations via AI...");
+
     try {
-      localStorage.setItem(
-        cacheKey,
-        JSON.stringify(backendData.recommendations)
-      );
-    } catch (error) {
-      console.error("Error writing to localStorage:", error);
-    }
+      const response = await fetch("/api/recommendation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metrics, weatherData, scopes }),
+      });
 
-    return { recommendations: backendData.recommendations };
+      if (!response.ok) {
+        throw new Error(
+          `AI recommendation generation failed: ${response.statusText}`
+        );
+      }
+
+      const aiData = await response.json();
+      const aiRecommendations = aiData.recommendations;
+
+      // Cache and store AI-generated recommendations
+      recommendationCache.set(cacheKey, aiRecommendations);
+      localStorage.setItem(cacheKey, JSON.stringify(aiRecommendations));
+
+      return { recommendations: aiRecommendations };
+    } catch (error) {
+      console.error("Error generating AI recommendations:", error);
+      throw new Error("Failed to generate recommendations.");
+    }
   };
 
   /**
    * Use SWR to handle data fetching + revalidation
    */
+  console.log("SWR key:", { userId, scopes: activeScopes });
+
   const { data, error: fetchError } = useSWR(
-    userId ? { userId, scopes: activeScopes } : null, // Only fetch when userId exists
-    fetcher, // custom fetcher
+    userId
+      ? {
+          userId,
+          scopes: activeScopes,
+          metrics: initialMetrics, // <= Pass them here
+          weatherData, // <= And here
+        }
+      : null,
+    fetcher,
     {
       revalidateOnFocus: false,
       dedupingInterval: 30000,

@@ -10,38 +10,63 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = params;
-  const scopes = request.nextUrl.searchParams.get("scopes")?.split(",") || [];
+  console.log('GET Request Parameters:', {
+    id: params.id,
+    scopes: request.nextUrl.searchParams.get("scopes")
+  });
 
-  if (!ObjectId.isValid(id)) {
-    return NextResponse.json({ error: "Invalid User ID format" }, { status: 400 });
-  }
+  const { id } = params;
+  const scopesParam = request.nextUrl.searchParams.get("scopes");
+  const scopes = scopesParam ? scopesParam.split(",").filter(Boolean) : [];
+
+
+if (!ObjectId.isValid(id)) {
+  console.warn(`Invalid User ID format: ${id}`);
+  return NextResponse.json(
+    { error: `Invalid User ID format: ${id}` },
+    { status: 400 }
+  );
+}
+
 
   try {
+    console.log('Connecting to database...');
     const db = await connectToDatabase.connectToDatabase();
+    console.log('Database connected successfully');
 
+    console.log('Fetching metrics and weather data...');
     // Fetch metrics and weather data
     const [metrics, weatherData] = await Promise.all([
       getMetrics(id),
       fetchWeatherData(),
     ]);
+    console.log('Metrics and weather data fetched:', { 
+      metricsReceived: !!metrics,
+      weatherDataReceived: !!weatherData 
+    });
 
+    console.log('Querying recommendations with scopes:', scopes);
     // Fetch recommendations from the database based on userId and scopes
     const recommendationsCollection = db.collection("recommendations");
     const recommendations = await recommendationsCollection.findOne({
       userId: id,
-      scopes: { $all: scopes.length > 0 ? scopes : [] },
+      ...(scopes.length > 0 && { scopes: { $all: scopes } }),
     });
+    console.log('Recommendations found:', !!recommendations);
 
     const responseData: ResponseData = { metrics, weatherData };
-    console.log("Recommendations fetched from database:", recommendations);
     if (recommendations) {
       responseData.recommendations = recommendations.recommendations;
     }
+    console.log('Sending response with data:', {
+      hasMetrics: !!responseData.metrics,
+      hasWeather: !!responseData.weatherData,
+      hasRecommendations: !!responseData.recommendations
+    });
 
     return NextResponse.json(responseData);
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error in GET request:", error);
     return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
   }
 }

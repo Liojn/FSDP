@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { Recommendation, MetricData, CategoryType } from "@/types";
 import Anthropic from "@anthropic-ai/sdk";
 import connectToDatabase from "dbConfig";
+import { ObjectId } from "mongodb";
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
@@ -83,8 +84,6 @@ const generatePrompt = async (metrics: MetricData, weatherData: any[], scopes?: 
     risk: determineWeatherRisk(data.temperature, data.rainfall, data.wind_speed),
   }));
 
-
-
   const scopesText =
     scopes && scopes.length > 0
       ? `The user needs recommendations for the following scopes: ${scopes.join(", ")}.`
@@ -109,9 +108,14 @@ ${weatherRisk
 **Instructions:**
 - Incorporate weather risks into the recommendations, prioritizing solutions for high-risk areas.
 - Provide exactly 3 practical recommendations.
-- **Return the response as valid JSON only**, with no additional text or explanations.
-- **Do not include any markdown, code snippets, or additional formatting.**
-- Use the following structure:
+- Include ROI and cost savings estimates for each recommendation.
+- Specify the expected timeline to implement each recommendation.
+- Highlight required dependencies, resources, or team roles for implementation.
+- Compare user metrics against industry benchmarks where available.
+
+**Return the response as valid JSON only**, with no additional text or explanations.
+**Do not include any markdown, code snippets, or additional formatting.**
+Use the following structure:
 
 {
   "recommendations": [
@@ -146,6 +150,7 @@ export async function POST(req: Request) {
       weatherData: any[];
       scopes?: string[];
     };
+    console.log("Request payload:", { metrics, weatherData, scopes });
 
     if (!metrics || !weatherData) {
       return NextResponse.json(
@@ -189,8 +194,8 @@ export async function POST(req: Request) {
     const parsedResponse = cleanAndParseJSON(assistantReply);
 
     const recommendations: Recommendation[] = parsedResponse.recommendations.map(
-      (rec, index) => ({
-        id: `rec_${index}`,
+      (rec) => ({
+        id: new ObjectId().toString(), // Generate a valid ObjectId
         title: rec.title,
         description: rec.description,
         scope: rec.scope || "Scope 1",
