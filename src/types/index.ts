@@ -1,7 +1,11 @@
 // Enum for Category Type
 export enum CategoryType {
-  OVERALL = "overall",
-  // Add other categories as needed
+  OVERALL = "Overall",
+  ENERGY = "Energy",
+  WASTE = "Waste",
+  CROPS = "Crops",
+  LIVESTOCK = "Livestock",
+  CUSTOM = "Custom", // Placeholder for dynamic categories
 }
 
 // Recommendation Type with fully optional fields
@@ -33,6 +37,7 @@ export interface TrackingRecommendation extends Recommendation {
   trackingImplementationSteps: ImplementationStep[];
   completedSteps: number;
   notes: Note[];
+  tags?: string[]; // Add this
 }
 
 

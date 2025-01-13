@@ -11,6 +11,7 @@ const anthropic = new Anthropic({
 });
 
 interface ApiRecommendation {
+  category: CategoryType;
   title: string;
   description: string;
   impact: string;
@@ -73,7 +74,11 @@ const determineWeatherRisk = (temperature: number, rainfall: number, windSpeed: 
   }
 };
 
-const generatePrompt = async (metrics: MetricData, weatherData: any[], scopes?: string[]) => {
+const generatePrompt = async (
+  metrics: MetricData,
+  weatherData: any[],
+  scopes?: string[]
+) => {
   const scopeEmissions = calculateScopeEmissions(metrics);
 
   const weatherRisk = weatherData.map((data) => ({
@@ -97,6 +102,15 @@ Current emissions by scope:
 - Scope 2 (Energy): ${scopeEmissions.scope2.toFixed(2)} tons CO₂e
 - Scope 3 (Indirect): ${scopeEmissions.scope3.toFixed(2)} tons CO₂e
 
+Key metrics breakdown:
+- Energy: ${metrics.energy.consumption} MWh consumed (${metrics.energy.previousYearComparison}% change from previous year)
+- Waste: ${metrics.waste.quantity} tons of waste
+- Crops: ${metrics.crops.area} hectares farmed, ${metrics.crops.fertilizer} kg of fertilizer used
+- Livestock: ${metrics.livestock.count} animals, ${metrics.livestock.emissions} tons CO₂e emissions
+- Emissions: Total emissions ${metrics.emissions.total} tons CO₂e (by category: ${Object.entries(metrics.emissions.byCategory)
+    .map(([category, value]) => `${category}: ${value} tons`)
+    .join(", ")})
+
 Weather conditions and risks:
 ${weatherRisk
   .map(
@@ -106,8 +120,10 @@ ${weatherRisk
   .join("\n")}
 
 **Instructions:**
+- Generate recommendations for the following categories only: energy, waste, crops, livestock, and emissions.
 - Incorporate weather risks into the recommendations, prioritizing solutions for high-risk areas.
-- Provide exactly 3 practical recommendations.
+- Generate exactly 3 recommendations, no more and no less.
+- Generate recommendations based on the user's current metrics and industry benchmarks.
 - Include ROI and cost savings estimates for each recommendation.
 - Specify the expected timeline to implement each recommendation.
 - Highlight required dependencies, resources, or team roles for implementation.
@@ -120,6 +136,7 @@ Use the following structure:
 {
   "recommendations": [
     {
+      "category": "Energy",
       "title": "Actionable recommendation title",
       "description": "Brief description of the recommendation",
       "impact": "Estimated reduction in emissions",
@@ -137,11 +154,13 @@ Use the following structure:
 }
 
 `;
-    // Log the generated prompt
+
+  // Log the generated prompt
   console.log("Generated AI Prompt:", aiPrompt);
 
   return aiPrompt;
 };
+
 
 export async function POST(req: Request) {
   try {
@@ -200,7 +219,7 @@ export async function POST(req: Request) {
         description: rec.description,
         scope: rec.scope || "Scope 1",
         impact: rec.impact,
-        category: CategoryType.OVERALL,
+        category: rec.category || CategoryType.OVERALL,
         estimatedEmissionReduction: rec.savings || 0,
         priorityLevel: rec.priority
           ? rec.priority <= 2

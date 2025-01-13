@@ -12,7 +12,15 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2, Clock, AlertCircle, Trash2, Save } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Trash2,
+  Save,
+  Search,
+  Plus,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Note, TrackingRecommendation } from "@/types";
 
@@ -29,12 +37,26 @@ export function TrackingCard({
   const [editMode, setEditMode] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [newNote, setNewNote] = useState("");
+  // NEW: For adding new steps on the fly
+  const [newStep, setNewStep] = useState("");
+
+  // NEW: For searching/filtering steps
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const [newTag, setNewTag] = useState("");
+
+  // Store “edited fields” in case user cancels
   const [editedFields, setEditedFields] = useState(() => ({
     title: initialRecommendation.title,
     description: initialRecommendation.description,
     scope: initialRecommendation.scope,
     impact: initialRecommendation.impact,
-    trackingtrackingImplementationSteps: [
+
+    // NEW: Add a 'category' field for categorization
+    category: initialRecommendation.category || "",
+
+    tags: initialRecommendation.tags || [],
+    trackingImplementationSteps: [
       ...initialRecommendation.trackingImplementationSteps,
     ],
   }));
@@ -50,7 +72,7 @@ export function TrackingCard({
 
     const updatedRecommendation = {
       ...recommendation,
-      trackingtrackingImplementationSteps: updatedSteps,
+      trackingImplementationSteps: updatedSteps,
       completedSteps,
       progress: newProgress,
       status: newStatus,
@@ -60,6 +82,7 @@ export function TrackingCard({
     onUpdate(updatedRecommendation);
   };
 
+  // Notes
   const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setNewNote(e.target.value);
   };
@@ -93,6 +116,30 @@ export function TrackingCard({
     onUpdate(updatedRecommendation);
   };
 
+  // Tags
+  const addTag = () => {
+    if (newTag.trim()) {
+      const updatedTags = [...editedFields.tags, newTag];
+
+      setEditedFields((prev) => ({
+        ...prev,
+        tags: updatedTags,
+      }));
+
+      setNewTag("");
+    }
+  };
+
+  const removeTag = (tag: string) => {
+    const updatedTags = editedFields.tags.filter((t) => t !== tag);
+
+    setEditedFields((prev) => ({
+      ...prev,
+      tags: updatedTags,
+    }));
+  };
+
+  // Handle field changes (title, description, scope, impact, category, etc.)
   const handleFieldChange = (
     field: keyof typeof editedFields,
     value: string
@@ -100,11 +147,47 @@ export function TrackingCard({
     setEditedFields((prev) => ({ ...prev, [field]: value }));
   };
 
+  // NEW: Add Step
+  const addStep = () => {
+    if (newStep.trim()) {
+      const step = {
+        id: Date.now().toString(),
+        step: newStep,
+        complete: false,
+      };
+      const updatedSteps = [...editedFields.trackingImplementationSteps, step];
+
+      setEditedFields((prev) => ({
+        ...prev,
+        trackingImplementationSteps: updatedSteps,
+      }));
+      setNewStep("");
+    }
+  };
+
   const saveChanges = () => {
     const updatedRecommendation = {
       ...recommendation,
       ...editedFields,
     };
+    // Recalculate completion info in case new steps were added
+    const completedSteps =
+      updatedRecommendation.trackingImplementationSteps.filter(
+        (s) => s.complete
+      ).length;
+    const totalSteps = updatedRecommendation.trackingImplementationSteps.length;
+    const newStatus: "Completed" | "In Progress" | "Not Started" =
+      completedSteps === 0
+        ? "Not Started"
+        : completedSteps === totalSteps
+        ? "Completed"
+        : "In Progress";
+    const newProgress = totalSteps ? (completedSteps / totalSteps) * 100 : 0;
+
+    updatedRecommendation.completedSteps = completedSteps;
+    updatedRecommendation.progress = newProgress;
+    updatedRecommendation.status = newStatus;
+
     setRecommendation(updatedRecommendation);
     onUpdate(updatedRecommendation);
     setEditMode(false);
@@ -116,7 +199,9 @@ export function TrackingCard({
       description: recommendation.description,
       scope: recommendation.scope,
       impact: recommendation.impact,
-      trackingtrackingImplementationSteps: [
+      category: recommendation.category || "",
+      tags: recommendation.tags || [],
+      trackingImplementationSteps: [
         ...recommendation.trackingImplementationSteps,
       ],
     });
@@ -133,6 +218,15 @@ export function TrackingCard({
         return <AlertCircle className="w-4 h-4" />;
     }
   };
+
+  // NEW: Filter steps by search term
+  const filteredSteps = editMode
+    ? editedFields.trackingImplementationSteps.filter((step) =>
+        step.step.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : recommendation.trackingImplementationSteps.filter((step) =>
+        step.step.toLowerCase().includes(searchTerm.toLowerCase())
+      );
 
   return (
     <Card className="bg-white shadow-sm">
@@ -177,6 +271,7 @@ export function TrackingCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Scope & Impact */}
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <p className="text-sm font-medium mb-1">Scope</p>
@@ -202,6 +297,20 @@ export function TrackingCard({
           </div>
         </div>
 
+        {/* NEW: Category (Organization & Categorization) */}
+        <div>
+          <p className="text-sm font-medium mb-1">Category</p>
+          {editMode ? (
+            <Input
+              value={editedFields.category}
+              onChange={(e) => handleFieldChange("category", e.target.value)}
+            />
+          ) : (
+            <p>{recommendation.category || "—"}</p>
+          )}
+        </div>
+
+        {/* Progress */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Progress</p>
@@ -213,12 +322,59 @@ export function TrackingCard({
           <Progress value={recommendation.progress} className="h-2" />
         </div>
 
+        {/* Tags */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Tags</p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {editedFields.tags.map((tag) => (
+              <Badge key={tag} variant="secondary">
+                {tag}
+                {editMode && (
+                  <Button
+                    size="default"
+                    variant="ghost"
+                    onClick={() => removeTag(tag)}
+                  >
+                    x
+                  </Button>
+                )}
+              </Badge>
+            ))}
+            {editMode && (
+              <Input
+                placeholder="Add tag"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    addTag();
+                    e.preventDefault();
+                  }
+                }}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Implementation Steps */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Implementation Steps</p>
+            {/* NEW: Simple search for steps */}
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Search steps..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-8"
+              />
+              <Search className="w-4 h-4 text-gray-500" />
+            </div>
           </div>
           <ul className="space-y-4">
-            {recommendation.trackingImplementationSteps.map((step, index) => (
+            {filteredSteps.map((step, index) => (
               <li key={step.id} className="flex items-center gap-3">
                 <Button
                   variant={step.complete ? "secondary" : "outline"}
@@ -236,8 +392,24 @@ export function TrackingCard({
               </li>
             ))}
           </ul>
+
+          {/* NEW: Add new step if editing */}
+          {editMode && (
+            <div className="flex items-center gap-2 mt-2">
+              <Input
+                placeholder="Add new step..."
+                value={newStep}
+                onChange={(e) => setNewStep(e.target.value)}
+              />
+              <Button variant="outline" size="sm" onClick={addStep}>
+                <Plus className="w-4 h-4" />
+                Add Step
+              </Button>
+            </div>
+          )}
         </div>
 
+        {/* Notes */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Notes</p>
@@ -293,6 +465,7 @@ export function TrackingCard({
           )}
         </div>
 
+        {/* Action Buttons (Edit/Save/Cancel) */}
         <div className="flex gap-2">
           {!editMode ? (
             <Button
