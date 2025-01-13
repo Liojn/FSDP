@@ -1,9 +1,9 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import RecommendationClient from "./recommendation-client";
-import { CategoryType, MetricData, WeatherData } from "@/types";
+import React from "react";
+import { useRecommendations } from "@/hooks/useRecommendation";
 import { PageHeader } from "@/components/shared/page-header";
-import RecommendationSkeleton from "./components/RecommendationSkeleton"; // Add skeleton component
+import RecommendationSkeleton from "./components/RecommendationSkeleton";
+import RecommendationCard from "./components/RecommendationCard";
 
 export const dynamic = "force-dynamic";
 
@@ -12,30 +12,7 @@ const RecommendationPage = ({
 }: {
   searchParams?: { scopes?: string | string[] };
 }) => {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<MetricData>({} as MetricData);
-  const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
-  const [loading, setLoading] = useState(true); // Track loading state
-
-  useEffect(() => {
-    const storedUserId = localStorage.getItem("userId");
-    if (storedUserId) {
-      setUserId(storedUserId);
-
-      fetch(`/api/recommendation/data/${storedUserId}`)
-        .then((response) => response.json())
-        .then((fetchedData) => {
-          setMetrics(fetchedData.metrics);
-          setWeatherData(fetchedData.weatherData);
-          setLoading(false); // Data fetched
-        })
-        .catch(() => {
-          setLoading(false); // Error occurred
-        });
-    } else {
-      setLoading(false); // No user ID found
-    }
-  }, []);
+  const userId = localStorage.getItem("userId"); // Get userId directly
 
   const scopesParam = searchParams?.scopes;
   const scopes = Array.isArray(scopesParam)
@@ -44,34 +21,38 @@ const RecommendationPage = ({
     ? [scopesParam]
     : [];
 
-  if (loading) {
-    // Show skeleton while loading
-    return (
-      <div className="p-4 px-10">
-        <PageHeader title="AI-Curated Farm Management Recommendations" />
-        <RecommendationSkeleton /> {/* Skeleton loader */}
-      </div>
-    );
-  }
+  const { recommendations, isLoading, error } = useRecommendations(
+    userId || "",
+    scopes
+  );
 
   if (!userId) {
     return <div>Error: User ID is required.</div>;
   }
 
-  if (!metrics) {
-    return <div>Error fetching metrics.</div>;
+  if (isLoading) {
+    // Show skeleton while loading
+    return (
+      <div className="p-4 px-10">
+        <PageHeader title="AI-Curated Farm Management Recommendations" />
+        <RecommendationSkeleton />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>Error loading recommendations: {error.message}</div>;
   }
 
   return (
     <div className="p-4 px-10">
       <PageHeader title="AI-Curated Farm Management Recommendations" />
-      <RecommendationClient
-        userId={userId}
-        initialMetrics={metrics}
-        initialCategory={CategoryType.OVERALL}
-        initialScopes={scopes}
-        weatherData={weatherData}
-      />
+      <div className="space-y-6">
+        {recommendations &&
+          recommendations.map((rec) => (
+            <RecommendationCard key={rec.id} rec={rec} />
+          ))}
+      </div>
     </div>
   );
 };

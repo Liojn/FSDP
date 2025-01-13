@@ -23,7 +23,7 @@ import {
   ImplementedRecommendationsState,
   MetricData,
 } from "@/types";
-import RecommendationSkeleton from "./components/RecommendationSkeleton";
+import RecommendationSkeleton from "../app/recommendation/components/RecommendationSkeleton";
 import RecommendationCard from "@/app/recommendation/components/RecommendationCard";
 
 /** ====================
@@ -63,6 +63,7 @@ function fetchFromLocalStorage(key: string): Recommendation[] | null {
  *  RecommendationClient
  *  ============================
  */
+
 export default function RecommendationClient({
   userId, // Destructure userId
   initialMetrics,

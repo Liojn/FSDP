@@ -24,6 +24,31 @@ export interface Recommendation {
   dashboardLink?: string;
 }
 
+export interface TrackingRecommendation extends Recommendation {
+  // Override status with narrower type if you wish
+  status: "Not Started" | "In Progress" | "Completed";
+
+  // New fields for tracking
+  progress: number;
+  trackingImplementationSteps: ImplementationStep[];
+  completedSteps: number;
+  notes: Note[];
+}
+
+
+export interface Note {
+  id: string;
+  content: string;
+  timestamp: string;
+}
+
+export interface ImplementationStep {
+  id: string;
+  step: string;
+  complete: boolean;
+}
+
+
 // Threshold Data Interface
 export interface ThresholdData {
   userId: string;
