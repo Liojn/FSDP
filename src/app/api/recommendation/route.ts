@@ -124,10 +124,10 @@ ${weatherRisk
 - Incorporate weather risks into the recommendations, prioritizing solutions for high-risk areas.
 - Generate exactly 3 recommendations, no more and no less.
 - Generate recommendations based on the user's current metrics and industry benchmarks.
-- Include ROI and cost savings estimates for each recommendation.
 - Specify the expected timeline to implement each recommendation.
 - Highlight required dependencies, resources, or team roles for implementation.
 - Compare user metrics against industry benchmarks where available.
+- Maximum 5 steps per recommendation, with clear and actionable instructions.
 
 **Return the response as valid JSON only**, with no additional text or explanations.
 **Do not include any markdown, code snippets, or additional formatting.**
@@ -141,13 +141,10 @@ Use the following structure:
       "description": "Brief description of the recommendation",
       "impact": "Estimated reduction in emissions",
       "steps": ["Step 1", "Step 2"],
-      "savings": 0,
       "priority": 1,
       "difficulty": "easy",
-      "roi": 10,
       "implementationTimeline": "3 months",
       "sourceData": "source of metrics used",
-      "dashboardLink": "/dashboard/link",
       "scope": "Scope 1"
     }
   ]

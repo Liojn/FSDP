@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,
@@ -6,9 +6,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"; // import Tooltip components
 import { RecommendationCardProps } from "@/types";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible"; // Import Collapsible from ShadCN
 
 const RecommendationCard: React.FC<RecommendationCardProps> = memo(
   ({ rec }) => {
+    const [isTrackingOpen, setIsTrackingOpen] = useState(false);
+
     return (
       <Card className="mb-4">
         <CardHeader>
@@ -76,9 +84,6 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
               <span>
                 Estimated Emission Reduction:{" "}
                 {rec.estimatedEmissionReduction.toLocaleString()} CO₂e
-                {rec.estimatedCost > 0
-                  ? ` | Cost: $${rec.estimatedCost.toLocaleString()}`
-                  : ""}
               </span>
             </div>
             <div className="flex justify-between items-center mt-4">
@@ -90,6 +95,32 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
                 )}
               </div>
             </div>
+          </div>
+          {/* Collapsible Tracking Section */}
+          <div className="mt-6">
+            <Collapsible open={isTrackingOpen} onOpenChange={setIsTrackingOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline">
+                  {isTrackingOpen ? "Hide Tracking" : "Track Progress"}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-4">
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Track Progress</h4>
+                  <div className="flex flex-col gap-2">
+                    {rec.implementationSteps.map((step, index) => (
+                      <div
+                        key={index}
+                        className="flex justify-between items-center border rounded px-4 py-2"
+                      >
+                        <span>{step}</span>
+                        <Button variant="ghost">Mark Complete</Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         </CardContent>
       </Card>

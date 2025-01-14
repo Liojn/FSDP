@@ -47,6 +47,7 @@ const RecommendationPage = ({
   return (
     <div className="p-4 px-10">
       <PageHeader title="AI-Curated Farm Management Recommendations" />
+
       <div className="space-y-6">
         {recommendations &&
           recommendations.map((rec) => (

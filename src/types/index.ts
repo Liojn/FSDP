@@ -19,13 +19,10 @@ export interface Recommendation {
   estimatedEmissionReduction: number;
   priorityLevel: string;
   implementationSteps: string[];
-  estimatedROI: number;
   status: string;
   difficulty: string;
-  estimatedCost: number;
   estimatedTimeframe: string;
   relatedMetrics?: string[];
-  dashboardLink?: string;
 }
 
 export interface TrackingRecommendation extends Recommendation {
