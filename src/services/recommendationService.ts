@@ -43,7 +43,7 @@ export async function fetchRecommendationsFromBackend(
       ? `?scopes=${scopes.join(",")}`
       : "";
 
-    // Use the correct API route with userId
+    // Fetch existing recommendations from the database
     const response = await fetch(`/api/recommendation/data/${userId}${queryString}`);
 
     if (!response.ok) {
@@ -53,10 +53,32 @@ export async function fetchRecommendationsFromBackend(
     }
 
     const data = await response.json();
-    console.log("Recommendations fetched from backend:", data);
-    return data;
+    const { recommendations } = data;
+
+    if (recommendations && recommendations.length > 0) {
+      console.log("Existing recommendations found:", recommendations);
+      return data; // Return existing recommendations
+    }
+
+    console.log("No existing recommendations found. Generating new recommendations...");
+
+    // If no recommendations exist, generate new ones
+    const generationResponse = await fetch(`/api/recommendation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ metrics: data.metrics, weatherData: data.weatherData, scopes }),
+    });
+
+    if (!generationResponse.ok) {
+      throw new Error(
+        `Failed to generate recommendations: ${generationResponse.statusText}`
+      );
+    }
+
+    const generatedData = await generationResponse.json();
+    return generatedData; // Return newly generated recommendations
   } catch (error) {
-    console.error("Error fetching recommendations from backend:", error);
+    console.error("Error in fetching or generating recommendations:", error);
     return null;
   }
 }
