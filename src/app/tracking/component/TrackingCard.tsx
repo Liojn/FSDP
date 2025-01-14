@@ -37,29 +37,48 @@ export function TrackingCard({
   const [editMode, setEditMode] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [newNote, setNewNote] = useState("");
-  // NEW: For adding new steps on the fly
   const [newStep, setNewStep] = useState("");
-
-  // NEW: For searching/filtering steps
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [newTag, setNewTag] = useState("");
-
-  // Store “edited fields” in case user cancels
   const [editedFields, setEditedFields] = useState(() => ({
     title: initialRecommendation.title,
     description: initialRecommendation.description,
     scope: initialRecommendation.scope,
     impact: initialRecommendation.impact,
-
-    // NEW: Add a 'category' field for categorization
     category: initialRecommendation.category || "",
-
-    tags: initialRecommendation.tags || [],
     trackingImplementationSteps: [
       ...initialRecommendation.trackingImplementationSteps,
     ],
   }));
+
+  const saveToDatabase = async (
+    updatedRecommendation: TrackingRecommendation
+  ) => {
+    try {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+      const response = await fetch(
+        `${baseUrl}/api/recommendation/data/${updatedRecommendation.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedRecommendation),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to save recommendation to the database.");
+      }
+
+      const data = await response.json();
+      console.log("Saved recommendation:", data);
+    } catch (error) {
+      console.error("Error in saveToDatabase:", error);
+    }
+  };
 
   const handleStepCompletion = (stepIndex: number) => {
     const updatedSteps = [...recommendation.trackingImplementationSteps];
@@ -80,9 +99,11 @@ export function TrackingCard({
 
     setRecommendation(updatedRecommendation);
     onUpdate(updatedRecommendation);
+
+    // Save progress to the database
+    saveToDatabase(updatedRecommendation);
   };
 
-  // Notes
   const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setNewNote(e.target.value);
   };
@@ -102,6 +123,10 @@ export function TrackingCard({
 
       setRecommendation(updatedRecommendation);
       onUpdate(updatedRecommendation);
+
+      // Save updated notes to the database
+      saveToDatabase(updatedRecommendation);
+
       setNewNote("");
     }
   };
@@ -114,32 +139,11 @@ export function TrackingCard({
 
     setRecommendation(updatedRecommendation);
     onUpdate(updatedRecommendation);
+
+    // Save updated notes to the database
+    saveToDatabase(updatedRecommendation);
   };
 
-  // Tags
-  const addTag = () => {
-    if (newTag.trim()) {
-      const updatedTags = [...editedFields.tags, newTag];
-
-      setEditedFields((prev) => ({
-        ...prev,
-        tags: updatedTags,
-      }));
-
-      setNewTag("");
-    }
-  };
-
-  const removeTag = (tag: string) => {
-    const updatedTags = editedFields.tags.filter((t) => t !== tag);
-
-    setEditedFields((prev) => ({
-      ...prev,
-      tags: updatedTags,
-    }));
-  };
-
-  // Handle field changes (title, description, scope, impact, category, etc.)
   const handleFieldChange = (
     field: keyof typeof editedFields,
     value: string
@@ -147,7 +151,6 @@ export function TrackingCard({
     setEditedFields((prev) => ({ ...prev, [field]: value }));
   };
 
-  // NEW: Add Step
   const addStep = () => {
     if (newStep.trim()) {
       const step = {
@@ -170,7 +173,6 @@ export function TrackingCard({
       ...recommendation,
       ...editedFields,
     };
-    // Recalculate completion info in case new steps were added
     const completedSteps =
       updatedRecommendation.trackingImplementationSteps.filter(
         (s) => s.complete
@@ -190,6 +192,10 @@ export function TrackingCard({
 
     setRecommendation(updatedRecommendation);
     onUpdate(updatedRecommendation);
+
+    // Save to the database
+    saveToDatabase(updatedRecommendation);
+
     setEditMode(false);
   };
 
@@ -200,7 +206,6 @@ export function TrackingCard({
       scope: recommendation.scope,
       impact: recommendation.impact,
       category: recommendation.category || "",
-      tags: recommendation.tags || [],
       trackingImplementationSteps: [
         ...recommendation.trackingImplementationSteps,
       ],
@@ -219,7 +224,6 @@ export function TrackingCard({
     }
   };
 
-  // NEW: Filter steps by search term
   const filteredSteps = editMode
     ? editedFields.trackingImplementationSteps.filter((step) =>
         step.step.toLowerCase().includes(searchTerm.toLowerCase())
@@ -271,7 +275,6 @@ export function TrackingCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Scope & Impact */}
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <p className="text-sm font-medium mb-1">Scope</p>
@@ -296,8 +299,6 @@ export function TrackingCard({
             )}
           </div>
         </div>
-
-        {/* NEW: Category (Organization & Categorization) */}
         <div>
           <p className="text-sm font-medium mb-1">Category</p>
           {editMode ? (
@@ -309,8 +310,6 @@ export function TrackingCard({
             <p>{recommendation.category || "—"}</p>
           )}
         </div>
-
-        {/* Progress */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Progress</p>
@@ -321,48 +320,9 @@ export function TrackingCard({
           </div>
           <Progress value={recommendation.progress} className="h-2" />
         </div>
-
-        {/* Tags */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Tags</p>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {editedFields.tags.map((tag) => (
-              <Badge key={tag} variant="secondary">
-                {tag}
-                {editMode && (
-                  <Button
-                    size="default"
-                    variant="ghost"
-                    onClick={() => removeTag(tag)}
-                  >
-                    x
-                  </Button>
-                )}
-              </Badge>
-            ))}
-            {editMode && (
-              <Input
-                placeholder="Add tag"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    addTag();
-                    e.preventDefault();
-                  }
-                }}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Implementation Steps */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Implementation Steps</p>
-            {/* NEW: Simple search for steps */}
             <div className="flex items-center gap-2">
               <Input
                 placeholder="Search steps..."
@@ -392,8 +352,6 @@ export function TrackingCard({
               </li>
             ))}
           </ul>
-
-          {/* NEW: Add new step if editing */}
           {editMode && (
             <div className="flex items-center gap-2 mt-2">
               <Input
@@ -408,8 +366,6 @@ export function TrackingCard({
             </div>
           )}
         </div>
-
-        {/* Notes */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Notes</p>
@@ -421,7 +377,6 @@ export function TrackingCard({
               {showNotes ? "Hide Notes" : "Show Notes"}
             </Button>
           </div>
-
           {showNotes && (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -435,7 +390,6 @@ export function TrackingCard({
                   Add Note
                 </Button>
               </div>
-
               {recommendation.notes.length > 0 && (
                 <div className="space-y-3">
                   {recommendation.notes.map((note) => (
@@ -464,8 +418,6 @@ export function TrackingCard({
             </div>
           )}
         </div>
-
-        {/* Action Buttons (Edit/Save/Cancel) */}
         <div className="flex gap-2">
           {!editMode ? (
             <Button

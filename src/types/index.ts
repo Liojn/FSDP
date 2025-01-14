@@ -34,7 +34,6 @@ export interface TrackingRecommendation extends Recommendation {
   trackingImplementationSteps: ImplementationStep[];
   completedSteps: number;
   notes: Note[];
-  tags?: string[]; // Add this
 }
 
 

@@ -46,11 +46,9 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
     difficulty: "Medium",
     estimatedTimeframe: "",
     trackingImplementationSteps: [],
-    tags: [],
     relatedMetrics: [],
   });
 
-  const [newTag, setNewTag] = useState("");
   const [newStep, setNewStep] = useState("");
   const [newMetric, setNewMetric] = useState("");
 
@@ -82,26 +80,8 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
       difficulty: "Medium",
       estimatedTimeframe: "",
       trackingImplementationSteps: [],
-      tags: [],
       relatedMetrics: [],
     });
-  };
-
-  const addTag = () => {
-    if (newTag.trim() && formData.tags) {
-      setFormData((prev) => ({
-        ...prev,
-        tags: [...(prev.tags || []), newTag.trim()],
-      }));
-      setNewTag("");
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: (prev.tags || []).filter((tag) => tag !== tagToRemove),
-    }));
   };
 
   const addStep = () => {
@@ -309,46 +289,6 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
                 <SelectItem value="Hard">Hard</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-        </div>
-
-        {/* Tags */}
-        <div className="space-y-3">
-          <p className="text-sm font-medium">Tags</p>
-          <div className="flex gap-2 flex-wrap">
-            {formData.tags?.map((tag) => (
-              <Badge
-                key={tag}
-                variant="secondary"
-                className="flex items-center gap-1"
-              >
-                {tag}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => removeTag(tag)}
-                  className="h-4 w-4 p-0"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add tag"
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addTag();
-                }
-              }}
-            />
-            <Button variant="outline" onClick={addTag}>
-              Add
-            </Button>
           </div>
         </div>
 

@@ -1,5 +1,7 @@
 // src/services/recommendationService.ts
 
+import { TrackingRecommendation } from "@/types";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Save recommendations to the backend.
@@ -82,3 +84,40 @@ export async function fetchRecommendationsFromBackend(
     return null;
   }
 }
+
+/**
+ * Save recommendation updates (progress, notes, etc.) to the backend.
+ * @param recommendationId - The ID of the recommendation to update.
+ * @param updates - The updated fields for the recommendation.
+ * @returns The updated recommendation data.
+ */
+export async function saveRecommendationUpdates(
+  recommendationId: string,
+  updates: Partial<TrackingRecommendation>
+): Promise<TrackingRecommendation> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+    const response = await fetch(`${baseUrl}/api/recommendation/data/${recommendationId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updates),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || "Failed to save recommendation updates."
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error in saveRecommendationUpdates:", error);
+    throw error;
+  }
+}
+
+

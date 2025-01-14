@@ -1,9 +1,10 @@
+// recommendation/data/[id]/route.ts
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ObjectId } from 'mongodb';
 import { MetricData, ResponseData} from "@/types";
 import connectToDatabase from "dbConfig";
 import { NextRequest, NextResponse } from 'next/server';
-
+import { saveRecommendationUpdates } from '@/services/recommendationService';
 
 
 export async function GET(
@@ -27,7 +28,6 @@ if (!ObjectId.isValid(id)) {
     { status: 400 }
   );
 }
-
 
   try {
     console.log('Connecting to database...');
@@ -71,6 +71,16 @@ if (!ObjectId.isValid(id)) {
   }
 }
 
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
+  try {
+    const body = await req.json();
+    const updatedRecommendation = await saveRecommendationUpdates(params.id, body);
+    return NextResponse.json(updatedRecommendation);
+  } catch (error) {
+    console.error("Error updating recommendation:", error);
+    return NextResponse.json({ error: "Failed to update recommendation" }, { status: 500 });
+  }
+}
 
 async function fetchWeatherData() {
   try {
