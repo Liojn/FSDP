@@ -39,6 +39,22 @@ interface NetZeroGraphProps {
   isLoading?: boolean;
   userGoals: UserGoals;
 }
+const calculateLinearRegression = (data: DataPoint[]): { slope: number; intercept: number } => {
+  const actualData = data.filter(point => !point.isProjected);
+  const n = actualData.length;
+  
+  if (n < 2) return { slope: 0, intercept: 0 };
+  
+  const sumX = actualData.reduce((sum, point) => sum + (point.year || 0), 0);
+  const sumY = actualData.reduce((sum, point) => sum + point.totalEmissions, 0);
+  const sumXY = actualData.reduce((sum, point) => sum + (point.year || 0) * point.totalEmissions, 0);
+  const sumXX = actualData.reduce((sum, point) => sum + (point.year || 0) * (point.year || 0), 0);
+  
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+  
+  return { slope, intercept };
+};
 
 const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
   data: propsData,
@@ -58,6 +74,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
   const [minTargetPercentage, setMinTargetPercentage] = useState<number | null>(
     null
   );
+  const [predictedNetZeroYear, setPredictedNetZeroYear] = useState<number | null>(null);
 
   console.log("NetZeroGraph rendered");
   console.log("Received propsData:", propsData);
@@ -181,8 +198,14 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
         historicalData.slice(historicalData.length - 5)
       );
     }
-
-    return historicalData;
+    
+    const { slope, intercept } = calculateLinearRegression(historicalData);
+    
+    // Add trend line values to each data point
+    return historicalData.map(point => ({
+      ...point,
+      trendLine: slope * (point.year || 0) + intercept
+    }));
   };
 
   useEffect(() => {
@@ -223,6 +246,14 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
       setTargetPercentage(targetPercentage * 100);
       setMinTargetPercentage(minPercentage * 100);
 
+    // Calculate predicted net zero year based on trend line
+      const { slope, intercept } = calculateLinearRegression(yearlyData);
+      if (slope < 0) { // Only calculate if emissions are decreasing
+        const predictedYear = Math.ceil((target - intercept) / slope);
+        setPredictedNetZeroYear(predictedYear);
+      } else {
+        setPredictedNetZeroYear(null);
+      }
       console.log("Calculated values:", { years, year, target, minPercentage });
     }
 
@@ -299,6 +330,14 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
             stroke="#52c41a"
             strokeDasharray="3 3"
           />
+          <Line
+            type="monotone"
+            dataKey="trendLine"
+            stroke="#8884d8"
+            name="Trend Line"
+            strokeWidth={2}
+            dot={false}
+          />
         </LineChart>
       </ResponsiveContainer>
     );
@@ -317,7 +356,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
     );
   }
 
-  return (
+return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Net Zero Emission Timeline</CardTitle>
@@ -344,6 +383,16 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
                 reduce your emissions by at least{" "}
                 <strong>{minTargetPercentage?.toFixed(0)}%</strong> per year for
                 future years.
+                <br />
+                {predictedNetZeroYear ? (
+                  predictedNetZeroYear <= 2050 ? (
+                    `You are on track to reach net zero by ${predictedNetZeroYear}, ahead of the 2050 target`
+                  ) : (
+                    `Based on your current trend, you are predicted to hit net zero around ${predictedNetZeroYear}, falling behind the 2050 target`
+                  )
+                ) : (
+                  `There is not enough data to show a prediction trend for your company.`
+                )}
               </AlertDescription>
             </Alert>
           )}
