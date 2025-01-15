@@ -128,6 +128,8 @@ ${weatherRisk
 - Highlight required dependencies, resources, or team roles for implementation.
 - Compare user metrics against industry benchmarks where available.
 - Maximum 5 steps per recommendation, with clear and actionable instructions.
+- You can assume the savings is in C02e (kg) / year emissions unless otherwise specified.
+
 
 **Return the response as valid JSON only**, with no additional text or explanations.
 **Do not include any markdown, code snippets, or additional formatting.**
@@ -142,6 +144,7 @@ Use the following structure:
       "impact": "Estimated reduction in emissions",
       "steps": ["Step 1", "Step 2"],
       "priority": 1,
+      "savings": 100,
       "difficulty": "easy",
       "implementationTimeline": "3 months",
       "sourceData": "source of metrics used",

@@ -83,7 +83,8 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
             <div className="flex justify-between items-center">
               <span>
                 Estimated Emission Reduction:{" "}
-                {rec.estimatedEmissionReduction.toLocaleString()} CO₂e
+                {rec.estimatedEmissionReduction.toLocaleString()} CO₂e (kg) /
+                Year
               </span>
             </div>
             <div className="flex justify-between items-center mt-4">
