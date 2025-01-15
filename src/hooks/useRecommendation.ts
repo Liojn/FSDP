@@ -3,19 +3,52 @@ import useSWR from "swr";
 import { Recommendation, TrackingRecommendation } from "@/types";
 
 export const transformToTrackingRecommendation = (
-  rec: Recommendation
-): TrackingRecommendation => ({
-  ...rec,
-  status: rec.status as "Not Started" | "In Progress" | "Completed",
-  progress: 0,
-  trackingImplementationSteps: rec.implementationSteps.map((step, index) => ({
-    id: index.toString(),
-    step,
-    complete: false,
-  })),
-  completedSteps: 0,
-  notes: [],
-});
+  rec: Recommendation & Partial<TrackingRecommendation>
+): TrackingRecommendation => {
+  // If the server already has "trackingImplementationSteps" (with "complete" flags, etc.), use them.
+  // Otherwise, construct them from "implementationSteps".
+  const trackingImplementationSteps =
+    rec.trackingImplementationSteps && rec.trackingImplementationSteps.length > 0
+      ? rec.trackingImplementationSteps
+      : (rec.implementationSteps || []).map((step, index) => ({
+          id: index.toString(),
+          step,
+          complete: false,
+        }));
+
+  // Keep 'notes' if the server returns them, else default to empty array.
+  const notes = rec.notes || [];
+
+  // Keep 'progress' if it’s already in the server data, else compute or default to 0.
+  // Same for 'completedSteps'.
+  const totalSteps = trackingImplementationSteps.length;
+  const completedSteps =
+    typeof rec.completedSteps === "number"
+      ? rec.completedSteps
+      : trackingImplementationSteps.filter((s) => s.complete).length;
+
+  const progress =
+    typeof rec.progress === "number"
+      ? rec.progress
+      : totalSteps > 0
+      ? (completedSteps / totalSteps) * 100
+      : 0;
+
+  // For status, keep the narrower union, default if missing or invalid.
+  let status = rec.status as "Not Started" | "In Progress" | "Completed";
+  if (!status || !["Not Started", "In Progress", "Completed"].includes(status)) {
+    status = "Not Started";
+  }
+
+  return {
+    ...rec,
+    trackingImplementationSteps,
+    notes,
+    completedSteps,
+    progress,
+    status,
+  };
+};
 
 export function useRecommendations(userId: string, scopes: string[]) {
   const fetcher = async (): Promise<TrackingRecommendation[]> => {
@@ -46,17 +79,38 @@ export function useRecommendations(userId: string, scopes: string[]) {
   );
 
   const saveRecommendation = async (recommendation: TrackingRecommendation) => {
-    const updatedRecs = data?.map((rec) =>
-      rec.id === recommendation.id ? recommendation : rec
-    );
-    await fetch(`/api/recommendation/update`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, recommendation }),
-    });
+    try {
+      const updatedRecs = data?.map((rec) =>
+        rec.id === recommendation.id ? recommendation : rec
+      );
 
-    mutate(updatedRecs, false); // Update local cache without re-fetching
-  };
+      console.log("Before mutate (optimistic):", updatedRecs);
+      mutate(updatedRecs, false); // Optimistically update the state
+
+    const response = await fetch(`/api/recommendation/data/${recommendation.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...recommendation,
+          userId,  // This must be a valid string
+        }),
+      });
+
+    if (!response.ok) {
+      throw new Error("Failed to save recommendation");
+    }
+
+    const updatedRecommendation = await response.json();
+    console.log("Updated recommendation from backend:", updatedRecommendation);
+
+    mutate(); // Revalidate to fetch the latest data
+  } catch (error) {
+    console.error("Error saving recommendation:", error);
+    mutate(data, false); // Revert optimistic update
+  }
+};
+
+
 
   return { recommendations: data, error, isLoading, mutate, saveRecommendation };
 }

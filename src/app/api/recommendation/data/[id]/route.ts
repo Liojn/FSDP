@@ -71,16 +71,65 @@ if (!ObjectId.isValid(id)) {
   }
 }
 
+// recommendation/data/[id]/route.ts
+
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
+    const recommendationId = params.id;  // The "6786787779dbc57579c13b0a"
     const body = await req.json();
-    const updatedRecommendation = await saveRecommendationUpdates(params.id, body);
-    return NextResponse.json(updatedRecommendation);
+
+    // We expect the user ID to come in the body
+    const { userId } = body;
+
+    if (!userId || !recommendationId) {
+      return NextResponse.json(
+        { error: "Missing userId or recommendationId" },
+        { status: 400 }
+      );
+    }
+
+    console.log(`Updating recommendation with ID: ${recommendationId}`, body);
+
+    // 1. Connect to DB
+    const db = await connectToDatabase.connectToDatabase();
+    const recommendationsCollection = db.collection("recommendations");
+
+    // 2. Actually update the correct recommendation in the array
+    const updateResult = await recommendationsCollection.updateOne(
+      { userId }, // filter by userId
+      {
+        $set: {
+          // Overwrite the entire object in the array matching 'recommendationId'
+          "recommendations.$[elem]": body
+        }
+      },
+      {
+        // Only update array element whose "id" matches 'recommendationId'
+        arrayFilters: [{ "elem.id": recommendationId }],
+      }
+    );
+
+    if (!updateResult.matchedCount) {
+      return NextResponse.json(
+        { error: "No matching recommendation found for this user" },
+        { status: 404 }
+      );
+    }
+
+    // 3. Optionally, return the updated doc or just a success message
+    return NextResponse.json(
+      { message: "Recommendation updated successfully" },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error updating recommendation:", error);
-    return NextResponse.json({ error: "Failed to update recommendation" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update recommendation" },
+      { status: 500 }
+    );
   }
 }
+
 
 async function fetchWeatherData() {
   try {
@@ -92,6 +141,7 @@ async function fetchWeatherData() {
     return [];
   }
 }
+
 
 
 

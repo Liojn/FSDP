@@ -39,7 +39,6 @@ export function TrackingCard({
   const [newNote, setNewNote] = useState("");
   const [newStep, setNewStep] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-
   const [editedFields, setEditedFields] = useState(() => ({
     title: initialRecommendation.title,
     description: initialRecommendation.description,
@@ -151,33 +150,58 @@ export function TrackingCard({
     setEditedFields((prev) => ({ ...prev, [field]: value }));
   };
 
-  const addStep = () => {
+  async function addStep() {
     if (newStep.trim()) {
       const step = {
         id: Date.now().toString(),
         step: newStep,
         complete: false,
       };
-      const updatedSteps = [...editedFields.trackingImplementationSteps, step];
 
+      // Update local state optimistically...
       setEditedFields((prev) => ({
         ...prev,
-        trackingImplementationSteps: updatedSteps,
+        trackingImplementationSteps: [
+          ...prev.trackingImplementationSteps,
+          step,
+        ],
       }));
+
+      // Then tell the server about the new step
+      const response = await fetch(
+        `/api/recommendation/data/${recommendation.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: localStorage.getItem("userId") || "",
+            newStep: step,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Error adding step:", await response.json());
+      } else {
+        console.log("Step added successfully.");
+      }
+
       setNewStep("");
     }
-  };
+  }
 
-  const saveChanges = () => {
+  const saveChanges = async () => {
     const updatedRecommendation = {
       ...recommendation,
       ...editedFields,
     };
+
     const completedSteps =
       updatedRecommendation.trackingImplementationSteps.filter(
         (s) => s.complete
       ).length;
     const totalSteps = updatedRecommendation.trackingImplementationSteps.length;
+
     const newStatus: "Completed" | "In Progress" | "Not Started" =
       completedSteps === 0
         ? "Not Started"
@@ -190,13 +214,14 @@ export function TrackingCard({
     updatedRecommendation.progress = newProgress;
     updatedRecommendation.status = newStatus;
 
-    setRecommendation(updatedRecommendation);
-    onUpdate(updatedRecommendation);
-
-    // Save to the database
-    saveToDatabase(updatedRecommendation);
-
-    setEditMode(false);
+    try {
+      await saveToDatabase(updatedRecommendation);
+      setRecommendation(updatedRecommendation);
+      onUpdate(updatedRecommendation);
+      setEditMode(false);
+    } catch (error) {
+      console.error("Failed to save changes:", error);
+    }
   };
 
   const cancelChanges = () => {
