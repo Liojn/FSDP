@@ -50,9 +50,9 @@ export default function TrackingPage({
         <PageHeader title="Tracking Recommendations" />
         <div className="space-y-6">
           <CreateRecommendation onSubmit={handleCreateRecommendation} />
-          {(recommendations ?? []).map((rec) => (
+          {(recommendations ?? []).map((rec, index) => (
             <TrackingCard
-              key={rec.id}
+              key={rec.id || `rec-${index}`}
               recommendation={rec}
               onUpdate={saveRecommendation}
             />

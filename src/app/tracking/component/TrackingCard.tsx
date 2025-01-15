@@ -49,6 +49,7 @@ export function TrackingCard({
       ...initialRecommendation.trackingImplementationSteps,
     ],
   }));
+  console.log("Recommendation ID:", recommendation.id);
 
   const saveToDatabase = async (
     updatedRecommendation: TrackingRecommendation
@@ -158,16 +159,64 @@ export function TrackingCard({
         complete: false,
       };
 
-      // Update local state optimistically...
-      setEditedFields((prev) => ({
-        ...prev,
-        trackingImplementationSteps: [
-          ...prev.trackingImplementationSteps,
-          step,
-        ],
-      }));
+      try {
+        const response = await fetch(
+          `/api/recommendation/data/${recommendation.id}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: localStorage.getItem("userId") || "",
+              newStep: step,
+            }),
+          }
+        );
 
-      // Then tell the server about the new step
+        if (!response.ok) {
+          throw new Error("Failed to add step.");
+        }
+
+        const updatedSteps = [
+          ...recommendation.trackingImplementationSteps,
+          step,
+        ];
+        setRecommendation({
+          ...recommendation,
+          trackingImplementationSteps: updatedSteps,
+        });
+        onUpdate({
+          ...recommendation,
+          trackingImplementationSteps: updatedSteps,
+        });
+        setNewStep(""); // Clear the input
+      } catch (error) {
+        console.error("Error adding step:", error);
+      }
+    }
+  }
+
+  const saveChanges = async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updatedFields: any = {};
+
+    // Add only fields that were edited
+    if (editedFields.title !== recommendation.title) {
+      updatedFields.title = editedFields.title;
+    }
+    if (editedFields.description !== recommendation.description) {
+      updatedFields.description = editedFields.description;
+    }
+    if (editedFields.scope !== recommendation.scope) {
+      updatedFields.scope = editedFields.scope;
+    }
+    if (editedFields.impact !== recommendation.impact) {
+      updatedFields.impact = editedFields.impact;
+    }
+    if (editedFields.category !== recommendation.category) {
+      updatedFields.category = editedFields.category;
+    }
+
+    try {
       const response = await fetch(
         `/api/recommendation/data/${recommendation.id}`,
         {
@@ -175,52 +224,30 @@ export function TrackingCard({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId: localStorage.getItem("userId") || "",
-            newStep: step,
+            ...updatedFields,
           }),
         }
       );
 
       if (!response.ok) {
-        console.error("Error adding step:", await response.json());
-      } else {
-        console.log("Step added successfully.");
+        throw new Error("Failed to save changes.");
       }
 
-      setNewStep("");
-    }
-  }
+      const data = await response.json();
+      console.log("Updated recommendation:", data);
 
-  const saveChanges = async () => {
-    const updatedRecommendation = {
-      ...recommendation,
-      ...editedFields,
-    };
-
-    const completedSteps =
-      updatedRecommendation.trackingImplementationSteps.filter(
-        (s) => s.complete
-      ).length;
-    const totalSteps = updatedRecommendation.trackingImplementationSteps.length;
-
-    const newStatus: "Completed" | "In Progress" | "Not Started" =
-      completedSteps === 0
-        ? "Not Started"
-        : completedSteps === totalSteps
-        ? "Completed"
-        : "In Progress";
-    const newProgress = totalSteps ? (completedSteps / totalSteps) * 100 : 0;
-
-    updatedRecommendation.completedSteps = completedSteps;
-    updatedRecommendation.progress = newProgress;
-    updatedRecommendation.status = newStatus;
-
-    try {
-      await saveToDatabase(updatedRecommendation);
-      setRecommendation(updatedRecommendation);
-      onUpdate(updatedRecommendation);
+      // Update local state
+      setRecommendation({
+        ...recommendation,
+        ...updatedFields,
+      });
+      onUpdate({
+        ...recommendation,
+        ...updatedFields,
+      });
       setEditMode(false);
     } catch (error) {
-      console.error("Failed to save changes:", error);
+      console.error("Error saving changes:", error);
     }
   };
 

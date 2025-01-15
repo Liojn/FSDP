@@ -72,14 +72,12 @@ if (!ObjectId.isValid(id)) {
 }
 
 // recommendation/data/[id]/route.ts
-
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
-    const recommendationId = params.id;  // The "6786787779dbc57579c13b0a"
-    const body = await req.json();
+    const recommendationId = params.id; // ID of the recommendation to update
+    const body = await req.json(); // Request body contains partial updates
 
-    // We expect the user ID to come in the body
-    const { userId } = body;
+    const { userId, newStep, ...updates } = body;
 
     if (!userId || !recommendationId) {
       return NextResponse.json(
@@ -88,25 +86,31 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       );
     }
 
-    console.log(`Updating recommendation with ID: ${recommendationId}`, body);
-
-    // 1. Connect to DB
     const db = await connectToDatabase.connectToDatabase();
     const recommendationsCollection = db.collection("recommendations");
 
-    // 2. Actually update the correct recommendation in the array
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateOperations: any = { $set: {}, $push: {} };
+
+    // Add general updates to $set
+    Object.keys(updates).forEach((key) => {
+      updateOperations.$set[`recommendations.$[elem].${key}`] = updates[key];
+    });
+
+    // Append new step if provided
+    if (newStep) {
+      updateOperations.$push["recommendations.$[elem].trackingImplementationSteps"] = newStep;
+    }
+
+    // Clean up empty operations
+    if (Object.keys(updateOperations.$set).length === 0) delete updateOperations.$set;
+    if (Object.keys(updateOperations.$push).length === 0) delete updateOperations.$push;
+
+    // Perform the update
     const updateResult = await recommendationsCollection.updateOne(
-      { userId }, // filter by userId
-      {
-        $set: {
-          // Overwrite the entire object in the array matching 'recommendationId'
-          "recommendations.$[elem]": body
-        }
-      },
-      {
-        // Only update array element whose "id" matches 'recommendationId'
-        arrayFilters: [{ "elem.id": recommendationId }],
-      }
+      { userId },
+      updateOperations,
+      { arrayFilters: [{ "elem.id": recommendationId }] }
     );
 
     if (!updateResult.matchedCount) {
@@ -116,7 +120,6 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       );
     }
 
-    // 3. Optionally, return the updated doc or just a success message
     return NextResponse.json(
       { message: "Recommendation updated successfully" },
       { status: 200 }
@@ -129,6 +132,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     );
   }
 }
+
+
 
 
 async function fetchWeatherData() {
