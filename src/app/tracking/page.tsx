@@ -45,8 +45,8 @@ export default function TrackingPage({
   }
 
   return (
-    <main className="min-h-screen">
-      <div className="container mx-auto py-12 px-4">
+    <main className="">
+      <div className=" mx-auto pb-12 px-4">
         <PageHeader title="Tracking Recommendations" />
         <div className="space-y-6">
           <CreateRecommendation onSubmit={handleCreateRecommendation} />

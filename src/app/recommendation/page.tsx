@@ -4,7 +4,7 @@ import { useRecommendations } from "@/hooks/useRecommendation";
 import { PageHeader } from "@/components/shared/page-header";
 import RecommendationSkeleton from "./components/RecommendationSkeleton";
 import RecommendationCard from "./components/RecommendationCard";
-
+import { useEffect, useState } from "react";
 export const dynamic = "force-dynamic";
 
 const RecommendationPage = ({
@@ -12,7 +12,11 @@ const RecommendationPage = ({
 }: {
   searchParams?: { scopes?: string | string[] };
 }) => {
-  const userId = localStorage.getItem("userId"); // Get userId directly
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUserId(localStorage.getItem("userId"));
+  }, []);
 
   const scopesParam = searchParams?.scopes;
   const scopes = Array.isArray(scopesParam)

@@ -4,14 +4,14 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"; // import Tooltip components
+} from "@/components/ui/tooltip";
 import { RecommendationCardProps } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
-} from "@/components/ui/collapsible"; // Import Collapsible from ShadCN
+} from "@/components/ui/collapsible";
 
 const RecommendationCard: React.FC<RecommendationCardProps> = memo(
   ({ rec }) => {
@@ -22,7 +22,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle>{rec.title}</CardTitle>
+              <CardTitle>{rec.title || "Untitled Recommendation"}</CardTitle>
               <div className="flex gap-2 mt-2">
                 {rec.difficulty && (
                   <Tooltip>
@@ -65,11 +65,13 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
           </div>
         </CardHeader>
         <CardContent>
-          <p className="mb-2">{rec.description}</p>
-          <p className="mb-4">
-            <strong>Impact:</strong> {rec.impact}
+          <p className="mb-2">
+            {rec.description || "No description provided."}
           </p>
-          {rec.implementationSteps && rec.implementationSteps.length > 0 && (
+          <p className="mb-4">
+            <strong>Impact:</strong> {rec.impact || "Not specified."}
+          </p>
+          {rec.implementationSteps?.length > 0 && (
             <>
               <h4 className="font-semibold mb-2">Steps to Implement:</h4>
               <ol className="list-decimal pl-5 mb-4">
@@ -83,8 +85,9 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
             <div className="flex justify-between items-center">
               <span>
                 Estimated Emission Reduction:{" "}
-                {rec.estimatedEmissionReduction.toLocaleString()} CO₂e (kg) /
-                Year
+                {rec.estimatedEmissionReduction
+                  ? `${rec.estimatedEmissionReduction.toLocaleString()} CO₂e (kg) / Year`
+                  : "N/A"}
               </span>
             </div>
             <div className="flex justify-between items-center mt-4">
@@ -109,7 +112,7 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
                 <div className="space-y-4">
                   <h4 className="font-semibold">Track Progress</h4>
                   <div className="flex flex-col gap-2">
-                    {rec.implementationSteps.map((step, index) => (
+                    {rec.implementationSteps?.map((step, index) => (
                       <div
                         key={index}
                         className="flex justify-between items-center border rounded px-4 py-2"
@@ -128,12 +131,8 @@ const RecommendationCard: React.FC<RecommendationCardProps> = memo(
     );
   },
   (prevProps, nextProps) => {
-    return (
-      prevProps.rec.id === nextProps.rec.id &&
-      prevProps.isImplemented === nextProps.isImplemented &&
-      prevProps.rec.estimatedEmissionReduction ===
-        nextProps.rec.estimatedEmissionReduction
-    );
+    // Compare props for memoization
+    return prevProps.rec.id === nextProps.rec.id;
   }
 );
 
