@@ -30,7 +30,6 @@ import {
   BadgeCheck,
   ChartColumn,
   ChevronsUpDown,
-  ClipboardList,
   LayoutDashboard,
   Lightbulb,
   LogOut,
@@ -49,7 +48,6 @@ const navigationItems = [
 
 const recommendationItems = [
   { title: "Recommendation", url: "/recommendation", icon: Lightbulb },
-  { title: "Tracking", url: "/tracking", icon: ClipboardList },
 ];
 
 const appConfig = {

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Sprout, ChartLine } from "lucide-react";
+import Image from "next/image";
 
 export default function Landing() {
   const [isVisible, setIsVisible] = useState(false);
@@ -25,13 +26,17 @@ export default function Landing() {
   return (
     <div className="relative flex flex-col min-h-screen">
       {/* Background image */}
-      <img
-        src="/landing-background.png"
-        alt="Background"
-        role="img"
-        aria-label="Background image for landing page"
-        className="absolute top-0 left-0 w-full h-full object-cover -z-10 brightness-90"
-      />
+      <div className="absolute top-0 left-0 w-full h-full -z-10 brightness-90">
+        <Image
+          src="/landing-background.png"
+          alt="Background image for landing page"
+          fill
+          sizes="100vw"
+          priority
+          aria-label="Background image for landing page"
+          className="object-cover"
+        />
+      </div>
 
       {/* Company name header */}
       <div className="w-full bg-black/75 backdrop-blur-sm shadow-md p-6 pt-10">
@@ -92,15 +97,17 @@ export default function Landing() {
           {/* Net Zero Drawing */}
           <div className="hidden md:block w-3/5">
             <div className="relative aspect-square max-w-5xl">
-              <img
+              <Image
                 src="/netZeroDrawing.png"
                 alt="Net Zero Agriculture Illustration"
-                className={`w-full h-full object-contain transition-all duration-1000 ease-in-out
-                                ${
-                                  isVisible
-                                    ? "opacity-100 transform translate-x-0"
-                                    : "opacity-0 transform -translate-x-4"
-                                }`}
+                width={800} // Specify exact width and height or use layout="fill" for responsiveness
+                height={800}
+                priority
+                className={`object-contain transition-all duration-1000 ease-in-out ${
+                  isVisible
+                    ? "opacity-100 transform translate-x-0"
+                    : "opacity-0 transform -translate-x-4"
+                }`}
               />
             </div>
           </div>

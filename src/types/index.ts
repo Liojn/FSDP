@@ -8,7 +8,7 @@ export enum CategoryType {
   CUSTOM = "Custom", // Placeholder for dynamic categories
 }
 
-// Recommendation Type with fully optional fields
+// Base Recommendation Type
 export interface Recommendation {
   id: string;
   title: string;
@@ -25,30 +25,31 @@ export interface Recommendation {
   relatedMetrics?: string[];
 }
 
-export interface TrackingRecommendation extends Recommendation {
-  // Override status with narrower type if you wish
-  status: "Not Started" | "In Progress" | "Completed";
-
-  // New fields for tracking
-  progress: number;
-  trackingImplementationSteps: ImplementationStep[];
-  completedSteps: number;
-  notes: Note[];
-}
-
-
-export interface Note {
-  id: string;
-  content: string;
-  timestamp: string;
-}
-
+// Implementation Step for tracking
 export interface ImplementationStep {
   id: string;
   step: string;
   complete: boolean;
 }
 
+// Note interface for tracking
+export interface Note {
+  id: string;
+  content: string;
+  timestamp: string;
+}
+
+// Extended TrackingRecommendation Type
+export interface TrackingRecommendation extends Recommendation {
+  // Override status with specific tracking states
+  status: "Not Started" | "In Progress" | "Completed";
+  
+  // Additional tracking fields
+  progress: number;
+  trackingImplementationSteps: ImplementationStep[];
+  completedSteps: number;
+  notes: Note[];
+}
 
 // Threshold Data Interface
 export interface ThresholdData {
