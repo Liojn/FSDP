@@ -19,7 +19,6 @@ const RecommendationPage = ({
   useEffect(() => {
     setUserId(localStorage.getItem("userId"));
   }, []);
-  const userId = localStorage.getItem("userId");
 
   const scopesParam = searchParams?.scopes;
   const scopes = Array.isArray(scopesParam)
