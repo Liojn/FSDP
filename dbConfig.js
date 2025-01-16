@@ -13,7 +13,6 @@ let connectedClient;
 
 async function connectToDatabase() {
     if (connectedClient) {
-        console.log("Reusing existing MongoDB client");
         return connectedClient.db(process.env.DB_NAME);
     }
     try {

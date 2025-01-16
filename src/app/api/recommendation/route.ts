@@ -1,164 +1,265 @@
-import { NextResponse } from "next/server";
-import { CategoryType, Recommendation, RecommendationRequest } from "@/types/";
-import Anthropic from '@anthropic-ai/sdk';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// src/app/api/recommendation/route.ts
 
-// Initialize the Claude client with the provided API key
+import { NextResponse } from "next/server";
+import { Recommendation, MetricData, CategoryType } from "@/types";
+import Anthropic from "@anthropic-ai/sdk";
+import connectToDatabase from "dbConfig";
+import { ObjectId } from "mongodb";
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY // Use environment variable
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// Define the structure of a recommendation returned from the API
 interface ApiRecommendation {
-  title: string;                       
-  description: string;                 
-  impact: string;                      
-  steps: string[];                     
-  savings: number;                     
-  priority?: number;                   
-  difficulty?: 'easy' | 'medium' | 'hard'; 
-  roi?: number;                        
-  implementationTimeline?: string;     
-  sourceData?: string;                 
-  dashboardLink?: string;              
+  category: CategoryType;
+  title: string;
+  description: string;
+  impact: string;
+  steps: string[];
+  savings: number;
+  priority?: number;
+  difficulty?: "easy" | "medium" | "hard";
+  roi?: number;
+  implementationTimeline?: string;
+  sourceData?: string;
+  dashboardLink?: string;
+  scope?: "Scope 1" | "Scope 2" | "Scope 3";
 }
 
 interface ApiResponse {
-  recommendations: ApiRecommendation[]; 
+  recommendations: ApiRecommendation[];
 }
+
 
 const cleanAndParseJSON = (str: string): ApiResponse => {
   try {
-    const start = str.indexOf('{');
-    const end = str.lastIndexOf('}') + 1;
+    str = str.trim();
+    if (str.startsWith("```json")) str = str.slice(7);
+    else if (str.startsWith("```")) str = str.slice(3);
+    if (str.endsWith("```")) str = str.slice(0, -3);
+
+    const start = str.indexOf("{");
+    const end = str.lastIndexOf("}") + 1;
     if (start === -1 || end === 0) throw new Error("No JSON object found");
+
     const jsonStr = str.slice(start, end);
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error("JSON parsing error:", error);
+    console.error("Original response content:", str);
     throw error;
   }
 };
 
-// Function to generate a category-specific prompt based on provided metrics
-interface Metrics {
-  energy: {
-    consumption: number;          // Energy consumption in kWh
-    previousYearComparison: number; // Comparison percentage with the previous year
-  };
-  emissions: {
-    total: number;                // Total emissions in tons CO2e
-  };
-  waste: {
-    quantity: number;             // Quantity of waste in tons
-  };
-  crops: {
-    area: number;                 // Area of crops in hectares
-    fertilizer: number;           // Amount of fertilizer used in tons
-  };
-  livestock: {
-    count: number;                // Count of livestock
-    emissions: number;            // Emissions from livestock in tons CO2e
+function calculateScopeEmissions(metrics: MetricData) {
+  const scope1 =
+    metrics.livestock.emissions + (metrics.emissions.byCategory["equipment"] || 0);
+  const scope2 = metrics.energy.consumption * 0.0005;
+  const scope3 = metrics.emissions.total - (scope1 + scope2);
+  return {
+    scope1,
+    scope2,
+    scope3: Math.max(0, scope3),
   };
 }
 
-// Function to generate a prompt for the AI based on the category and metrics
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const generatePrompt = (category: CategoryType, metrics: Metrics, _timeframe: string) => {
-  const systemContext = `You are a JSON-only response system specialized in farm management recommendations. Only output valid JSON objects with no additional text.`;
-  
-  const prompt = `${systemContext}
+// Might have to change this
+const determineWeatherRisk = (temperature: number, rainfall: number, windSpeed: number) => {
+  if (temperature > 30 && rainfall < 50 && windSpeed > 20) {
+    return "High risk: Hot, dry conditions with strong winds.";
+  } else if (temperature >= 20 && temperature <= 30 && rainfall >= 50 && rainfall <= 100 && windSpeed >= 10 && windSpeed <= 20) {
+    return "Medium risk: Moderate conditions.";
+  } else {
+    return "Low risk: Cool, wet conditions.";
+  }
+};
 
-Generate exactly 3 practical recommendations for the ${category} category based on the following metrics:
+const generatePrompt = async (
+  metrics: MetricData,
+  weatherData: any[],
+  scopes?: string[]
+) => {
+  const scopeEmissions = calculateScopeEmissions(metrics);
 
-Energy: ${metrics.energy.consumption}kWh (${metrics.energy.previousYearComparison}% vs last year)
-Emissions: ${metrics.emissions.total} tons CO2e
-Waste: ${metrics.waste.quantity} tons
-Crops: ${metrics.crops.area} hectares, ${metrics.crops.fertilizer} tons fertilizer
-Livestock: ${metrics.livestock.count} animals, ${metrics.livestock.emissions} tons CO2e emissions
+  const weatherRisk = weatherData.map((data) => ({
+    location: data.location,
+    temperature: data.temperature,
+    rainfall: data.rainfall,
+    windSpeed: data.wind_speed,
+    risk: determineWeatherRisk(data.temperature, data.rainfall, data.wind_speed),
+  }));
 
-Return ONLY a JSON object in this exact format with no additional text:
+  const scopesText =
+    scopes && scopes.length > 0
+      ? `The user needs recommendations for the following scopes: ${scopes.join(", ")}.`
+      : "The user needs general recommendations.";
+
+  const aiPrompt = `
+${scopesText}
+
+Current emissions by scope:
+- Scope 1 (Direct): ${scopeEmissions.scope1.toFixed(2)} tons CO₂e
+- Scope 2 (Energy): ${scopeEmissions.scope2.toFixed(2)} tons CO₂e
+- Scope 3 (Indirect): ${scopeEmissions.scope3.toFixed(2)} tons CO₂e
+
+Key metrics breakdown:
+- Energy: ${metrics.energy.consumption} MWh consumed (${metrics.energy.previousYearComparison}% change from previous year)
+- Waste: ${metrics.waste.quantity} tons of waste
+- Crops: ${metrics.crops.area} hectares farmed, ${metrics.crops.fertilizer} kg of fertilizer used
+- Livestock: ${metrics.livestock.count} animals, ${metrics.livestock.emissions} tons CO₂e emissions
+- Emissions: Total emissions ${metrics.emissions.total} tons CO₂e (by category: ${Object.entries(metrics.emissions.byCategory)
+    .map(([category, value]) => `${category}: ${value} tons`)
+    .join(", ")})
+
+Weather conditions and risks:
+${weatherRisk
+  .map(
+    (risk) =>
+      `- ${risk.location}: High temperature (${risk.temperature}°C), rainfall (${risk.rainfall}mm), wind speed (${risk.windSpeed}km/h) — Risk assessment: ${risk.risk}`
+  )
+  .join("\n")}
+
+**Instructions:**
+- Generate recommendations for the following categories only: energy, waste, crops, livestock, and emissions.
+- Incorporate weather risks into the recommendations, prioritizing solutions for high-risk areas.
+- Generate exactly 3 recommendations, no more and no less.
+- Generate recommendations based on the user's current metrics and industry benchmarks.
+- Specify the expected timeline to implement each recommendation.
+- Highlight required dependencies, resources, or team roles for implementation.
+- Compare user metrics against industry benchmarks where available.
+- Maximum 5 steps per recommendation, with clear and actionable instructions.
+- You can assume the savings is in C02e (kg) / year emissions unless otherwise specified.
+
+
+**Return the response as valid JSON only**, with no additional text or explanations.
+**Do not include any markdown, code snippets, or additional formatting.**
+Use the following structure:
+
 {
   "recommendations": [
     {
-      "title": "Clear action-oriented title",
-      "description": "Clear 1-2 sentence description",
-      "impact": "Specific metrics and numbers",
-      "steps": ["step1", "step2", "step3"],
-      "savings": 1000,
-      "priority": 1-5 number,
-      "difficulty": "easy|medium|hard",
-      "roi": percentage number,
-      "implementationTimeline": "timeframe string",
-      "sourceData": "reference to metrics used",
-      "dashboardLink": "/dashboards/category-specific-path"
+      "category": "Energy",
+      "title": "Actionable recommendation title",
+      "description": "Brief description of the recommendation",
+      "impact": "Estimated reduction in emissions",
+      "steps": ["Step 1", "Step 2"],
+      "priority": 1,
+      "savings": 100,
+      "difficulty": "easy",
+      "implementationTimeline": "3 months",
+      "sourceData": "source of metrics used",
+      "scope": "Scope 1"
     }
   ]
-}`;
+}
 
-  return prompt;
+`;
+
+  // Log the generated prompt
+  console.log("Generated AI Prompt:", aiPrompt);
+
+  return aiPrompt;
 };
 
-// Handler function for the POST request
+
 export async function POST(req: Request) {
   try {
-    const { category, metrics, timeframe } = await req.json() as RecommendationRequest;
-    
-    if (!category || !metrics || !timeframe) {
+    const { metrics, weatherData, scopes } = (await req.json()) as {
+      metrics: MetricData;
+      weatherData: any[];
+      scopes?: string[];
+    };
+    console.log("Request payload:", { metrics, weatherData, scopes });
+
+    if (!metrics || !weatherData) {
       return NextResponse.json(
-        { error: "Category, metrics, and timeframe are required" },
+        { error: "Metrics and weather data are required" },
         { status: 400 }
       );
     }
 
-    const prompt = generatePrompt(category, metrics, timeframe);
+    // Connect to the database
+    const db = await connectToDatabase.connectToDatabase();
+    const collection = db.collection("recommendations");
 
-    const message = await anthropic.messages.create({
+    // Check if recommendations for this user and scopes already exist
+    const existingRecommendations = await collection.findOne({
+      userId: metrics.userId,
+      scopes,
+    });
+
+    if (existingRecommendations) {
+      return NextResponse.json({
+        recommendations: existingRecommendations.recommendations,
+        source: "database",
+      });
+    }
+
+    // Generate recommendations via AI
+    const prompt = await generatePrompt(metrics, weatherData, scopes);
+    const msg = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",
-      max_tokens: 1024,
+      max_tokens: 1000,
+      temperature: 0.7,
       messages: [
         {
           role: "user",
-          content: prompt
-        }
+          content: [{ type: "text", text: prompt }],
+        },
       ],
-      temperature: 0.7
     });
 
-    // Check for valid response and get the text content
-    const textContent = message.content.find(block => block.type === 'text');
-    if (!textContent || typeof textContent.text !== 'string') {
-      throw new Error("No valid text response from Claude");
-    }
+    const assistantReply = (msg.content[0] as any).text;
+    const parsedResponse = cleanAndParseJSON(assistantReply);
 
-    // Parse and validate response
-    const parsedResponse = cleanAndParseJSON(textContent.text);
-    
-    // Transform recommendations
-    const recommendations: Recommendation[] = parsedResponse.recommendations.map((rec) => ({
-      title: rec.title,
-      description: rec.description,
-      impact: rec.impact,
-      steps: rec.steps,
-      savings: typeof rec.savings === 'number' ? rec.savings : 0,
-      category,
-      implemented: false,
-      priority: rec.priority,
-      difficulty: rec.difficulty,
-      roi: rec.roi,
-      implementationTimeline: rec.implementationTimeline,
-      sourceData: rec.sourceData,
-      dashboardLink: rec.dashboardLink
-    }));
+    const recommendations: Recommendation[] = parsedResponse.recommendations.map(
+      (rec) => ({
+        id: new ObjectId().toString(), // Generate a valid ObjectId
+        title: rec.title,
+        description: rec.description,
+        scope: rec.scope || "Scope 1",
+        impact: rec.impact,
+        category: rec.category || CategoryType.OVERALL,
+        estimatedEmissionReduction: rec.savings || 0,
+        priorityLevel: rec.priority
+          ? rec.priority <= 2
+            ? "High"
+            : rec.priority <= 4
+            ? "Medium"
+            : "Low"
+          : "Medium",
+        implementationSteps: rec.steps || [],
+        estimatedROI: rec.roi || 0,
+        status: "Not Started",
+        difficulty:
+          rec.difficulty === "easy"
+            ? "Easy"
+            : rec.difficulty === "medium"
+            ? "Moderate"
+            : rec.difficulty === "hard"
+            ? "Challenging"
+            : "Moderate",
+        estimatedCost: 0,
+        estimatedTimeframe: rec.implementationTimeline || "3-6 months",
+        relatedMetrics: rec.sourceData ? [rec.sourceData] : [],
+        dashboardLink: rec.dashboardLink || "",
+      })
+    );
 
-    return NextResponse.json({ recommendations }, { status: 200 });
+    // Store recommendations in the database
+    await collection.updateOne(
+      { userId: metrics.userId, scopes },
+      { $set: { recommendations, updatedAt: new Date() } },
+      { upsert: true }
+    );
 
+    return NextResponse.json({ recommendations, source: "AI" });
   } catch (error) {
-    console.error("API Error:", error);
     return NextResponse.json(
-      { 
+      {
         error: "Failed to generate recommendations",
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }, 
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }

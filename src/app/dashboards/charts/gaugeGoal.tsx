@@ -1,75 +1,91 @@
-//Component Gauge Chart for Dashboard
 import React from 'react';
 import GaugeChart from 'react-gauge-chart';
 
 type GaugeChartProps = {
-  currentYearEmissions: number; // Emissions for the current year
-  previousYearEmissions: number; // Emissions for the previous year
-  targetReduction: number; // percentage in reduction for the current year goal
+  currentYearEmissions: number;
+  previousYearEmissions: number;
+  targetReduction: number;
+  initialYearGoal: number; // prop for initial year target, at the first signup
+  isEarliestYear: boolean; // New prop to check if it's the earliest year
 };
 
 const GaugeChartComponent: React.FC<GaugeChartProps> = ({
   currentYearEmissions,
   previousYearEmissions,
   targetReduction,
+  initialYearGoal,
+  isEarliestYear,
 }) => {
-  //Calculate percentage change from previous year to current year
   let percentageChange = 0;
   let comparisonMessage = '';
-  let arrow = ''; // Variable to hold the arrow direction
-
-  if (previousYearEmissions !== 0) {
-    //Calculate percentage change from previous year Goal****
-    const baseline = (previousYearEmissions * (1- targetReduction));
-    percentageChange = ((currentYearEmissions - baseline) / baseline) * 100;
-
-    //Build the comparison message based on whether current year emission is higher or lower
-    if (currentYearEmissions > previousYearEmissions) {
-      comparisonMessage = `carbons emitted than goal set.`;
-      arrow = '⬆'; // Up arrow for higher emissions
-    } else if (currentYearEmissions < previousYearEmissions) {
-      comparisonMessage = `carbons emitted than goal set.`;
-      arrow = '⬇'; // Down arrow for lower emissions
+  let arrow = '';
+  console.log(targetReduction);
+  console.log(initialYearGoal);
+  console.log(previousYearEmissions);
+  console.log(currentYearEmissions);
+  //Calculate percentage change based on whether it's the earliest year or not
+  if (isEarliestYear) {
+    // For earliest year, calculate against initialYearGoal
+    percentageChange = ((currentYearEmissions - initialYearGoal) / initialYearGoal) * 100;
+    const baseline = initialYearGoal;
+    if (currentYearEmissions > baseline) {
+      comparisonMessage = `carbons exceeded from initial goal set.`;
+      arrow = '⬆';
+    } else if (currentYearEmissions < baseline) {
+      comparisonMessage = `carbons left from initial goal set.`;
+      arrow = '⬇';
     } else {
-      comparisonMessage = "Same as last year.";
-      arrow = ''; // No arrow for same emissions
+      comparisonMessage = "Same as initial goal.";
+      arrow = '';
     }
-  } else {
-    // If no previous year data is available msg
-    comparisonMessage = "No previous year data available";
-    arrow = ''; // No arrow if no data
-    percentageChange = 0;
+  } else if (previousYearEmissions !== 0) {
+    // For other years, use the existing calculation
+    const baseline = (previousYearEmissions * (1 - targetReduction));
+    percentageChange = ((currentYearEmissions - baseline) / baseline) * 100;
+    console.log(percentageChange);
 
+    if (currentYearEmissions > baseline) {
+      comparisonMessage = `carbons exceeded from goal set.`;
+      arrow = '⬆';
+    } else if (currentYearEmissions < baseline) {
+      comparisonMessage = `carbons left from goal set.`;
+      arrow = '⬇';
+    } else {
+      comparisonMessage = "Same as goal target.";
+      arrow = '';
+    }
   }
 
-  //Ensure the gauge value does not exceed the target goal
+  // Calculate target goal based on whether it's the earliest year
   let targetGoal;
   let gaugeValue;
-  if (previousYearEmissions !== 0){
-    targetGoal = (1- targetReduction) * previousYearEmissions; //current year target is previous 0.95 amount
-    gaugeValue = Math.min(currentYearEmissions, targetGoal); //Do not let gauge to exceed the target
+  if (isEarliestYear) {
+    targetGoal = initialYearGoal;
+    gaugeValue = Math.min(currentYearEmissions, targetGoal);
+  } else if (previousYearEmissions !== 0) {
+    targetGoal = (1 - targetReduction) * previousYearEmissions;
+    gaugeValue = Math.min(currentYearEmissions, targetGoal);
   } else {
-    targetGoal = 10000;//Temporarily, since it can't be left empty;
-    gaugeValue  = 0;
+    targetGoal = 10000;
+    gaugeValue = 0;
   }
-  //console.log(targetGoal);
-  const max = targetGoal; // Maximum value for the gauge (target)
+
+  const max = targetGoal;
 
   return (
     <div>      
       <GaugeChart
         id="gauge-chart"
-        nrOfLevels={100}  
-        arcsLength={[0.6, 0.3, 0.1]}  // Green, Yellow, Red
-        colors={['#66CDAA', '#FFB347', '#FF6B6B']} //#A0CD78Green for below target, Yellow for warning, Red for exceeding target
-        percent={gaugeValue / max} // Set the percentage based on current year emissions vs target
-        arcWidth={0.2} // Set the width of the gauge arc
-        textColor="#000000" // Color of the text
-        formatTextValue={(gaugeValue) => `${gaugeValue}% used`} // Add custom text to the percentage
+        nrOfLevels={100}
+        arcsLength={[0.6, 0.3, 0.1]}
+        colors={['#66CDAA', '#FFB347', '#FF6B6B']}
+        percent={gaugeValue / max}
+        arcWidth={0.2}
+        textColor="#000000"
+        formatTextValue={(gaugeValue) => `${gaugeValue}% used`}
       />
       
-      {/* Only display the comparison and percentage if previous year data avail */}
-      {previousYearEmissions !== 0 ? (
+      {(previousYearEmissions !== 0 || isEarliestYear) ? (
         <p>
           <span 
             style={{
@@ -81,7 +97,6 @@ const GaugeChartComponent: React.FC<GaugeChartProps> = ({
           <span> {comparisonMessage}</span>
         </p>
       ) : (
-        //If no previous data then display the message for no comparison
         <p>{comparisonMessage}</p>
       )}
     </div>

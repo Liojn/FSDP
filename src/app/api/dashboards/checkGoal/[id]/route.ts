@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import  connectToDatabase  from '@/../dbConfig'
-const { ObjectId } = require('mongodb');
+import { ObjectId } from 'mongodb';
 
-type User = {
-  _id: {
-    $oid: string; // MongoDB ObjectId in string format
-  };
-  emissionGoal: EmissionGoal[]; // Array of emission goals for different years
-};
 type EmissionGoal = {
   year: number;
   target: number;
@@ -42,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         //Query from mongodb
         const userCollection = db.collection("User");
         const user = await userCollection
-        .findOne({ _id: objectId }, { projection: { emissionGoal: 1 } }); // Only return emissionGoal
+        .findOne({ _id: objectId }, { projection: { emissionGoal: 1, firstYearGoal: 1} }); // Only return emissionGoal and firstYearGoal
 
         if (!user) {
         throw new Error("User not found.");
@@ -52,15 +46,25 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             (goal) => goal.year === year
         );
 
-        if (emissionGoalForYear) {
-            // Return the target for the year
-            return NextResponse.json({ target: emissionGoalForYear.target });
+         if (emissionGoalForYear) {
+            // Check if it's the earliest year
+            const earliestYear = Math.min(...user.emissionGoal.map((goal: EmissionGoal) => goal.year));
+            const isEarliestYear = emissionGoalForYear.year === earliestYear;
+
+            return NextResponse.json({
+                target: emissionGoalForYear.target,
+                isEarliestYear: isEarliestYear,
+                firstYearGoal: isEarliestYear ? user.firstYearGoal : 10000
+            });
         } else {
-            // If no target found for the year, return default 10000
-            return NextResponse.json({ target: 10000 });
-        }
+        // If no target found for the year, return default values
+        return NextResponse.json({
+            target: 10000,
+            isEarliestYear: false,
+            firstYearGoal: null
+        });
     }
-   catch (error) {
-        return NextResponse.json({ error: "An error occurred while fetching data" }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "An error occurred while fetching data" }, { status: 500 });
     }
 }

@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
         // Update user profile in the database
         const db = await dbClient.connectToDatabase();
-        await db.collection("User").updateOne(
+        const result = await db.collection("User").updateOne(
             { email: currentEmail },
             { $set: { name, email, password: hashedPassword } } // adjust this based on password hashing, if used
         );
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         } else {
             return NextResponse.json({ message: "Failed to update profile" }, { status: 500 });
         }
-    } catch (error) {
+    } catch {
         return NextResponse.json({ message: "Failed to update profile" }, { status: 500 });
     }
 }

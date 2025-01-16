@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { connectToDatabase } from '@/../dbConfig';
-const { ObjectId } = require('mongodb');
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { NextResponse } from "next/server";
+import  connectToDatabase  from 'dbConfig';
+import { ObjectId } from 'mongodb';
 
 // Define types for our data structures
 type EmissionRates = {
@@ -36,10 +37,10 @@ const collections = [
   'Forest'
 ];
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Connect to database
-    const db = await connectToDatabase();
+    const db = await connectToDatabase.connectToDatabase();
     if (!db) {
       throw new Error("Database connection failed.");
     }
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
     // Get all companies
     const companies = await db.collection('users').find({}).toArray();
 
-    const companyDataPromises = companies.map(async (company) => {
+    const companyDataPromises = companies.map(async (company: { _id: number; name: any; }) => {
       const companyId = new ObjectId(company._id);
       const results: CollectionData = {};
 
