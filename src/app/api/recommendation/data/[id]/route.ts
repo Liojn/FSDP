@@ -75,9 +75,9 @@ if (!ObjectId.isValid(id)) {
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
     const recommendationId = params.id; // ID of the recommendation to update
-    const body = await req.json(); // Request body contains partial updates
+    const body = await req.json(); // Parse the request body
 
-    const { userId, newStep, ...updates } = body;
+    const { userId, newStep, addToBothArrays, ...updates } = body;
 
     if (!userId || !recommendationId) {
       return NextResponse.json(
@@ -89,22 +89,32 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const db = await connectToDatabase.connectToDatabase();
     const recommendationsCollection = db.collection("recommendations");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Prepare update operations
     const updateOperations: any = { $set: {}, $push: {} };
 
     // Add general updates to $set
     Object.keys(updates).forEach((key) => {
-      updateOperations.$set[`recommendations.$[elem].${key}`] = updates[key];
+      if (key !== "implementationSteps") {
+        updateOperations.$set[`recommendations.$[elem].${key}`] = updates[key];
+      }
     });
 
-    // Append new step if provided
+    // Append new step to trackingImplementationSteps
     if (newStep) {
       updateOperations.$push["recommendations.$[elem].trackingImplementationSteps"] = newStep;
+
+      // Append to implementationSteps if addToBothArrays is true
+      if (addToBothArrays) {
+        updateOperations.$push["recommendations.$[elem].implementationSteps"] = newStep.step;
+      }
     }
 
     // Clean up empty operations
     if (Object.keys(updateOperations.$set).length === 0) delete updateOperations.$set;
     if (Object.keys(updateOperations.$push).length === 0) delete updateOperations.$push;
+
+    // Debug the operations before execution
+    console.log("Update Operations:", JSON.stringify(updateOperations, null, 2));
 
     // Perform the update
     const updateResult = await recommendationsCollection.updateOne(
@@ -113,12 +123,20 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       { arrayFilters: [{ "elem.id": recommendationId }] }
     );
 
+    // Check if the update matched any documents
     if (!updateResult.matchedCount) {
       return NextResponse.json(
         { error: "No matching recommendation found for this user" },
         { status: 404 }
       );
     }
+
+    // Log the updated recommendation for debugging
+    const updatedRecommendation = await recommendationsCollection.findOne(
+      { userId },
+      { projection: { recommendations: { $elemMatch: { id: recommendationId } } } }
+    );
+    console.log("Updated Recommendation:", JSON.stringify(updatedRecommendation, null, 2));
 
     return NextResponse.json(
       { message: "Recommendation updated successfully" },
@@ -132,6 +150,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     );
   }
 }
+
+
+
+
 
 
 

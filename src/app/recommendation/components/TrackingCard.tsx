@@ -18,11 +18,10 @@ import {
   AlertCircle,
   Trash2,
   Save,
-  Search,
   Plus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Note, TrackingRecommendation } from "@/types";
+import { Note, TrackingRecommendation, CategoryType } from "@/types";
 
 interface TrackingCardProps {
   recommendation: TrackingRecommendation;
@@ -38,17 +37,25 @@ export function TrackingCard({
   const [showNotes, setShowNotes] = useState(false);
   const [newNote, setNewNote] = useState("");
   const [newStep, setNewStep] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm] = useState("");
   const [editedFields, setEditedFields] = useState(() => ({
     title: initialRecommendation.title,
     description: initialRecommendation.description,
     scope: initialRecommendation.scope,
     impact: initialRecommendation.impact,
-    category: initialRecommendation.category || "",
+    category: initialRecommendation.category || CategoryType.CUSTOM,
+    // -- Additional fields we want to make visible/editable --
+    priorityLevel: initialRecommendation.priorityLevel || "",
+    difficulty: initialRecommendation.difficulty || "",
+    estimatedEmissionReduction:
+      initialRecommendation.estimatedEmissionReduction || 0,
+    estimatedTimeframe: initialRecommendation.estimatedTimeframe || "",
+    // -- Keep this one as well --
     trackingImplementationSteps: [
       ...initialRecommendation.trackingImplementationSteps,
     ],
   }));
+
   console.log("Recommendation ID:", recommendation.id);
 
   const saveToDatabase = async (
@@ -65,7 +72,10 @@ export function TrackingCard({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(updatedRecommendation),
+          body: JSON.stringify({
+            userId: localStorage.getItem("userId") || "",
+            ...updatedRecommendation,
+          }),
         }
       );
 
@@ -146,7 +156,7 @@ export function TrackingCard({
 
   const handleFieldChange = (
     field: keyof typeof editedFields,
-    value: string
+    value: string | number
   ) => {
     setEditedFields((prev) => ({ ...prev, [field]: value }));
   };
@@ -168,6 +178,8 @@ export function TrackingCard({
             body: JSON.stringify({
               userId: localStorage.getItem("userId") || "",
               newStep: step,
+              // Let the backend know we want to add to both arrays:
+              addToBothArrays: true,
             }),
           }
         );
@@ -176,18 +188,19 @@ export function TrackingCard({
           throw new Error("Failed to add step.");
         }
 
+        // Update local state
         const updatedSteps = [
           ...recommendation.trackingImplementationSteps,
           step,
         ];
-        setRecommendation({
+        const updatedRecommendation = {
           ...recommendation,
           trackingImplementationSteps: updatedSteps,
-        });
-        onUpdate({
-          ...recommendation,
-          trackingImplementationSteps: updatedSteps,
-        });
+        };
+
+        setRecommendation(updatedRecommendation);
+        onUpdate(updatedRecommendation);
+
         setNewStep(""); // Clear the input
       } catch (error) {
         console.error("Error adding step:", error);
@@ -197,25 +210,44 @@ export function TrackingCard({
 
   const saveChanges = async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updatedFields: any = {};
+    const updatedFieldsToSave: any = {};
 
     // Add only fields that were edited
     if (editedFields.title !== recommendation.title) {
-      updatedFields.title = editedFields.title;
+      updatedFieldsToSave.title = editedFields.title;
     }
     if (editedFields.description !== recommendation.description) {
-      updatedFields.description = editedFields.description;
+      updatedFieldsToSave.description = editedFields.description;
     }
     if (editedFields.scope !== recommendation.scope) {
-      updatedFields.scope = editedFields.scope;
+      updatedFieldsToSave.scope = editedFields.scope;
     }
     if (editedFields.impact !== recommendation.impact) {
-      updatedFields.impact = editedFields.impact;
+      updatedFieldsToSave.impact = editedFields.impact;
     }
     if (editedFields.category !== recommendation.category) {
-      updatedFields.category = editedFields.category;
+      updatedFieldsToSave.category = editedFields.category;
     }
 
+    // -- Additional fields we decided to add --
+    if (editedFields.priorityLevel !== recommendation.priorityLevel) {
+      updatedFieldsToSave.priorityLevel = editedFields.priorityLevel;
+    }
+    if (editedFields.difficulty !== recommendation.difficulty) {
+      updatedFieldsToSave.difficulty = editedFields.difficulty;
+    }
+    if (
+      editedFields.estimatedEmissionReduction !==
+      recommendation.estimatedEmissionReduction
+    ) {
+      updatedFieldsToSave.estimatedEmissionReduction =
+        editedFields.estimatedEmissionReduction;
+    }
+    if (editedFields.estimatedTimeframe !== recommendation.estimatedTimeframe) {
+      updatedFieldsToSave.estimatedTimeframe = editedFields.estimatedTimeframe;
+    }
+
+    // Send the updates to the backend
     try {
       const response = await fetch(
         `/api/recommendation/data/${recommendation.id}`,
@@ -224,7 +256,7 @@ export function TrackingCard({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId: localStorage.getItem("userId") || "",
-            ...updatedFields,
+            ...updatedFieldsToSave,
           }),
         }
       );
@@ -233,18 +265,14 @@ export function TrackingCard({
         throw new Error("Failed to save changes.");
       }
 
-      const data = await response.json();
-      console.log("Updated recommendation:", data);
+      // Merge updates into local state
+      const updatedRecommendation = {
+        ...recommendation,
+        ...updatedFieldsToSave,
+      };
+      setRecommendation(updatedRecommendation);
+      onUpdate(updatedRecommendation);
 
-      // Update local state
-      setRecommendation({
-        ...recommendation,
-        ...updatedFields,
-      });
-      onUpdate({
-        ...recommendation,
-        ...updatedFields,
-      });
       setEditMode(false);
     } catch (error) {
       console.error("Error saving changes:", error);
@@ -257,7 +285,12 @@ export function TrackingCard({
       description: recommendation.description,
       scope: recommendation.scope,
       impact: recommendation.impact,
-      category: recommendation.category || "",
+      category: recommendation.category || CategoryType.CUSTOM,
+      priorityLevel: recommendation.priorityLevel || "",
+      difficulty: recommendation.difficulty || "",
+      estimatedEmissionReduction:
+        recommendation.estimatedEmissionReduction || 0,
+      estimatedTimeframe: recommendation.estimatedTimeframe || "",
       trackingImplementationSteps: [
         ...recommendation.trackingImplementationSteps,
       ],
@@ -327,6 +360,7 @@ export function TrackingCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Scope and Impact */}
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <p className="text-sm font-medium mb-1">Scope</p>
@@ -351,17 +385,75 @@ export function TrackingCard({
             )}
           </div>
         </div>
-        <div>
-          <p className="text-sm font-medium mb-1">Category</p>
-          {editMode ? (
-            <Input
-              value={editedFields.category}
-              onChange={(e) => handleFieldChange("category", e.target.value)}
-            />
-          ) : (
-            <p>{recommendation.category || "—"}</p>
-          )}
+
+        {/* Additional Fields */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm font-medium mb-1">Priority Level</p>
+            {editMode ? (
+              <Input
+                value={editedFields.priorityLevel}
+                onChange={(e) =>
+                  handleFieldChange("priorityLevel", e.target.value)
+                }
+              />
+            ) : (
+              <p>{recommendation.priorityLevel || "—"}</p>
+            )}
+          </div>
+          <div>
+            <p className="text-sm font-medium mb-1">
+              Estimated Emission Reduction (kg CO₂e)
+            </p>
+            {editMode ? (
+              <Input
+                type="number"
+                value={editedFields.estimatedEmissionReduction}
+                onChange={(e) =>
+                  handleFieldChange(
+                    "estimatedEmissionReduction",
+                    Number(e.target.value)
+                  )
+                }
+              />
+            ) : (
+              <p>
+                {recommendation.estimatedEmissionReduction?.toLocaleString() ||
+                  "—"}
+              </p>
+            )}
+          </div>
         </div>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm font-medium mb-1">Difficulty</p>
+            {editMode ? (
+              <Input
+                value={editedFields.difficulty}
+                onChange={(e) =>
+                  handleFieldChange("difficulty", e.target.value)
+                }
+              />
+            ) : (
+              <p>{recommendation.difficulty || "—"}</p>
+            )}
+          </div>
+          <div>
+            <p className="text-sm font-medium mb-1">Estimated Timeframe</p>
+            {editMode ? (
+              <Input
+                value={editedFields.estimatedTimeframe}
+                onChange={(e) =>
+                  handleFieldChange("estimatedTimeframe", e.target.value)
+                }
+              />
+            ) : (
+              <p>{recommendation.estimatedTimeframe || "—"}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Progress */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Progress</p>
@@ -372,19 +464,9 @@ export function TrackingCard({
           </div>
           <Progress value={recommendation.progress} className="h-2" />
         </div>
+
+        {/* Steps */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Implementation Steps</p>
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Search steps..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-8"
-              />
-              <Search className="w-4 h-4 text-gray-500" />
-            </div>
-          </div>
           <ul className="space-y-4">
             {filteredSteps.map((step, index) => (
               <li key={step.id} className="flex items-center gap-3">
@@ -418,6 +500,8 @@ export function TrackingCard({
             </div>
           )}
         </div>
+
+        {/* Notes */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Notes</p>
@@ -470,6 +554,8 @@ export function TrackingCard({
             </div>
           )}
         </div>
+
+        {/* Edit / Save / Cancel Buttons */}
         <div className="flex gap-2">
           {!editMode ? (
             <Button
