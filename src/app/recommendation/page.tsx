@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { TrackingCard } from "@/app/recommendation/components/TrackingCard";
 import CreateRecommendation from "@/app/recommendation/components/CreateRecommendation";
 import { Recommendation, TrackingRecommendation } from "@/types";
-
+import { useEffect, useState } from "react";
 export const dynamic = "force-dynamic";
 
 const RecommendationPage = ({
@@ -14,6 +14,11 @@ const RecommendationPage = ({
 }: {
   searchParams?: { scopes?: string | string[] };
 }) => {
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUserId(localStorage.getItem("userId"));
+  }, []);
   const userId = localStorage.getItem("userId");
 
   const scopesParam = searchParams?.scopes;
