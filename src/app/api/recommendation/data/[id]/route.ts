@@ -16,18 +16,17 @@ export async function GET(
     scopes: request.nextUrl.searchParams.get("scopes")
   });
 
-  const { id } = params;
+  const { id } = params; // This is the recommendation ID
   const scopesParam = request.nextUrl.searchParams.get("scopes");
   const scopes = scopesParam ? scopesParam.split(",").filter(Boolean) : [];
 
-
-if (!ObjectId.isValid(id)) {
-  console.warn(`Invalid User ID format: ${id}`);
-  return NextResponse.json(
-    { error: `Invalid User ID format: ${id}` },
-    { status: 400 }
-  );
-}
+  if (!ObjectId.isValid(id)) {
+    console.warn(`Invalid Recommendation ID format: ${id}`);
+    return NextResponse.json(
+      { error: `Invalid Recommendation ID format: ${id}` },
+      { status: 400 }
+    );
+  }
 
   try {
     console.log('Connecting to database...');
@@ -37,7 +36,7 @@ if (!ObjectId.isValid(id)) {
     console.log('Fetching metrics and weather data...');
     // Fetch metrics and weather data
     const [metrics, weatherData] = await Promise.all([
-      getMetrics(id),
+      getMetrics(id), // Ensure this function fetches metrics correctly
       fetchWeatherData(),
     ]);
     console.log('Metrics and weather data fetched:', { 
@@ -46,37 +45,59 @@ if (!ObjectId.isValid(id)) {
     });
 
     console.log('Querying recommendations with scopes:', scopes);
-    // Fetch recommendations from the database based on userId and scopes
+    // Fetch the document containing the recommendation
     const recommendationsCollection = db.collection("recommendations");
-    const recommendations = await recommendationsCollection.findOne({
-      userId: id,
+    const doc = await recommendationsCollection.findOne({
+      "recommendations.id": id,
       ...(scopes.length > 0 && { scopes: { $all: scopes } }),
     });
-    console.log('Recommendations found:', !!recommendations);
 
-    const responseData: ResponseData = { metrics, weatherData };
-    if (recommendations) {
-      responseData.recommendations = recommendations.recommendations;
+    if (!doc) {
+      console.log('No document found containing the recommendation.');
+      return NextResponse.json(
+        { metrics, weatherData, error: "No recommendation found" },
+        { status: 404 }
+      );
     }
+
+    // Extract the specific recommendation
+    const singleRec = doc.recommendations.find(
+      (r: { id: string }) => r.id === id
+    );
+
+    if (!singleRec) {
+      console.log('Recommendation not found within the document.');
+      return NextResponse.json(
+        { metrics, weatherData, error: "Recommendation not found" },
+        { status: 404 }
+      );
+    }
+
+    // Combine metrics, weatherData, and the single recommendation
+    const responseData = {
+      metrics,
+      weatherData,
+      recommendation: singleRec, // Return only the specific recommendation
+    };
+
     console.log('Sending response with data:', {
       hasMetrics: !!responseData.metrics,
       hasWeather: !!responseData.weatherData,
-      hasRecommendations: !!responseData.recommendations
+      hasRecommendation: !!responseData.recommendation
     });
 
-    return NextResponse.json(responseData);
+    return NextResponse.json(responseData, { status: 200 });
   } catch (error) {
     console.error("Error in GET request:", error);
     return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
   }
 }
-
 // recommendation/data/[id]/route.ts
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
     const recommendationId = params.id;
     const body = await req.json();
-    const { userId, newStep, addToBothArrays, note, ...updates } = body; // Renamed newNote to note
+    const { userId, newStep, addToBothArrays, note, ...updates } = body;
 
     if (!userId || !recommendationId) {
       return NextResponse.json(
@@ -88,11 +109,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const db = await connectToDatabase.connectToDatabase();
     const recommendationsCollection = db.collection("recommendations");
 
-    // Prepare update operations
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateOperations: Record<string, any> = {};
 
-    // Add general updates to $set
+    // Handle general updates via $set
     Object.keys(updates).forEach((key) => {
       if (key !== "implementationSteps" && key !== "notes") {
         if (!updateOperations.$set) {
@@ -100,17 +120,25 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         }
         updateOperations.$set[`recommendations.$[elem].${key}`] = updates[key];
       }
+
+      // Handle setting the entire 'notes' array if provided
+      if (key === "notes") {
+        if (!updateOperations.$set) {
+          updateOperations.$set = {};
+        }
+        updateOperations.$set["recommendations.$[elem].notes"] = updates.notes;
+      }
     });
 
-    // Handle note if present
+    // Handle adding a single note
     if (note) {
       if (!updateOperations.$push) {
         updateOperations.$push = {};
       }
-      updateOperations.$push["recommendations.$[elem].notes"] = note; // Append the single note
+      updateOperations.$push["recommendations.$[elem].notes"] = note;
     }
 
-    // Handle new step if present
+    // Handle adding a new step
     if (newStep) {
       if (!updateOperations.$push) {
         updateOperations.$push = {};

@@ -32,7 +32,13 @@ export function TrackingCard({
   recommendation: initialRecommendation,
   onUpdate,
 }: TrackingCardProps) {
-  const [recommendation, setRecommendation] = useState(initialRecommendation);
+  console.log("Initial recommendation:", initialRecommendation); // Debug log
+  const [recommendation, setRecommendation] = useState({
+    ...initialRecommendation,
+    trackingImplementationSteps:
+      initialRecommendation.trackingImplementationSteps || [],
+  });
+
   const [editMode, setEditMode] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [newNote, setNewNote] = useState("");
@@ -56,6 +62,8 @@ export function TrackingCard({
     notes: [...(initialRecommendation.notes || [])], // Ensure notes are initialized
   }));
 
+  console.log("Current recommendation state:", recommendation); // Debug log
+  console.log("Current editedFields state:", editedFields); // Debug log
   console.log("Recommendation ID:", recommendation.id);
 
   useEffect(() => {
@@ -69,12 +77,24 @@ export function TrackingCard({
         if (!response.ok) throw new Error("Failed to fetch recommendation");
 
         const data = await response.json();
-        setRecommendation(data);
+        console.log("Fetched data:", data); // Debug log
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        if (!data.recommendation) {
+          throw new Error("Recommendation not found in response");
+        }
+
+        // Set the fetched recommendation
+        setRecommendation(data.recommendation);
         setEditedFields({
-          ...data, // Use the fetched data for initial values
+          ...data.recommendation,
         });
       } catch (error) {
         console.error("Error fetching recommendation:", error);
+        // Optionally, handle the error in the UI
       }
     };
 
@@ -113,7 +133,9 @@ export function TrackingCard({
   };
 
   const handleStepCompletion = (stepIndex: number) => {
-    const updatedSteps = [...recommendation.trackingImplementationSteps];
+    const updatedSteps = [
+      ...(recommendation.trackingImplementationSteps || []),
+    ];
     updatedSteps[stepIndex].complete = true;
 
     const completedSteps = updatedSteps.filter((s) => s.complete).length;
@@ -175,21 +197,63 @@ export function TrackingCard({
       }
     }
   };
+
   const deleteNote = async (noteId: string) => {
-    const updatedRecommendation = {
-      ...recommendation,
-      notes: (recommendation.notes || []).filter((note) => note.id !== noteId),
-    };
+    // Optimistically update the local state by removing the note
+    const updatedNotes = (recommendation.notes || []).filter(
+      (note) => note.id !== noteId
+    );
+    setRecommendation((prev) => ({
+      ...prev,
+      notes: updatedNotes,
+    }));
+    setEditedFields((prev) => ({
+      ...prev,
+      notes: updatedNotes,
+    }));
 
     try {
-      await saveToDatabase(updatedRecommendation);
+      const response = await fetch(
+        `/api/recommendation/data/${recommendation.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: localStorage.getItem("userId") || "",
+            notes: updatedNotes, // Send the updated notes array
+          }),
+        }
+      );
 
-      // Update local state only after successful save
-      setRecommendation(updatedRecommendation);
-      onUpdate(updatedRecommendation);
+      if (!response.ok) {
+        throw new Error("Failed to delete note.");
+      }
+
+      const data = await response.json();
+      console.log("Note deleted successfully:", data);
+
+      // Optionally, update the state with the response from the backend
+      setRecommendation(data.recommendation);
+      setEditedFields({
+        ...data.recommendation,
+      });
     } catch (error) {
       console.error("Error deleting note:", error);
-      // Optionally show error to user
+      // Revert the optimistic update
+      setRecommendation((prev) => ({
+        ...prev,
+        notes: (prev.notes || []).concat(
+          (recommendation.notes || []).find((note) => note.id === noteId)!
+        ),
+      }));
+      setEditedFields((prev) => ({
+        ...prev,
+        notes: (prev.notes || []).concat(
+          (recommendation.notes || []).find((note) => note.id === noteId)!
+        ),
+      }));
+      // Optionally, notify the user about the failure
+      alert("Failed to delete note. Please try again.");
     }
   };
 
@@ -200,7 +264,7 @@ export function TrackingCard({
     setEditedFields((prev) => ({ ...prev, [field]: value }));
   };
 
-  async function addStep() {
+  const addStep = async () => {
     if (newStep.trim()) {
       const step = {
         id: Date.now().toString(),
@@ -208,12 +272,16 @@ export function TrackingCard({
         complete: false,
       };
 
-      // Update local state
+      // Optimistically update the local state
       const updatedSteps = [
-        ...recommendation.trackingImplementationSteps,
+        ...(recommendation.trackingImplementationSteps || []),
         step,
       ];
       setRecommendation((prev) => ({
+        ...prev,
+        trackingImplementationSteps: updatedSteps,
+      }));
+      setEditedFields((prev) => ({
         ...prev,
         trackingImplementationSteps: updatedSteps,
       }));
@@ -233,14 +301,38 @@ export function TrackingCard({
           }
         );
 
-        if (!response.ok) throw new Error("Failed to add step");
+        if (!response.ok) {
+          throw new Error("Failed to add step");
+        }
 
-        console.log("Step added successfully");
+        const data = await response.json();
+        console.log("Step added successfully:", data);
+
+        // Optionally, update the state with the response from the backend
+        setRecommendation(data.recommendation);
+        setEditedFields({
+          ...data.recommendation,
+        });
       } catch (error) {
         console.error("Error adding step:", error);
+        // Revert the optimistic update
+        setRecommendation((prev) => ({
+          ...prev,
+          trackingImplementationSteps: prev.trackingImplementationSteps.filter(
+            (s) => s.id !== step.id
+          ),
+        }));
+        setEditedFields((prev) => ({
+          ...prev,
+          trackingImplementationSteps: prev.trackingImplementationSteps.filter(
+            (s) => s.id !== step.id
+          ),
+        }));
+        // Optionally, notify the user about the failure
+        alert("Failed to add step. Please try again.");
       }
     }
-  }
+  };
 
   const saveChanges = async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -345,12 +437,12 @@ export function TrackingCard({
   };
 
   const filteredSteps = editMode
-    ? editedFields.trackingImplementationSteps.filter((step) =>
+    ? editedFields.trackingImplementationSteps?.filter((step) =>
         step.step.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : recommendation.trackingImplementationSteps.filter((step) =>
+      ) || []
+    : recommendation.trackingImplementationSteps?.filter((step) =>
         step.step.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      ) || [];
 
   return (
     <Card className="bg-white shadow-sm">

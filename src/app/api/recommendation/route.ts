@@ -229,6 +229,11 @@ export async function POST(req: Request) {
             : "Low"
           : "Medium",
         implementationSteps: rec.steps || [],
+         trackingImplementationSteps: (rec.steps || []).map((step, index) => ({
+      id: `${new ObjectId().toString()}-step-${index}`,
+      step,
+      complete: false, // Default completion status
+    })),
         estimatedROI: rec.roi || 0,
         status: "Not Started",
         difficulty:
