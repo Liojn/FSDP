@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardHeader,
@@ -38,25 +38,48 @@ export function TrackingCard({
   const [newNote, setNewNote] = useState("");
   const [newStep, setNewStep] = useState("");
   const [searchTerm] = useState("");
+  // Initialize editedFields with notes array
   const [editedFields, setEditedFields] = useState(() => ({
     title: initialRecommendation.title,
     description: initialRecommendation.description,
     scope: initialRecommendation.scope,
     impact: initialRecommendation.impact,
     category: initialRecommendation.category || CategoryType.CUSTOM,
-    // -- Additional fields we want to make visible/editable --
     priorityLevel: initialRecommendation.priorityLevel || "",
     difficulty: initialRecommendation.difficulty || "",
     estimatedEmissionReduction:
       initialRecommendation.estimatedEmissionReduction || 0,
     estimatedTimeframe: initialRecommendation.estimatedTimeframe || "",
-    // -- Keep this one as well --
     trackingImplementationSteps: [
       ...initialRecommendation.trackingImplementationSteps,
     ],
+    notes: [...(initialRecommendation.notes || [])], // Ensure notes are initialized
   }));
 
   console.log("Recommendation ID:", recommendation.id);
+
+  useEffect(() => {
+    const fetchRecommendation = async () => {
+      try {
+        const baseUrl =
+          process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+        const response = await fetch(
+          `${baseUrl}/api/recommendation/data/${recommendation.id}`
+        );
+        if (!response.ok) throw new Error("Failed to fetch recommendation");
+
+        const data = await response.json();
+        setRecommendation(data);
+        setEditedFields({
+          ...data, // Use the fetched data for initial values
+        });
+      } catch (error) {
+        console.error("Error fetching recommendation:", error);
+      }
+    };
+
+    fetchRecommendation();
+  }, [recommendation.id]);
 
   const saveToDatabase = async (
     updatedRecommendation: TrackingRecommendation
@@ -64,7 +87,6 @@ export function TrackingCard({
     try {
       const baseUrl =
         process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-
       const response = await fetch(
         `${baseUrl}/api/recommendation/data/${updatedRecommendation.id}`,
         {
@@ -83,10 +105,10 @@ export function TrackingCard({
         throw new Error("Failed to save recommendation to the database.");
       }
 
-      const data = await response.json();
-      console.log("Saved recommendation:", data);
+      return await response.json();
     } catch (error) {
       console.error("Error in saveToDatabase:", error);
+      throw error;
     }
   };
 
@@ -114,11 +136,7 @@ export function TrackingCard({
     saveToDatabase(updatedRecommendation);
   };
 
-  const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setNewNote(e.target.value);
-  };
-
-  const addNote = () => {
+  const addNote = async () => {
     if (newNote.trim()) {
       const note: Note = {
         id: Date.now().toString(),
@@ -126,32 +144,53 @@ export function TrackingCard({
         timestamp: new Date().toLocaleDateString(),
       };
 
-      const updatedRecommendation = {
-        ...recommendation,
-        notes: [...recommendation.notes, note],
-      };
+      try {
+        const response = await fetch(
+          `/api/recommendation/data/${recommendation.id}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: localStorage.getItem("userId") || "",
+              note, // <-- pass the new note only
+            }),
+          }
+        );
 
-      setRecommendation(updatedRecommendation);
-      onUpdate(updatedRecommendation);
+        if (!response.ok) {
+          throw new Error("Failed to add note.");
+        }
 
-      // Save updated notes to the database
-      saveToDatabase(updatedRecommendation);
-
-      setNewNote("");
+        // Then fetch the updated recommendation or just
+        // update local state by appending that note:
+        const updatedRecommendation = {
+          ...recommendation,
+          notes: [...(recommendation.notes || []), note],
+        };
+        setRecommendation(updatedRecommendation);
+        onUpdate(updatedRecommendation);
+        setNewNote("");
+      } catch (error) {
+        console.error("Error adding note:", error);
+      }
     }
   };
-
-  const deleteNote = (noteId: string) => {
+  const deleteNote = async (noteId: string) => {
     const updatedRecommendation = {
       ...recommendation,
-      notes: recommendation.notes.filter((note) => note.id !== noteId),
+      notes: (recommendation.notes || []).filter((note) => note.id !== noteId),
     };
 
-    setRecommendation(updatedRecommendation);
-    onUpdate(updatedRecommendation);
+    try {
+      await saveToDatabase(updatedRecommendation);
 
-    // Save updated notes to the database
-    saveToDatabase(updatedRecommendation);
+      // Update local state only after successful save
+      setRecommendation(updatedRecommendation);
+      onUpdate(updatedRecommendation);
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      // Optionally show error to user
+    }
   };
 
   const handleFieldChange = (
@@ -169,6 +208,18 @@ export function TrackingCard({
         complete: false,
       };
 
+      // Update local state
+      const updatedSteps = [
+        ...recommendation.trackingImplementationSteps,
+        step,
+      ];
+      setRecommendation((prev) => ({
+        ...prev,
+        trackingImplementationSteps: updatedSteps,
+      }));
+      setNewStep("");
+
+      // Send to backend
       try {
         const response = await fetch(
           `/api/recommendation/data/${recommendation.id}`,
@@ -178,30 +229,13 @@ export function TrackingCard({
             body: JSON.stringify({
               userId: localStorage.getItem("userId") || "",
               newStep: step,
-              // Let the backend know we want to add to both arrays:
-              addToBothArrays: true,
             }),
           }
         );
 
-        if (!response.ok) {
-          throw new Error("Failed to add step.");
-        }
+        if (!response.ok) throw new Error("Failed to add step");
 
-        // Update local state
-        const updatedSteps = [
-          ...recommendation.trackingImplementationSteps,
-          step,
-        ];
-        const updatedRecommendation = {
-          ...recommendation,
-          trackingImplementationSteps: updatedSteps,
-        };
-
-        setRecommendation(updatedRecommendation);
-        onUpdate(updatedRecommendation);
-
-        setNewStep(""); // Clear the input
+        console.log("Step added successfully");
       } catch (error) {
         console.error("Error adding step:", error);
       }
@@ -281,19 +315,20 @@ export function TrackingCard({
 
   const cancelChanges = () => {
     setEditedFields({
-      title: recommendation.title,
-      description: recommendation.description,
-      scope: recommendation.scope,
-      impact: recommendation.impact,
-      category: recommendation.category || CategoryType.CUSTOM,
-      priorityLevel: recommendation.priorityLevel || "",
-      difficulty: recommendation.difficulty || "",
+      title: initialRecommendation.title,
+      description: initialRecommendation.description,
+      scope: initialRecommendation.scope,
+      impact: initialRecommendation.impact,
+      category: initialRecommendation.category || CategoryType.CUSTOM,
+      priorityLevel: initialRecommendation.priorityLevel || "",
+      difficulty: initialRecommendation.difficulty || "",
       estimatedEmissionReduction:
-        recommendation.estimatedEmissionReduction || 0,
-      estimatedTimeframe: recommendation.estimatedTimeframe || "",
+        initialRecommendation.estimatedEmissionReduction || 0,
+      estimatedTimeframe: initialRecommendation.estimatedTimeframe || "",
       trackingImplementationSteps: [
-        ...recommendation.trackingImplementationSteps,
+        ...initialRecommendation.trackingImplementationSteps,
       ],
+      notes: [...(initialRecommendation.notes || [])], // Ensure notes are initialized
     });
     setEditMode(false);
   };
@@ -504,7 +539,9 @@ export function TrackingCard({
         {/* Notes */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Notes</p>
+            <p className="text-sm font-medium">
+              Notes ({(recommendation.notes || []).length})
+            </p>
             <Button
               variant="outline"
               size="sm"
@@ -519,14 +556,14 @@ export function TrackingCard({
                 <Textarea
                   placeholder="Add a new note..."
                   value={newNote}
-                  onChange={handleNoteChange}
+                  onChange={(e) => setNewNote(e.target.value)}
                   className="bg-white"
                 />
                 <Button onClick={addNote} size="sm">
                   Add Note
                 </Button>
               </div>
-              {recommendation.notes.length > 0 && (
+              {recommendation.notes && recommendation.notes.length > 0 && (
                 <div className="space-y-3">
                   {recommendation.notes.map((note) => (
                     <div

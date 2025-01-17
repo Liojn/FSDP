@@ -74,10 +74,9 @@ if (!ObjectId.isValid(id)) {
 // recommendation/data/[id]/route.ts
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
-    const recommendationId = params.id; // ID of the recommendation to update
-    const body = await req.json(); // Parse the request body
-
-    const { userId, newStep, addToBothArrays, ...updates } = body;
+    const recommendationId = params.id;
+    const body = await req.json();
+    const { userId, newStep, addToBothArrays, note, ...updates } = body; // Renamed newNote to note
 
     if (!userId || !recommendationId) {
       return NextResponse.json(
@@ -90,30 +89,48 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const recommendationsCollection = db.collection("recommendations");
 
     // Prepare update operations
-    const updateOperations: any = { $set: {}, $push: {} };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateOperations: Record<string, any> = {};
 
     // Add general updates to $set
     Object.keys(updates).forEach((key) => {
-      if (key !== "implementationSteps") {
+      if (key !== "implementationSteps" && key !== "notes") {
+        if (!updateOperations.$set) {
+          updateOperations.$set = {};
+        }
         updateOperations.$set[`recommendations.$[elem].${key}`] = updates[key];
       }
     });
 
-    // Append new step to trackingImplementationSteps
+    // Handle note if present
+    if (note) {
+      if (!updateOperations.$push) {
+        updateOperations.$push = {};
+      }
+      updateOperations.$push["recommendations.$[elem].notes"] = note; // Append the single note
+    }
+
+    // Handle new step if present
     if (newStep) {
+      if (!updateOperations.$push) {
+        updateOperations.$push = {};
+      }
       updateOperations.$push["recommendations.$[elem].trackingImplementationSteps"] = newStep;
 
-      // Append to implementationSteps if addToBothArrays is true
       if (addToBothArrays) {
         updateOperations.$push["recommendations.$[elem].implementationSteps"] = newStep.step;
       }
     }
 
     // Clean up empty operations
-    if (Object.keys(updateOperations.$set).length === 0) delete updateOperations.$set;
-    if (Object.keys(updateOperations.$push).length === 0) delete updateOperations.$push;
+    if (updateOperations.$set && Object.keys(updateOperations.$set).length === 0) {
+      delete updateOperations.$set;
+    }
+    if (updateOperations.$push && Object.keys(updateOperations.$push).length === 0) {
+      delete updateOperations.$push;
+    }
 
-    // Debug the operations before execution
+    // Debug logging
     console.log("Update Operations:", JSON.stringify(updateOperations, null, 2));
 
     // Perform the update
@@ -123,7 +140,6 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       { arrayFilters: [{ "elem.id": recommendationId }] }
     );
 
-    // Check if the update matched any documents
     if (!updateResult.matchedCount) {
       return NextResponse.json(
         { error: "No matching recommendation found for this user" },
@@ -131,15 +147,17 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       );
     }
 
-    // Log the updated recommendation for debugging
+    // Fetch and return the updated recommendation for verification
     const updatedRecommendation = await recommendationsCollection.findOne(
       { userId },
       { projection: { recommendations: { $elemMatch: { id: recommendationId } } } }
     );
-    console.log("Updated Recommendation:", JSON.stringify(updatedRecommendation, null, 2));
 
     return NextResponse.json(
-      { message: "Recommendation updated successfully" },
+      {
+        message: "Recommendation updated successfully",
+        recommendation: updatedRecommendation?.recommendations?.[0],
+      },
       { status: 200 }
     );
   } catch (error) {
@@ -150,7 +168,6 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     );
   }
 }
-
 
 
 
