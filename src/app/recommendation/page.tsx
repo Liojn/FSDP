@@ -13,6 +13,7 @@ import {
   TrackingRecommendation,
   CreateRecommendationFormData,
 } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ const RecommendationPage = ({
     createRecommendation,
   } = useRecommendations(userId || "", scopes);
 
-  // Update the handler to accept CreateRecommendationFormData
+  // Handler for creating a new recommendation
   const handleCreateRecommendation = async (
     newRecommendation: CreateRecommendationFormData
   ) => {
@@ -60,10 +61,6 @@ const RecommendationPage = ({
   ): TrackingRecommendation => {
     return {
       ...rec,
-      status: "Not Started" as "Not Started" | "In Progress" | "Completed",
-      progress: 0,
-      completedSteps: 0,
-      notes: [],
       trackingImplementationSteps: rec.implementationSteps.map(
         (step, index) => ({
           id: `${rec.id}-step-${index}`,
@@ -71,6 +68,10 @@ const RecommendationPage = ({
           complete: false,
         })
       ),
+      progress: 0,
+      completedSteps: 0,
+      notes: [],
+      status: "Not Started",
     };
   };
 
@@ -82,9 +83,22 @@ const RecommendationPage = ({
     return (
       <div className="p-4 px-10">
         <PageHeader title="Farm Management Recommendations" />
-        <div className="animate-pulse space-y-6">
+        {/* Skeleton Loading State */}
+        <div className="space-y-6">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-64 bg-gray-200 rounded-lg"></div>
+            <div key={i} className="bg-white shadow-sm rounded-lg p-4">
+              <Skeleton className="h-6 w-1/3 mb-4" /> {/* Title Skeleton */}
+              <Skeleton className="h-4 w-full mb-2" />{" "}
+              {/* Description Skeleton */}
+              <Skeleton className="h-4 w-2/3 mb-2" /> {/* Scope Skeleton */}
+              <Skeleton className="h-4 w-1/2 mb-4" /> {/* Impact Skeleton */}
+              <div className="flex space-x-4">
+                <Skeleton className="h-4 w-1/4" /> {/* Priority Skeleton */}
+                <Skeleton className="h-4 w-1/4" /> {/* Difficulty Skeleton */}
+              </div>
+              <Skeleton className="h-4 w-1/2 mt-4" />{" "}
+              {/* Estimated Timeframe Skeleton */}
+            </div>
           ))}
         </div>
       </div>
