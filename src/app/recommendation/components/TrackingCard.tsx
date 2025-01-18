@@ -20,6 +20,7 @@ import {
   Save,
   Plus,
 } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
 import { Badge } from "@/components/ui/badge";
 import { Note, TrackingRecommendation, CategoryType } from "@/types";
 
@@ -175,7 +176,7 @@ export function TrackingCard({
   const addNote = async () => {
     if (newNote.trim()) {
       const note: Note = {
-        id: Date.now().toString(),
+        id: uuidv4(), // Use UUID for step ID
         content: newNote,
         timestamp: new Date().toLocaleDateString(),
       };
@@ -281,7 +282,7 @@ export function TrackingCard({
   const addStep = async () => {
     if (newStep.trim()) {
       const step = {
-        id: Date.now().toString(),
+        id: uuidv4(), // Use UUID for step ID
         step: newStep,
         complete: false,
       };

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,7 +56,7 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
     const newRecommendation: TrackingRecommendation = {
       ...formData,
       scope: selectedScopes.join(", "),
-      id: Date.now().toString(),
+      id: uuidv4(), // Use UUID for step ID
       status: "Not Started",
       progress: 0,
       completedSteps: 0,
@@ -87,7 +88,7 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
   const addStep = () => {
     if (newStep.trim()) {
       const implementationStep: ImplementationStep = {
-        id: Date.now().toString(),
+        id: uuidv4(), // Use UUID for step ID
         step: newStep.trim(),
         complete: false,
       };

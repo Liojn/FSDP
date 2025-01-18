@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "dbConfig"; // Adjust the path as needed
 import { TrackingRecommendation, CategoryType } from "@/types";
-import { ObjectId } from "mongodb"; // Import ObjectId from MongoDB
+import { v4 as uuidv4 } from "uuid"; // Import UUID function
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
 
     // Destructure necessary fields from the request body
     const {
-      userId,
+      userId, // Ensure userId is provided to associate the recommendation with a user
       title,
       description,
       scope,
@@ -43,9 +43,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Initialize the new recommendation with ObjectId-based IDs
+    // Initialize the new recommendation
     const newRecommendation: TrackingRecommendation = {
-      id: new ObjectId().toHexString(), // Generate unique ID using ObjectId
+      id: uuidv4(), // Generate a unique UUID for the recommendation ID
       title,
       description,
       scope,
@@ -58,8 +58,8 @@ export async function POST(req: Request) {
       difficulty,
       estimatedTimeframe,
       progress: 0,
-      trackingImplementationSteps: implementationSteps.map((step: string) => ({
-        id: new ObjectId().toHexString(), // Generate unique ID for each step
+      trackingImplementationSteps: implementationSteps.map((step: string, index: number) => ({
+        id: `${uuidv4()}-${index}`, // Generate a unique UUID for each step
         step,
         complete: false,
       })),
