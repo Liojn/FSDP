@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useRecommendations } from "@/hooks/useRecommendation";
+import { useRecommendations } from "@/hooks/useRecommendations";
 import { PageHeader } from "@/components/shared/page-header";
 import { TrackingCard } from "@/app/recommendation/components/TrackingCard";
 import CreateRecommendation from "@/app/recommendation/components/CreateRecommendation";
