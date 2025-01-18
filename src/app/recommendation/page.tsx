@@ -1,12 +1,19 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// src/app/recommendation/page.tsx
+
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRecommendations } from "@/hooks/useRecommendations";
 import { PageHeader } from "@/components/shared/page-header";
 import { TrackingCard } from "@/app/recommendation/components/TrackingCard";
 import CreateRecommendation from "@/app/recommendation/components/CreateRecommendation";
-import { Recommendation, TrackingRecommendation } from "@/types";
-import { useEffect, useState } from "react";
+import {
+  Recommendation,
+  TrackingRecommendation,
+  CreateRecommendationFormData,
+} from "@/types";
+
 export const dynamic = "force-dynamic";
 
 const RecommendationPage = ({
@@ -27,13 +34,24 @@ const RecommendationPage = ({
     ? [scopesParam]
     : [];
 
-  const { recommendations, isLoading, error, saveRecommendation } =
-    useRecommendations(userId || "", scopes);
+  const {
+    recommendations,
+    isLoading,
+    error,
+    saveRecommendation,
+    createRecommendation,
+  } = useRecommendations(userId || "", scopes);
 
+  // Update the handler to accept CreateRecommendationFormData
   const handleCreateRecommendation = async (
-    newRecommendation: TrackingRecommendation
+    newRecommendation: CreateRecommendationFormData
   ) => {
-    await saveRecommendation(newRecommendation);
+    try {
+      await createRecommendation(newRecommendation);
+      // Show a success notification
+    } catch (error) {
+      // Show an error notification
+    }
   };
 
   // Convert Recommendation to TrackingRecommendation
@@ -82,7 +100,11 @@ const RecommendationPage = ({
       <PageHeader title="Farm Management Recommendations" />
 
       <div className="mb-6">
-        <CreateRecommendation onSubmit={handleCreateRecommendation} />
+        {/* Pass the userId prop to CreateRecommendation */}
+        <CreateRecommendation
+          onSubmit={handleCreateRecommendation}
+          userId={userId}
+        />
       </div>
 
       <div className="space-y-6">

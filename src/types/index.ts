@@ -50,6 +50,20 @@ export interface TrackingRecommendation extends Recommendation {
   notes: Note[];
 }
 
+export interface CreateRecommendationFormData {
+  userId: string;
+  title: string;
+  description: string;
+  scope: string;
+  impact: string;
+  category: CategoryType;
+  estimatedEmissionReduction: number;
+  priorityLevel: "Low" | "Medium" | "High";
+  implementationSteps: string[];
+  difficulty: "Easy" | "Medium" | "Hard";
+  estimatedTimeframe: string;
+}
+
 // Threshold Data Interface
 export interface ThresholdData {
   userId: string;

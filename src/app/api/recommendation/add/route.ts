@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "dbConfig"; // Adjust the path as needed
 import { TrackingRecommendation, CategoryType } from "@/types";
-import { v4 as uuidv4 } from "uuid"; // Import UUID function
+import { ObjectId } from "mongodb"; // Import ObjectId
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
 
     // Destructure necessary fields from the request body
     const {
-      userId, // Ensure userId is provided to associate the recommendation with a user
+      userId,
       title,
       description,
       scope,
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
     // Initialize the new recommendation
     const newRecommendation: TrackingRecommendation = {
-      id: uuidv4(), // Generate a unique UUID for the recommendation ID
+      id: new ObjectId().toString(), // Generate a unique ObjectId for the recommendation ID
       title,
       description,
       scope,
@@ -58,8 +58,8 @@ export async function POST(req: Request) {
       difficulty,
       estimatedTimeframe,
       progress: 0,
-      trackingImplementationSteps: implementationSteps.map((step: string, index: number) => ({
-        id: `${uuidv4()}-${index}`, // Generate a unique UUID for each step
+      trackingImplementationSteps: implementationSteps.map((step: string) => ({
+        id: new ObjectId().toString(), // Generate a unique ObjectId for each step
         step,
         complete: false,
       })),
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     // Update the user's document by pushing the new recommendation into the recommendations array
     const updateResult = await recommendationsCollection.updateOne(
       { userId },
-      { $push: { recommendations: newRecommendation } },
+      { $push: { recommendations: newRecommendation }, $set: { updatedAt: new Date() } },
       { upsert: true }
     );
 

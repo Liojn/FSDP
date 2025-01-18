@@ -1,5 +1,6 @@
+// src/app/recommendation/components/CreateRecommendation.tsx
+
 import React, { useState } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,29 +14,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
-import {
-  TrackingRecommendation,
-  CategoryType,
-  Note,
-  ImplementationStep,
-} from "@/types";
+import { CategoryType } from "@/types";
 
 interface CreateRecommendationProps {
-  onSubmit: (recommendation: TrackingRecommendation) => void;
+  onSubmit: (recommendation: CreateRecommendationFormData) => void;
+  userId: string;
   onCancel?: () => void;
+}
+
+interface CreateRecommendationFormData {
+  userId: string;
+  title: string;
+  description: string;
+  scope: string;
+  impact: string;
+  category: CategoryType;
+  estimatedEmissionReduction: number;
+  priorityLevel: "Low" | "Medium" | "High";
+  implementationSteps: string[];
+  difficulty: "Easy" | "Medium" | "Hard";
+  estimatedTimeframe: string;
 }
 
 const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
   onSubmit,
+  userId,
   onCancel,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [formData, setFormData] = useState<
-    Omit<
-      TrackingRecommendation,
-      "id" | "status" | "progress" | "completedSteps" | "notes"
-    >
-  >({
+  const [formData, setFormData] = useState<CreateRecommendationFormData>({
+    userId: userId || "",
     title: "",
     description: "",
     scope: "",
@@ -46,21 +54,37 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
     implementationSteps: [],
     difficulty: "Medium",
     estimatedTimeframe: "",
-    trackingImplementationSteps: [],
   });
 
   const [newStep, setNewStep] = useState("");
   const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
 
   const handleSubmit = () => {
-    const newRecommendation: TrackingRecommendation = {
+    // Basic validation
+    if (!formData.title.trim()) {
+      alert("Title is required.");
+      return;
+    }
+    if (!formData.description.trim()) {
+      alert("Description is required.");
+      return;
+    }
+    if (!formData.userId.trim()) {
+      alert("User ID is required.");
+      return;
+    }
+    if (selectedScopes.length === 0) {
+      alert("At least one scope must be selected.");
+      return;
+    }
+    if (!formData.category) {
+      alert("Category is required.");
+      return;
+    }
+
+    const newRecommendation: CreateRecommendationFormData = {
       ...formData,
-      scope: selectedScopes.join(", "),
-      id: uuidv4(), // Use UUID for step ID
-      status: "Not Started",
-      progress: 0,
-      completedSteps: 0,
-      notes: [] as Note[],
+      scope: selectedScopes.join(", "), // Ensure consistent format
     };
 
     onSubmit(newRecommendation);
@@ -70,6 +94,7 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
   const resetForm = () => {
     setIsExpanded(false);
     setFormData({
+      userId: userId || "",
       title: "",
       description: "",
       scope: "",
@@ -78,40 +103,29 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
       estimatedEmissionReduction: 0,
       priorityLevel: "Medium",
       implementationSteps: [],
-      difficulty: "Moderate",
+      difficulty: "Medium",
       estimatedTimeframe: "",
-      trackingImplementationSteps: [],
     });
     setSelectedScopes([]);
+    setNewStep("");
   };
 
   const addStep = () => {
     if (newStep.trim()) {
-      const implementationStep: ImplementationStep = {
-        id: uuidv4(), // Use UUID for step ID
-        step: newStep.trim(),
-        complete: false,
-      };
-
       setFormData((prev) => ({
         ...prev,
-        trackingImplementationSteps: [
-          ...prev.trackingImplementationSteps,
-          implementationStep,
-        ],
         implementationSteps: [...prev.implementationSteps, newStep.trim()],
       }));
       setNewStep("");
     }
   };
 
-  const removeStep = (stepId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      trackingImplementationSteps: prev.trackingImplementationSteps.filter(
-        (step) => step.id !== stepId
-      ),
-    }));
+  const removeStep = (index: number) => {
+    setFormData((prev) => {
+      const newSteps = [...prev.implementationSteps];
+      newSteps.splice(index, 1);
+      return { ...prev, implementationSteps: newSteps };
+    });
   };
 
   const toggleScope = (scope: string) => {
@@ -202,23 +216,28 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
           </div>
         </div>
 
-        {/* Priority Level & Emission Reduction */}
+        {/* Category & Estimated Emission Reduction */}
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <p className="text-sm font-medium mb-1">Priority Level</p>
+            <p className="text-sm font-medium mb-1">Category</p>
             <Select
-              value={formData.priorityLevel}
+              value={formData.category}
               onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, priorityLevel: value }))
+                setFormData((prev) => ({
+                  ...prev,
+                  category: value as CategoryType,
+                }))
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select priority" />
+                <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Low">Low</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
-                <SelectItem value="High">High</SelectItem>
+                {Object.values(CategoryType).map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -240,14 +259,38 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
           </div>
         </div>
 
-        {/* Timeframe & Difficulty */}
+        {/* Priority Level & Difficulty */}
         <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm font-medium mb-1">Priority Level</p>
+            <Select
+              value={formData.priorityLevel}
+              onValueChange={(value) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  priorityLevel: value as "Low" | "Medium" | "High",
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Low">Low</SelectItem>
+                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="High">High</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div>
             <p className="text-sm font-medium mb-1">Difficulty</p>
             <Select
               value={formData.difficulty}
               onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, difficulty: value }))
+                setFormData((prev) => ({
+                  ...prev,
+                  difficulty: value as "Medium" | "Easy" | "Hard",
+                }))
               }
             >
               <SelectTrigger>
@@ -255,37 +298,39 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Easy">Easy</SelectItem>
-                <SelectItem value="Medium">Moderate</SelectItem>
+                <SelectItem value="Medium">Medium</SelectItem>
                 <SelectItem value="Hard">Hard</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <p className="text-sm font-medium mb-1">Estimated Timeframe</p>
-            <Input
-              placeholder="Enter timeframe"
-              value={formData.estimatedTimeframe}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  estimatedTimeframe: e.target.value,
-                }))
-              }
-            />
-          </div>
+        </div>
+
+        {/* Estimated Timeframe */}
+        <div>
+          <p className="text-sm font-medium mb-1">Estimated Timeframe</p>
+          <Input
+            placeholder="Enter timeframe"
+            value={formData.estimatedTimeframe}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                estimatedTimeframe: e.target.value,
+              }))
+            }
+          />
         </div>
 
         {/* Implementation Steps */}
         <div className="space-y-3">
           <p className="text-sm font-medium">Implementation Steps</p>
           <div className="space-y-2">
-            {formData.trackingImplementationSteps.map((step) => (
-              <div key={step.id} className="flex items-center gap-2">
-                <span>{step.step}</span>
+            {formData.implementationSteps.map((step, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <span>{step}</span>
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => removeStep(step.id)}
+                  onClick={() => removeStep(index)}
                   className="ml-auto"
                 >
                   <X className="h-4 w-4" />
