@@ -4,7 +4,7 @@ import { ObjectId } from 'mongodb';
 import { MetricData, ResponseData} from "@/types";
 import connectToDatabase from "dbConfig";
 import { NextRequest, NextResponse } from 'next/server';
-import { saveRecommendationUpdates } from '@/services/recommendationService';
+
 
 
 export async function GET(
@@ -181,6 +181,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       { projection: { recommendations: { $elemMatch: { id: recommendationId } } } }
     );
 
+    // Additional Logging
+    console.log("Updated Recommendation:", updatedRecommendation);
+
     return NextResponse.json(
       {
         message: "Recommendation updated successfully",
@@ -199,10 +202,6 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
 
 
-
-
-
-
 async function fetchWeatherData() {
   try {
     const db = await connectToDatabase.connectToDatabase();
@@ -213,9 +212,6 @@ async function fetchWeatherData() {
     return [];
   }
 }
-
-
-
 
 // Helper function to fetch and calculate metrics based on userId
 async function getMetrics(userId: string): Promise<MetricData> {

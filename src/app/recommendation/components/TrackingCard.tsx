@@ -132,30 +132,44 @@ export function TrackingCard({
     }
   };
 
-  const handleStepCompletion = (stepIndex: number) => {
-    const updatedSteps = [
-      ...(recommendation.trackingImplementationSteps || []),
-    ];
-    updatedSteps[stepIndex].complete = true;
+  const handleStepCompletion = async (stepIndex: number) => {
+    try {
+      const updatedSteps = [
+        ...(recommendation.trackingImplementationSteps || []),
+      ];
+      updatedSteps[stepIndex].complete = true;
 
-    const completedSteps = updatedSteps.filter((s) => s.complete).length;
-    const newStatus: "Completed" | "In Progress" | "Not Started" =
-      completedSteps === updatedSteps.length ? "Completed" : "In Progress";
-    const newProgress = (completedSteps / updatedSteps.length) * 100;
+      const completedSteps = updatedSteps.filter((s) => s.complete).length;
+      const newStatus: "Completed" | "In Progress" | "Not Started" =
+        completedSteps === updatedSteps.length ? "Completed" : "In Progress";
+      const newProgress = Math.round(
+        (completedSteps / updatedSteps.length) * 100
+      );
 
-    const updatedRecommendation = {
-      ...recommendation,
-      trackingImplementationSteps: updatedSteps,
-      completedSteps,
-      progress: newProgress,
-      status: newStatus,
-    };
+      const updatedRecommendation = {
+        ...recommendation,
+        trackingImplementationSteps: updatedSteps,
+        completedSteps,
+        progress: newProgress,
+        status: newStatus,
+      };
 
-    setRecommendation(updatedRecommendation);
-    onUpdate(updatedRecommendation);
+      // Save progress to the database and await the response
+      const savedData = await saveToDatabase(updatedRecommendation);
 
-    // Save progress to the database
-    saveToDatabase(updatedRecommendation);
+      if (savedData && savedData.recommendation) {
+        setRecommendation(savedData.recommendation);
+        setEditedFields({
+          ...savedData.recommendation,
+        });
+        onUpdate(savedData.recommendation);
+      } else {
+        throw new Error("Invalid data received from server.");
+      }
+    } catch (error) {
+      console.error("Error in handleStepCompletion:", error);
+      alert("Failed to mark step as complete. Please try again.");
+    }
   };
 
   const addNote = async () => {

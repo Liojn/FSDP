@@ -46,15 +46,15 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
     difficulty: "Medium",
     estimatedTimeframe: "",
     trackingImplementationSteps: [],
-    relatedMetrics: [],
   });
 
   const [newStep, setNewStep] = useState("");
-  const [newMetric, setNewMetric] = useState("");
+  const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
 
   const handleSubmit = () => {
     const newRecommendation: TrackingRecommendation = {
       ...formData,
+      scope: selectedScopes.join(", "),
       id: Date.now().toString(),
       status: "Not Started",
       progress: 0,
@@ -77,11 +77,11 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
       estimatedEmissionReduction: 0,
       priorityLevel: "Medium",
       implementationSteps: [],
-      difficulty: "Medium",
+      difficulty: "Moderate",
       estimatedTimeframe: "",
       trackingImplementationSteps: [],
-      relatedMetrics: [],
     });
+    setSelectedScopes([]);
   };
 
   const addStep = () => {
@@ -113,23 +113,13 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
     }));
   };
 
-  const addMetric = () => {
-    if (newMetric.trim() && formData.relatedMetrics) {
-      setFormData((prev) => ({
-        ...prev,
-        relatedMetrics: [...(prev.relatedMetrics || []), newMetric.trim()],
-      }));
-      setNewMetric("");
-    }
-  };
-
-  const removeMetric = (metricToRemove: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      relatedMetrics: (prev.relatedMetrics || []).filter(
-        (metric) => metric !== metricToRemove
-      ),
-    }));
+  const toggleScope = (scope: string) => {
+    setSelectedScopes((prev) => {
+      if (prev.includes(scope)) {
+        return prev.filter((s) => s !== scope);
+      }
+      return [...prev, scope];
+    });
   };
 
   if (!isExpanded) {
@@ -184,13 +174,20 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <p className="text-sm font-medium mb-1">Scope</p>
-            <Input
-              placeholder="Enter scope"
-              value={formData.scope}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, scope: e.target.value }))
-              }
-            />
+            <div className="flex gap-2 flex-wrap">
+              {["Scope 1", "Scope 2", "Scope 3"].map((scope) => (
+                <Badge
+                  key={scope}
+                  variant={
+                    selectedScopes.includes(scope) ? "default" : "outline"
+                  }
+                  className="cursor-pointer"
+                  onClick={() => toggleScope(scope)}
+                >
+                  {scope}
+                </Badge>
+              ))}
+            </div>
           </div>
           <div>
             <p className="text-sm font-medium mb-1">Impact</p>
@@ -204,21 +201,8 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
           </div>
         </div>
 
-        {/* Category & Priority Level */}
+        {/* Priority Level & Emission Reduction */}
         <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-medium mb-1">Category</p>
-            <Input
-              placeholder="Enter category"
-              value={formData.category}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  category: e.target.value as CategoryType,
-                }))
-              }
-            />
-          </div>
           <div>
             <p className="text-sm font-medium mb-1">Priority Level</p>
             <Select
@@ -237,12 +221,10 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        {/* Estimates */}
-        <div className="grid md:grid-cols-3 gap-4">
           <div>
-            <p className="text-sm font-medium mb-1">Emission Reduction</p>
+            <p className="text-sm font-medium mb-1">
+              Estimated Emission Reduction (kg CO₂e)
+            </p>
             <Input
               type="number"
               placeholder="Enter estimated reduction"
@@ -260,19 +242,6 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
         {/* Timeframe & Difficulty */}
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <p className="text-sm font-medium mb-1">Estimated Timeframe</p>
-            <Input
-              placeholder="Enter timeframe"
-              value={formData.estimatedTimeframe}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  estimatedTimeframe: e.target.value,
-                }))
-              }
-            />
-          </div>
-          <div>
             <p className="text-sm font-medium mb-1">Difficulty</p>
             <Select
               value={formData.difficulty}
@@ -285,50 +254,23 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Easy">Easy</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="Medium">Moderate</SelectItem>
                 <SelectItem value="Hard">Hard</SelectItem>
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        {/* Related Metrics */}
-        <div className="space-y-3">
-          <p className="text-sm font-medium">Related Metrics</p>
-          <div className="flex gap-2 flex-wrap">
-            {formData.relatedMetrics?.map((metric) => (
-              <Badge
-                key={metric}
-                variant="secondary"
-                className="flex items-center gap-1"
-              >
-                {metric}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => removeMetric(metric)}
-                  className="h-4 w-4 p-0"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
-          </div>
-          <div className="flex gap-2">
+          <div>
+            <p className="text-sm font-medium mb-1">Estimated Timeframe</p>
             <Input
-              placeholder="Add related metric"
-              value={newMetric}
-              onChange={(e) => setNewMetric(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addMetric();
-                }
-              }}
+              placeholder="Enter timeframe"
+              value={formData.estimatedTimeframe}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  estimatedTimeframe: e.target.value,
+                }))
+              }
             />
-            <Button variant="outline" onClick={addMetric}>
-              Add
-            </Button>
           </div>
         </div>
 

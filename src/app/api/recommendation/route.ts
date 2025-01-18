@@ -147,7 +147,6 @@ Use the following structure:
       "savings": 100,
       "difficulty": "easy",
       "implementationTimeline": "3 months",
-      "sourceData": "source of metrics used",
       "scope": "Scope 1"
     }
   ]

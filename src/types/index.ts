@@ -22,7 +22,6 @@ export interface Recommendation {
   status: string;
   difficulty: string;
   estimatedTimeframe: string;
-  relatedMetrics?: string[];
 }
 
 // Implementation Step for tracking
