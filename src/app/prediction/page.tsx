@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { useData, MonthlyData } from "@/context/DataContext";
 import { useRef, useEffect } from "react";
 import NetZeroGraph from "./netZeroGraph/netZeroGraph";
-import EmissionsChart from "./predictionComponents/predictionGraph";
+import EmissionsChart from "./carbonNeutralGraph/predictionGraph";
 
 export interface UserGoals {
   annualEmissionsTarget: number;

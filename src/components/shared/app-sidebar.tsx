@@ -30,6 +30,7 @@ import {
   BadgeCheck,
   ChartColumn,
   ChevronsUpDown,
+  Handshake,
   LayoutDashboard,
   LogOut,
   Medal,
@@ -43,6 +44,7 @@ const navigationItems = [
   { title: "Prediction", url: "/prediction", icon: ChartColumn },
   { title: "Badges", url: "/badges", icon: Medal },
   { title: "Campaign", url: "/campaign", icon: PencilLine },
+  { title: "WTE Operation", url: "/wasteToEnergy", icon: Handshake },
 ];
 
 const appConfig = {
