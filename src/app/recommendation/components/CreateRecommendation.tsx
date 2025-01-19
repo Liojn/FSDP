@@ -199,7 +199,6 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, title: e.target.value }))
                 }
-                required
               />
             </div>
             <div>
@@ -213,7 +212,6 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
                     description: e.target.value,
                   }))
                 }
-                required
               />
             </div>
             <div>
@@ -228,7 +226,6 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
                     impact: e.target.value,
                   }))
                 }
-                required
               />
             </div>
           </div>
@@ -261,7 +258,6 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
                     category: value as CategoryType,
                   }))
                 }
-                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
