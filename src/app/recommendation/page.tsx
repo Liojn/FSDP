@@ -1,19 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // src/app/recommendation/page.tsx
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useRecommendations } from "@/hooks/useRecommendations";
 import { PageHeader } from "@/components/shared/page-header";
 import { TrackingCard } from "@/app/recommendation/components/TrackingCard";
 import CreateRecommendation from "@/app/recommendation/components/CreateRecommendation";
-import {
-  Recommendation,
-  TrackingRecommendation,
-  CreateRecommendationFormData,
-} from "@/types";
-import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
+import { TrackingRecommendation, CreateRecommendationFormData } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const dynamic = "force-dynamic";
 
@@ -49,34 +44,38 @@ const RecommendationPage = ({
   ) => {
     try {
       await createRecommendation(newRecommendation);
-      // Show a success notification
+      // Optionally, show a success notification
     } catch (error) {
-      // Show an error notification
+      // Optionally, show an error notification
+      console.error("Error creating recommendation:", error);
     }
   };
 
-  // Convert Recommendation to TrackingRecommendation
-  const convertToTrackingRecommendation = (
-    rec: Recommendation
-  ): TrackingRecommendation => {
-    return {
-      ...rec,
-      trackingImplementationSteps: rec.implementationSteps.map(
-        (step, index) => ({
-          id: `${rec.id}-step-${index}`,
-          step: step,
-          complete: false,
-        })
-      ),
-      progress: 0,
-      completedSteps: 0,
-      notes: [],
-      status: "Not Started",
-    };
+  // Separate recommendations into active and history based on status
+  const activeRecommendations = useMemo(
+    () =>
+      recommendations
+        ? recommendations.filter((rec) => rec.status !== "Completed")
+        : [],
+    [recommendations]
+  );
+
+  const historyRecommendations = useMemo(
+    () =>
+      recommendations
+        ? recommendations.filter((rec) => rec.status === "Completed")
+        : [],
+    [recommendations]
+  );
+
+  // Handler to update a recommendation in the local state
+  const handleUpdateRecommendation = (updatedRec: TrackingRecommendation) => {
+    saveRecommendation(updatedRec);
+    // No need to manually separate active and history; useMemo handles it
   };
 
   if (!userId) {
-    return <div>Error: User ID is required.</div>;
+    return <div className="p-4 px-10">Error: User ID is required.</div>;
   }
 
   if (isLoading) {
@@ -106,7 +105,14 @@ const RecommendationPage = ({
   }
 
   if (error) {
-    return <div>Error loading recommendations: {error.message}</div>;
+    return (
+      <div className="p-4 px-10">
+        <PageHeader title="Farm Management Recommendations" />
+        <div className="text-red-500">
+          Error loading recommendations: {error.message}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -121,14 +127,37 @@ const RecommendationPage = ({
         />
       </div>
 
+      {/* Active Recommendations */}
       <div className="space-y-6">
-        {recommendations?.map((rec) => (
-          <TrackingCard
-            key={rec.id}
-            recommendation={convertToTrackingRecommendation(rec)}
-            onUpdate={saveRecommendation}
-          />
-        ))}
+        {activeRecommendations.length > 0 ? (
+          activeRecommendations.map((rec) => (
+            <TrackingCard
+              key={rec.id}
+              recommendation={rec}
+              onUpdate={handleUpdateRecommendation}
+            />
+          ))
+        ) : (
+          <p className="text-gray-500">No active recommendations.</p>
+        )}
+      </div>
+
+      {/* History Section */}
+      <div className="space-y-6 mt-10">
+        <div className="flex items-center gap-4 py-5">
+          <h1 className="text-3xl font-bold">History</h1>
+        </div>
+        {historyRecommendations.length > 0 ? (
+          historyRecommendations.map((rec) => (
+            <TrackingCard
+              key={rec.id}
+              recommendation={rec}
+              onUpdate={handleUpdateRecommendation}
+            />
+          ))
+        ) : (
+          <p className="text-gray-500">No completed recommendations.</p>
+        )}
       </div>
     </div>
   );

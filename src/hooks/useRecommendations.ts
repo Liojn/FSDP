@@ -1,19 +1,21 @@
 // src/hooks/useRecommendations.ts
 
 import useSWR from "swr";
-import { TrackingRecommendation, Recommendation, CreateRecommendationFormData } from "@/types";
+import {
+  TrackingRecommendation,
+  Recommendation,
+  CreateRecommendationFormData,
+} from "@/types";
 
 export const transformToTrackingRecommendation = (
   rec: Recommendation & Partial<TrackingRecommendation>
 ): TrackingRecommendation => {
+  // Since we are removing implementationSteps entirely,
+  // we simply default to an empty array if trackingImplementationSteps is undefined or empty.
   const trackingImplementationSteps =
     rec.trackingImplementationSteps && rec.trackingImplementationSteps.length > 0
       ? rec.trackingImplementationSteps
-      : (rec.implementationSteps || []).map((step, index) => ({
-          id: `${rec.id}-step-${index}`,
-          step,
-          complete: false,
-        }));
+      : [];
 
   const notes = rec.notes || [];
 
@@ -52,6 +54,7 @@ export function useRecommendations(userId: string, scopes: string[]) {
     );
     const { metrics, weatherData, recommendations } = await dataRes.json();
 
+    // If no recommendations exist, generate them via AI
     if (!recommendations || recommendations.length === 0) {
       console.log("No existing recommendations. Generating...");
       const postRes = await fetch(`/api/recommendation`, {
@@ -87,14 +90,17 @@ export function useRecommendations(userId: string, scopes: string[]) {
       console.log("Before mutate (optimistic):", updatedRecs);
       mutate(updatedRecs, false); // Optimistically update the state
 
-      const response = await fetch(`/api/recommendation/data/${recommendation.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...recommendation,
-          userId, // Ensure userId is included
-        }),
-      });
+      const response = await fetch(
+        `/api/recommendation/data/${recommendation.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...recommendation,
+            userId, // Ensure userId is included
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to save recommendation");
@@ -111,7 +117,7 @@ export function useRecommendations(userId: string, scopes: string[]) {
     }
   };
 
-  // **New Function: Create a new recommendation**
+  // Create a new recommendation
   const createRecommendation = async (
     recommendation: CreateRecommendationFormData
   ) => {
@@ -120,7 +126,7 @@ export function useRecommendations(userId: string, scopes: string[]) {
         ...recommendation,
       };
 
-      const response = await fetch(`/api/recommendation/add`, { // Updated endpoint
+      const response = await fetch(`/api/recommendation/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -137,12 +143,17 @@ export function useRecommendations(userId: string, scopes: string[]) {
       mutate((currentData) => [...(currentData || []), createdRecommendation], false);
     } catch (error) {
       console.error("Error creating recommendation:", error);
-      // Optionally, show a toast or notification to the user
-      // Revalidate the data to ensure consistency
-      mutate();
-      throw error; // Re-throw to handle it in the component if needed
+      mutate(); // Revalidate to ensure consistency
+      throw error; // Re-throw if needed in the component
     }
   };
 
-  return { recommendations: data, error, isLoading, mutate, saveRecommendation, createRecommendation };
+  return {
+    recommendations: data,
+    error,
+    isLoading,
+    mutate,
+    saveRecommendation,
+    createRecommendation,
+  };
 }

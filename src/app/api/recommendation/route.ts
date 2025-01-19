@@ -129,6 +129,7 @@ ${weatherRisk
 - Compare user metrics against industry benchmarks where available.
 - Maximum 5 steps per recommendation, with clear and actionable instructions.
 - You can assume the savings is in C02e (kg) / year emissions unless otherwise specified.
+- Your english should be in British English.
 
 
 **Return the response as valid JSON only**, with no additional text or explanations.
@@ -227,13 +228,11 @@ export async function POST(req: Request) {
             ? "Medium"
             : "Low"
           : "Medium",
-        implementationSteps: rec.steps || [],
-         trackingImplementationSteps: (rec.steps || []).map((step, index) => ({
+        trackingImplementationSteps: (rec.steps || []).map((step, index) => ({
       id: `${new ObjectId().toString()}-step-${index}`,
       step,
       complete: false, // Default completion status
     })),
-        estimatedROI: rec.roi || 0,
         status: "Not Started",
         difficulty:
           rec.difficulty === "easy"
@@ -246,7 +245,6 @@ export async function POST(req: Request) {
         estimatedCost: 0,
         estimatedTimeframe: rec.implementationTimeline || "3-6 months",
         relatedMetrics: rec.sourceData ? [rec.sourceData] : [],
-        dashboardLink: rec.dashboardLink || "",
       })
     );
 

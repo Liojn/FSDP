@@ -53,7 +53,6 @@ export async function POST(req: Request) {
       category: category as CategoryType,
       estimatedEmissionReduction,
       priorityLevel,
-      implementationSteps,
       status: "Not Started",
       difficulty,
       estimatedTimeframe,

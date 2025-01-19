@@ -63,6 +63,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/chart.js": "^2.9.41",
     "@types/jsonwebtoken": "^9.0.7",
+    "@types/lodash": "^4.17.14",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18.3.1",

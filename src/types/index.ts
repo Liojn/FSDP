@@ -18,7 +18,6 @@ export interface Recommendation {
   category: CategoryType;
   estimatedEmissionReduction: number;
   priorityLevel: string;
-  implementationSteps: string[];
   status: string;
   difficulty: string;
   estimatedTimeframe: string;
@@ -59,10 +58,9 @@ export interface CreateRecommendationFormData {
   category: CategoryType;
   estimatedEmissionReduction: number;
   priorityLevel: "Low" | "Medium" | "High";
-  implementationSteps: string[];
   difficulty: "Easy" | "Medium" | "Hard";
   estimatedTimeframe: string;
-}
+} 
 
 // Threshold Data Interface
 export interface ThresholdData {
