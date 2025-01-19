@@ -96,7 +96,7 @@ const DashboardPage = () => {
   };
 
   const handleMonthSelection = (monthIndex: number) => {
-    setClickedMonthIndex(monthIndex === clickedMonthIndex? null: monthIndex);
+    setClickedMonthIndex(monthIndex === clickedMonthIndex ? null : monthIndex);
     handleMonthClick(monthIndex);
   };
 
@@ -200,7 +200,7 @@ const DashboardPage = () => {
                     setIsAlertDialogOpen(true);
                     handleGenerateReport();
                   }}
-                  className="bg-emerald-500 text-emerald-50 hover:bg-emerald-600 w-full md:w-auto"
+                  className="w-full md:w-auto"
                 >
                   Export Report to PDF
                 </Button>

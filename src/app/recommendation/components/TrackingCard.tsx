@@ -897,10 +897,10 @@ export function TrackingCard({
         <div className="flex gap-2">
           {!editMode ? (
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => setEditMode(true)}
               size="sm"
-              className="border-lime-200 text-lime-700 hover:bg-lime-100"
+              className=""
             >
               Edit Details
             </Button>
