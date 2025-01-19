@@ -20,10 +20,11 @@ import {
   Trash2,
   Save,
   Plus,
+  ChevronRight,
 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { Badge } from "@/components/ui/badge";
-import { Note, TrackingRecommendation, CategoryType } from "@/types";
+import { Note, TrackingRecommendation } from "@/types";
 
 interface TrackingCardProps {
   recommendation: TrackingRecommendation;
@@ -51,7 +52,7 @@ export function TrackingCard({
     description: initialRecommendation.description,
     scope: initialRecommendation.scope,
     impact: initialRecommendation.impact,
-    category: initialRecommendation.category || CategoryType.CUSTOM,
+    category: initialRecommendation.category,
     priorityLevel: initialRecommendation.priorityLevel || "",
     difficulty: initialRecommendation.difficulty || "",
     estimatedEmissionReduction:
@@ -128,65 +129,64 @@ export function TrackingCard({
     }
   };
 
-  const toggleStepCompletion = async (stepIndex: number) => {
-    try {
-      // Create a new recommendation object with the updated step
-      const updatedSteps = [
-        ...(recommendation.trackingImplementationSteps || []),
-      ];
-      const step = updatedSteps[stepIndex];
-      const newComplete = !step.complete; // Store the new completion state
-      step.complete = newComplete;
-
-      // Calculate new status and progress
-      const completedSteps = updatedSteps.filter((s) => s.complete).length;
-      const newProgress =
-        updatedSteps.length > 0
-          ? Math.round((completedSteps / updatedSteps.length) * 100)
-          : 0;
-
-      const newStatus: "Not Started" | "In Progress" | "Completed" = (() => {
-        if (completedSteps === updatedSteps.length && updatedSteps.length > 0) {
-          return "Completed";
-        } else if (completedSteps > 0) {
-          return "In Progress";
-        }
-        return "Not Started";
-      })();
-
-      const updatedRecommendation = {
-        ...recommendation,
-        trackingImplementationSteps: updatedSteps,
-        completedSteps,
-        progress: newProgress,
-        status: newStatus,
-      };
-
-      // Save to database first
-      const response = await saveToDatabase(updatedRecommendation);
-
-      if (!response || !response.recommendation) {
-        throw new Error("Invalid server response");
-      }
-
-      // Only update local state and parent after successful server response
-      setRecommendation(response.recommendation);
-      onUpdate(response.recommendation);
-    } catch (error) {
-      console.error("Error in toggleStepCompletion:", error);
-      // Revert to previous state on error
-      setRecommendation(recommendation);
-      onUpdate(recommendation);
-      alert("Failed to update step status. Please try again.");
-    }
-  };
-
   // Inside the TrackingCard component:
   const debouncedToggle = useCallback(
     debounce(async (stepIndex: number) => {
-      await toggleStepCompletion(stepIndex);
+      try {
+        // Create a new recommendation object with the updated step
+        const updatedSteps = [
+          ...(recommendation.trackingImplementationSteps || []),
+        ];
+        const step = updatedSteps[stepIndex];
+        const newComplete = !step.complete; // Store the new completion state
+        step.complete = newComplete;
+
+        // Calculate new status and progress
+        const completedSteps = updatedSteps.filter((s) => s.complete).length;
+        const newProgress =
+          updatedSteps.length > 0
+            ? Math.round((completedSteps / updatedSteps.length) * 100)
+            : 0;
+
+        const newStatus: "Not Started" | "In Progress" | "Completed" = (() => {
+          if (
+            completedSteps === updatedSteps.length &&
+            updatedSteps.length > 0
+          ) {
+            return "Completed";
+          } else if (completedSteps > 0) {
+            return "In Progress";
+          }
+          return "Not Started";
+        })();
+
+        const updatedRecommendation = {
+          ...recommendation,
+          trackingImplementationSteps: updatedSteps,
+          completedSteps,
+          progress: newProgress,
+          status: newStatus,
+        };
+
+        // Save to database first
+        const response = await saveToDatabase(updatedRecommendation);
+
+        if (!response || !response.recommendation) {
+          throw new Error("Invalid server response");
+        }
+
+        // Only update local state and parent after successful server response
+        setRecommendation(response.recommendation);
+        onUpdate(response.recommendation);
+      } catch (error) {
+        console.error("Error in toggleStepCompletion:", error);
+        // Revert to previous state on error
+        setRecommendation(recommendation);
+        onUpdate(recommendation);
+        alert("Failed to update step status. Please try again.");
+      }
     }, 300),
-    [toggleStepCompletion]
+    [recommendation, onUpdate, saveToDatabase]
   );
 
   const addNote = async () => {
@@ -564,7 +564,7 @@ export function TrackingCard({
       description: initialRecommendation.description,
       scope: initialRecommendation.scope,
       impact: initialRecommendation.impact,
-      category: initialRecommendation.category || CategoryType.CUSTOM,
+      category: initialRecommendation.category,
       priorityLevel: initialRecommendation.priorityLevel || "",
       difficulty: initialRecommendation.difficulty || "",
       estimatedEmissionReduction:
@@ -608,14 +608,14 @@ export function TrackingCard({
                   <Input
                     value={editedFields.title}
                     onChange={(e) => handleFieldChange("title", e.target.value)}
-                    className="font-semibold text-xl border-lime-200 focus:ring-lime-500 focus:border-lime-500"
+                    className="font-semibold text-xl "
                   />
                   <Textarea
                     value={editedFields.description}
                     onChange={(e) =>
                       handleFieldChange("description", e.target.value)
                     }
-                    className="mt-2 border-lime-200 focus:ring-lime-500 focus:border-lime-500"
+                    className="mt-2 "
                   />
                 </div>
               ) : (
@@ -648,7 +648,7 @@ export function TrackingCard({
               <Input
                 value={editedFields.scope}
                 onChange={(e) => handleFieldChange("scope", e.target.value)}
-                className="border-lime-200 focus:ring-lime-500 focus:border-lime-500"
+                className=""
               />
             ) : (
               <p className="text-gray-900">{recommendation.scope}</p>
@@ -660,7 +660,7 @@ export function TrackingCard({
               <Input
                 value={editedFields.impact}
                 onChange={(e) => handleFieldChange("impact", e.target.value)}
-                className="border-lime-200 focus:ring-lime-500 focus:border-lime-500"
+                className=""
               />
             ) : (
               <p className="text-gray-900">{recommendation.impact}</p>
@@ -680,7 +680,7 @@ export function TrackingCard({
                 onChange={(e) =>
                   handleFieldChange("priorityLevel", e.target.value)
                 }
-                className="border-lime-200 focus:ring-lime-500 focus:border-lime-500"
+                className=""
               />
             ) : (
               <p className="text-gray-900">
@@ -702,7 +702,7 @@ export function TrackingCard({
                     Number(e.target.value)
                   )
                 }
-                className="border-lime-200 focus:ring-lime-500 focus:border-lime-500"
+                className=""
               />
             ) : (
               <p className="text-gray-900">
@@ -721,7 +721,7 @@ export function TrackingCard({
                 onChange={(e) =>
                   handleFieldChange("difficulty", e.target.value)
                 }
-                className="border-lime-200 focus:ring-lime-500 focus:border-lime-500"
+                className=""
               />
             ) : (
               <p className="text-gray-900">
@@ -739,7 +739,7 @@ export function TrackingCard({
                 onChange={(e) =>
                   handleFieldChange("estimatedTimeframe", e.target.value)
                 }
-                className="border-lime-200 focus:ring-lime-500 focus:border-lime-500"
+                className=""
               />
             ) : (
               <p className="text-gray-900">
@@ -770,14 +770,10 @@ export function TrackingCard({
             {filteredSteps.map((step, index) => (
               <li key={step.id} className="flex items-center gap-3">
                 <Button
-                  variant={step.complete ? "outline" : "secondary"}
+                  variant={step.complete ? "secondary" : "default"}
                   size="sm"
                   onClick={() => debouncedToggle(index)}
-                  className={
-                    step.complete
-                      ? "border-lime-200 text-lime-700 hover:bg-lime-100"
-                      : "bg-lime-100 text-lime-700"
-                  }
+                  className={step.complete ? "" : ""}
                 >
                   {step.complete ? "Mark Incomplete" : "Mark Complete"}
                 </Button>
@@ -791,15 +787,18 @@ export function TrackingCard({
                   {step.step}
                 </span>
                 {/* Delete Button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => deleteStep(step.id)}
-                  className="text-red-500 hover:text-red-700 ml-auto"
-                  aria-label="Delete Step"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                {/* Delete Button - Visible only in edit mode */}
+                {editMode && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteStep(step.id)}
+                    className="text-red-500 hover:text-red-700 ml-auto"
+                    aria-label="Delete Step"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
@@ -827,20 +826,28 @@ export function TrackingCard({
 
         {/* Notes */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowNotes(!showNotes)}
+              className="p-0 hover:bg-transparent"
+            >
+              <ChevronRight
+                className={`w-4 h-4 text-gray-500 transform transition-transform duration-200 ease-in-out ${
+                  showNotes ? "rotate-90" : ""
+                }`}
+              />
+            </Button>
             <p className="text-sm font-medium text-gray-500">
               Notes ({(recommendation.notes || []).length})
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowNotes(!showNotes)}
-              className="border-lime-200 text-lime-700 hover:bg-lime-100"
-            >
-              {showNotes ? "Hide Notes" : "Show Notes"}
-            </Button>
           </div>
-          {showNotes && (
+          <div
+            className={`transform transition-all duration-200 ease-in-out origin-top ${
+              showNotes ? "scale-y-100 opacity-100" : "scale-y-0 opacity-0 h-0"
+            }`}
+          >
             <div className="space-y-4">
               <div className="space-y-2">
                 <Textarea
@@ -883,7 +890,7 @@ export function TrackingCard({
                 </div>
               )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Edit / Save / Cancel Buttons */}

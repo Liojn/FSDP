@@ -5,7 +5,6 @@ export enum CategoryType {
   WASTE = "Waste",
   CROPS = "Crops",
   LIVESTOCK = "Livestock",
-  CUSTOM = "Custom", // Placeholder for dynamic categories
 }
 
 // Base Recommendation Type
@@ -58,7 +57,7 @@ export interface CreateRecommendationFormData {
   category: CategoryType;
   estimatedEmissionReduction: number;
   priorityLevel: "Low" | "Medium" | "High";
-  difficulty: "Easy" | "Medium" | "Hard";
+  difficulty: "Easy" | "Moderate" | "Hard";
   estimatedTimeframe: string;
 } 
 

@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+
 import {
   Select,
   SelectContent,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
 import { CategoryType } from "@/types";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CreateRecommendationProps {
   onSubmit: (recommendation: CreateRecommendationFormData) => void;
@@ -32,7 +33,7 @@ interface CreateRecommendationFormData {
   estimatedEmissionReduction: number;
   priorityLevel: "Low" | "Medium" | "High";
   implementationSteps: string[];
-  difficulty: "Easy" | "Medium" | "Hard";
+  difficulty: "Easy" | "Moderate" | "Hard";
   estimatedTimeframe: string;
 }
 
@@ -52,46 +53,60 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
     estimatedEmissionReduction: 0,
     priorityLevel: "Medium",
     implementationSteps: [],
-    difficulty: "Medium",
+    difficulty: "Moderate",
     estimatedTimeframe: "",
   });
 
   const [newStep, setNewStep] = useState("");
   const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
 
-  const handleSubmit = () => {
-    // Basic validation
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Form submission attempted");
+    console.log("Current form data:", formData);
+    console.log("Selected scopes:", selectedScopes);
+
     if (!formData.title.trim()) {
+      console.log("Validation failed: Title is empty");
       alert("Title is required.");
       return;
     }
     if (!formData.description.trim()) {
+      console.log("Validation failed: Description is empty");
       alert("Description is required.");
       return;
     }
     if (!formData.userId.trim()) {
+      console.log("Validation failed: UserID is empty");
       alert("User ID is required.");
       return;
     }
     if (selectedScopes.length === 0) {
+      console.log("Validation failed: No scopes selected");
       alert("At least one scope must be selected.");
       return;
     }
     if (!formData.category) {
+      console.log("Validation failed: No category selected");
       alert("Category is required.");
       return;
     }
 
+    console.log("All validation passed");
     const newRecommendation: CreateRecommendationFormData = {
       ...formData,
-      scope: selectedScopes.join(", "), // Ensure consistent format
+      scope: selectedScopes.join(", "),
     };
+    console.log("New recommendation data:", newRecommendation);
 
     onSubmit(newRecommendation);
+    console.log("onSubmit called");
     resetForm();
+    console.log("Form reset completed");
   };
 
   const resetForm = () => {
+    console.log("Resetting form");
     setIsExpanded(false);
     setFormData({
       userId: userId || "",
@@ -103,11 +118,12 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
       estimatedEmissionReduction: 0,
       priorityLevel: "Medium",
       implementationSteps: [],
-      difficulty: "Medium",
+      difficulty: "Moderate",
       estimatedTimeframe: "",
     });
     setSelectedScopes([]);
     setNewStep("");
+    console.log("Form state after reset:", formData);
   };
 
   const addStep = () => {
@@ -183,39 +199,35 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
               }
             />
           </div>
-        </div>
-
-        {/* Scope & Impact */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-medium mb-1">Scope</p>
-            <div className="flex gap-2 flex-wrap">
-              {["Scope 1", "Scope 2", "Scope 3"].map((scope) => (
-                <Badge
-                  key={scope}
-                  variant={
-                    selectedScopes.includes(scope) ? "default" : "outline"
-                  }
-                  className="cursor-pointer"
-                  onClick={() => toggleScope(scope)}
-                >
-                  {scope}
-                </Badge>
-              ))}
-            </div>
-          </div>
           <div>
             <p className="text-sm font-medium mb-1">Impact</p>
-            <Input
-              placeholder="Enter impact"
+            <Textarea
+              id="impact"
+              placeholder="Describe the impact of this recommendation"
               value={formData.impact}
               onChange={(e) =>
-                setFormData((prev) => ({ ...prev, impact: e.target.value }))
+                setFormData((prev) => ({
+                  ...prev,
+                  impact: e.target.value,
+                }))
               }
             />
           </div>
         </div>
-
+        <div className="flex space-x-4">
+          {["Scope 1", "Scope 2", "Scope 3"].map((scope) => (
+            <div key={scope} className="flex items-center">
+              <Checkbox
+                id={scope}
+                checked={selectedScopes.includes(scope)}
+                onCheckedChange={() => toggleScope(scope)}
+              />
+              <label htmlFor={scope} className="ml-2 text-sm">
+                {scope}
+              </label>
+            </div>
+          ))}
+        </div>
         {/* Category & Estimated Emission Reduction */}
         <div className="grid md:grid-cols-2 gap-4">
           <div>
@@ -246,7 +258,7 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
               Estimated Emission Reduction (kg CO₂e)
             </p>
             <Input
-              type="number"
+              type="default"
               placeholder="Enter estimated reduction"
               value={formData.estimatedEmissionReduction}
               onChange={(e) =>
@@ -289,7 +301,7 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
               onValueChange={(value) =>
                 setFormData((prev) => ({
                   ...prev,
-                  difficulty: value as "Medium" | "Easy" | "Hard",
+                  difficulty: value as "Moderate" | "Easy" | "Hard",
                 }))
               }
             >
@@ -298,7 +310,7 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Easy">Easy</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="Moderate">Moderate</SelectItem>
                 <SelectItem value="Hard">Hard</SelectItem>
               </SelectContent>
             </Select>
@@ -358,7 +370,9 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
 
         {/* Action Buttons */}
         <div className="flex gap-2">
-          <Button onClick={handleSubmit}>Create Recommendation</Button>
+          <Button onClick={handleSubmit} variant="default">
+            Create Recommendation
+          </Button>
           <Button
             variant="outline"
             onClick={() => {
