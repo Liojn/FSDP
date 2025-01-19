@@ -14,8 +14,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
-import { CategoryType } from "@/types";
+import { CategoryType, CreateRecommendationFormData } from "@/types";
 import { Checkbox } from "@/components/ui/checkbox";
+
+// Import the Zod schema
+import { createRecommendationSchema } from "@/lib/schemas/recommendationSchema";
+
+// Import the useToast hook from shadcn
+import { useToast } from "@/hooks/use-toast";
 
 interface CreateRecommendationProps {
   onSubmit: (recommendation: CreateRecommendationFormData) => void;
@@ -23,25 +29,12 @@ interface CreateRecommendationProps {
   onCancel?: () => void;
 }
 
-interface CreateRecommendationFormData {
-  userId: string;
-  title: string;
-  description: string;
-  scope: string;
-  impact: string;
-  category: CategoryType;
-  estimatedEmissionReduction: number;
-  priorityLevel: "Low" | "Medium" | "High";
-  implementationSteps: string[];
-  difficulty: "Easy" | "Moderate" | "Hard";
-  estimatedTimeframe: string;
-}
-
 const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
   onSubmit,
   userId,
   onCancel,
 }) => {
+  const { toast } = useToast(); // Initialize toast
   const [isExpanded, setIsExpanded] = useState(false);
   const [formData, setFormData] = useState<CreateRecommendationFormData>({
     userId: userId || "",
@@ -66,43 +59,58 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
     console.log("Current form data:", formData);
     console.log("Selected scopes:", selectedScopes);
 
-    if (!formData.title.trim()) {
-      console.log("Validation failed: Title is empty");
-      alert("Title is required.");
-      return;
-    }
-    if (!formData.description.trim()) {
-      console.log("Validation failed: Description is empty");
-      alert("Description is required.");
-      return;
-    }
-    if (!formData.userId.trim()) {
-      console.log("Validation failed: UserID is empty");
-      alert("User ID is required.");
-      return;
-    }
-    if (selectedScopes.length === 0) {
-      console.log("Validation failed: No scopes selected");
-      alert("At least one scope must be selected.");
-      return;
-    }
-    if (!formData.category) {
-      console.log("Validation failed: No category selected");
-      alert("Category is required.");
+    // Combine selectedScopes into a single string
+    const scopeString = selectedScopes.join(", ");
+
+    // Construct an object to validate
+    const dataToValidate: CreateRecommendationFormData = {
+      ...formData,
+      scope: scopeString,
+    };
+
+    // Validate using Zod
+    const validationResult =
+      createRecommendationSchema.safeParse(dataToValidate);
+
+    if (!validationResult.success) {
+      // Extract error messages
+      const errorMessages = validationResult.error.errors.map(
+        (err) => err.message
+      );
+
+      // Display each error as a separate toast
+      errorMessages.forEach((message) => {
+        toast({
+          title: "Validation Error",
+          description: message,
+          variant: "destructive",
+        });
+      });
+
+      console.log("Validation failed:", errorMessages);
       return;
     }
 
     console.log("All validation passed");
     const newRecommendation: CreateRecommendationFormData = {
       ...formData,
-      scope: selectedScopes.join(", "),
+      scope: scopeString,
     };
     console.log("New recommendation data:", newRecommendation);
 
-    onSubmit(newRecommendation);
-    console.log("onSubmit called");
-    resetForm();
-    console.log("Form reset completed");
+    try {
+      onSubmit(newRecommendation);
+      console.log("onSubmit called");
+      resetForm();
+      console.log("Form reset completed");
+    } catch (error) {
+      console.error("Submission error:", error);
+      toast({
+        title: "Submission Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const resetForm = () => {
@@ -133,6 +141,12 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
         implementationSteps: [...prev.implementationSteps, newStep.trim()],
       }));
       setNewStep("");
+    } else {
+      toast({
+        title: "Invalid Step",
+        description: "Implementation step cannot be empty.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -174,215 +188,231 @@ const CreateRecommendation: React.FC<CreateRecommendationProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Title & Description */}
-        <div className="space-y-4">
-          <div>
-            <p className="text-sm font-medium mb-1">Title</p>
-            <Input
-              placeholder="Enter recommendation title"
-              value={formData.title}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, title: e.target.value }))
-              }
-            />
-          </div>
-          <div>
-            <p className="text-sm font-medium mb-1">Description</p>
-            <Textarea
-              placeholder="Enter recommendation description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  description: e.target.value,
-                }))
-              }
-            />
-          </div>
-          <div>
-            <p className="text-sm font-medium mb-1">Impact</p>
-            <Textarea
-              id="impact"
-              placeholder="Describe the impact of this recommendation"
-              value={formData.impact}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  impact: e.target.value,
-                }))
-              }
-            />
-          </div>
-        </div>
-        <div className="flex space-x-4">
-          {["Scope 1", "Scope 2", "Scope 3"].map((scope) => (
-            <div key={scope} className="flex items-center">
-              <Checkbox
-                id={scope}
-                checked={selectedScopes.includes(scope)}
-                onCheckedChange={() => toggleScope(scope)}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Title, Description & Impact */}
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium mb-1">Title</p>
+              <Input
+                placeholder="Enter recommendation title"
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, title: e.target.value }))
+                }
+                required
               />
-              <label htmlFor={scope} className="ml-2 text-sm">
-                {scope}
-              </label>
             </div>
-          ))}
-        </div>
-        {/* Category & Estimated Emission Reduction */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-medium mb-1">Category</p>
-            <Select
-              value={formData.category}
-              onValueChange={(value) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  category: value as CategoryType,
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(CategoryType).map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div>
+              <p className="text-sm font-medium mb-1">Description</p>
+              <Textarea
+                placeholder="Enter recommendation description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
+                required
+              />
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-1">Impact</p>
+              <Textarea
+                id="impact"
+                placeholder="Describe the impact of this recommendation"
+                value={formData.impact}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    impact: e.target.value,
+                  }))
+                }
+                required
+              />
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium mb-1">
-              Estimated Emission Reduction (kg CO₂e)
-            </p>
-            <Input
-              type="default"
-              placeholder="Enter estimated reduction"
-              value={formData.estimatedEmissionReduction}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  estimatedEmissionReduction: parseFloat(e.target.value) || 0,
-                }))
-              }
-            />
-          </div>
-        </div>
 
-        {/* Priority Level & Difficulty */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm font-medium mb-1">Priority Level</p>
-            <Select
-              value={formData.priorityLevel}
-              onValueChange={(value) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  priorityLevel: value as "Low" | "Medium" | "High",
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Low">Low</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
-                <SelectItem value="High">High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <p className="text-sm font-medium mb-1">Difficulty</p>
-            <Select
-              value={formData.difficulty}
-              onValueChange={(value) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  difficulty: value as "Moderate" | "Easy" | "Hard",
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select difficulty" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Easy">Easy</SelectItem>
-                <SelectItem value="Moderate">Moderate</SelectItem>
-                <SelectItem value="Hard">Hard</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Estimated Timeframe */}
-        <div>
-          <p className="text-sm font-medium mb-1">Estimated Timeframe</p>
-          <Input
-            placeholder="Enter timeframe"
-            value={formData.estimatedTimeframe}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                estimatedTimeframe: e.target.value,
-              }))
-            }
-          />
-        </div>
-
-        {/* Implementation Steps */}
-        <div className="space-y-3">
-          <p className="text-sm font-medium">Implementation Steps</p>
-          <div className="space-y-2">
-            {formData.implementationSteps.map((step, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <span>{step}</span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => removeStep(index)}
-                  className="ml-auto"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+          {/* Scopes */}
+          <div className="flex space-x-4">
+            {["Scope 1", "Scope 2", "Scope 3"].map((scope) => (
+              <div key={scope} className="flex items-center">
+                <Checkbox
+                  id={scope}
+                  checked={selectedScopes.includes(scope)}
+                  onCheckedChange={() => toggleScope(scope)}
+                />
+                <label htmlFor={scope} className="ml-2 text-sm">
+                  {scope}
+                </label>
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add implementation step"
-              value={newStep}
-              onChange={(e) => setNewStep(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addStep();
+
+          {/* Category & Estimated Emission Reduction */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium mb-1">Category</p>
+              <Select
+                value={formData.category}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    category: value as CategoryType,
+                  }))
                 }
-              }}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(CategoryType).map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-1">
+                Estimated Emission Reduction (kg CO₂e)
+              </p>
+              <Input
+                type="number"
+                placeholder="Enter estimated reduction"
+                value={formData.estimatedEmissionReduction}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    estimatedEmissionReduction: parseFloat(e.target.value) || 0,
+                  }))
+                }
+                min="0"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Priority Level & Difficulty */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium mb-1">Priority Level</p>
+              <Select
+                value={formData.priorityLevel}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    priorityLevel: value as "Low" | "Medium" | "High",
+                  }))
+                }
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Low">Low</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-1">Difficulty</p>
+              <Select
+                value={formData.difficulty}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    difficulty: value as "Moderate" | "Easy" | "Hard",
+                  }))
+                }
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select difficulty" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Easy">Easy</SelectItem>
+                  <SelectItem value="Moderate">Moderate</SelectItem>
+                  <SelectItem value="Hard">Hard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Estimated Timeframe */}
+          <div>
+            <p className="text-sm font-medium mb-1">Estimated Timeframe</p>
+            <Input
+              placeholder="Enter timeframe"
+              value={formData.estimatedTimeframe}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  estimatedTimeframe: e.target.value,
+                }))
+              }
+              required
             />
-            <Button variant="outline" onClick={addStep}>
-              Add
+          </div>
+
+          {/* Implementation Steps */}
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Implementation Steps</p>
+            <div className="space-y-2">
+              {formData.implementationSteps.map((step, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <span>{step}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeStep(index)}
+                    className="ml-auto"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add implementation step"
+                value={newStep}
+                onChange={(e) => setNewStep(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addStep();
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" onClick={addStep}>
+                Add
+              </Button>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <Button type="submit" variant="default">
+              Create Recommendation
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                resetForm();
+                if (onCancel) onCancel();
+              }}
+            >
+              Cancel
             </Button>
           </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button onClick={handleSubmit} variant="default">
-            Create Recommendation
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              resetForm();
-              if (onCancel) onCancel();
-            }}
-          >
-            Cancel
-          </Button>
-        </div>
+        </form>
       </CardContent>
     </Card>
   );
