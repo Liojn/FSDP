@@ -92,7 +92,8 @@ export async function GET(
     return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
   }
 }
-// recommendation/data/[id]/route.ts
+
+
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
     const recommendationId = params.id;

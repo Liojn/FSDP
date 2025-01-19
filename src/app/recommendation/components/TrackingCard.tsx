@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import debounce from "lodash/debounce";
 import {
   Card,
@@ -64,40 +64,6 @@ export function TrackingCard({
     notes: [...(initialRecommendation.notes || [])], // Ensure notes are initialized
   }));
 
-  useEffect(() => {
-    const fetchRecommendation = async () => {
-      try {
-        const baseUrl =
-          process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-        const response = await fetch(
-          `${baseUrl}/api/recommendation/data/${recommendation.id}`
-        );
-        if (!response.ok) throw new Error("Failed to fetch recommendation");
-
-        const data = await response.json();
-
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        if (!data.recommendation) {
-          throw new Error("Recommendation not found in response");
-        }
-
-        // Set the fetched recommendation
-        setRecommendation(data.recommendation);
-        setEditedFields({
-          ...data.recommendation,
-        });
-      } catch (error) {
-        console.error("Error fetching recommendation:", error);
-        // Optionally, handle the error in the UI
-      }
-    };
-
-    fetchRecommendation();
-  }, [recommendation.id]);
-
   const saveToDatabase = async (
     updatedRecommendation: TrackingRecommendation
   ) => {
@@ -129,16 +95,16 @@ export function TrackingCard({
     }
   };
 
-  // Inside the TrackingCard component:
+  // Inside the TrackingCard component
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedToggle = useCallback(
     debounce(async (stepIndex: number) => {
       try {
         // Create a new recommendation object with the updated step
-        const updatedSteps = [
-          ...(recommendation.trackingImplementationSteps || []),
-        ];
+        const updatedSteps = [...recommendation.trackingImplementationSteps];
         const step = updatedSteps[stepIndex];
-        const newComplete = !step.complete; // Store the new completion state
+        const newComplete = !step.complete;
         step.complete = newComplete;
 
         // Calculate new status and progress
@@ -168,25 +134,27 @@ export function TrackingCard({
           status: newStatus,
         };
 
-        // Save to database first
+        // Save to database
         const response = await saveToDatabase(updatedRecommendation);
 
         if (!response || !response.recommendation) {
           throw new Error("Invalid server response");
         }
 
-        // Only update local state and parent after successful server response
-        setRecommendation(response.recommendation);
+        setRecommendation((prev) => ({
+          ...prev,
+          trackingImplementationSteps: updatedSteps,
+          completedSteps,
+          progress: newProgress,
+          status: newStatus,
+        }));
         onUpdate(response.recommendation);
       } catch (error) {
         console.error("Error in toggleStepCompletion:", error);
-        // Revert to previous state on error
-        setRecommendation(recommendation);
-        onUpdate(recommendation);
         alert("Failed to update step status. Please try again.");
       }
     }, 300),
-    [recommendation, onUpdate, saveToDatabase]
+    [recommendation, onUpdate, saveToDatabase] // Explicitly declare dependencies
   );
 
   const addNote = async () => {
@@ -837,11 +805,11 @@ export function TrackingCard({
                 className={`w-4 h-4 text-gray-500 transform transition-transform duration-200 ease-in-out ${
                   showNotes ? "rotate-90" : ""
                 }`}
-              />
+              />{" "}
+              <p className="text-sm font-medium text-gray-500">
+                Notes ({(recommendation.notes || []).length})
+              </p>
             </Button>
-            <p className="text-sm font-medium text-gray-500">
-              Notes ({(recommendation.notes || []).length})
-            </p>
           </div>
           <div
             className={`transform transition-all duration-200 ease-in-out origin-top ${

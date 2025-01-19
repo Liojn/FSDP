@@ -48,6 +48,7 @@ export interface TrackingRecommendation extends Recommendation {
   notes: Note[];
 }
 
+
 // Export other interfaces as needed
 export interface CreateRecommendationFormData {
   userId: string;
