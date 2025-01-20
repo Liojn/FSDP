@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Collection } from "mongodb";
 import dbConfig from "dbConfig";
 import { Company, CampaignParticipant } from "@/app/campaign/types";
-
+// campaign/user/campaign-status/route.ts
 export async function GET(request: NextRequest) {
   try {
     console.log("Connecting to the database...");

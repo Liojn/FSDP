@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Collection, ObjectId,  Filter } from "mongodb";
 import dbConfig from "dbConfig";
 import { Campaign, Company, CampaignParticipant } from "../../campaign/types";
-
+// api/campaign/route.ts
 export async function GET() {
   try {
     const db = await dbConfig.connectToDatabase();

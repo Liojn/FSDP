@@ -2,52 +2,50 @@
 
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "@/hooks/use-toast";
-import { CampaignData, CompanyFormValues } from "./types";
+import { CampaignData } from "./types";
 import { PageHeader } from "@/components/shared/page-header";
 import { CampaignProgress } from "./components/CampaignProgress";
 import { CampaignMilestones } from "./components/CampaignMilestones";
-import { JoinCampaignForm } from "./components/JoinCampaignForm";
-import { CompanyParticipation } from "./components/CompanyParticipation";
 import { CompanyParticipationProps } from "./components/CompanyParticipation";
 import { Card } from "@/components/ui/card";
 
 export default function CampaignPage() {
   const [campaignData, setCampaignData] = useState<CampaignData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasJoined, setHasJoined] = useState(false);
-  const [userCompany, setUserCompany] = useState<
+
+  // This will hold the current user's company info if they are logged in
+  const [, setUserCompany] = useState<
     CompanyParticipationProps["company"] | null
   >(null);
-  const [, setUserName] = useState<string>("");
 
-  // Function to fetch campaign data
+  // Fetch campaign data (and the user’s company data) from your API
   const fetchCampaignData = async () => {
     try {
-      const [campaignResponse, userResponse] = await Promise.all([
-        fetch("/api/campaign"),
-        fetch("/api/campaign/user/campaign-status", {
-          headers: {
-            "user-email": localStorage.getItem("userEmail") || "",
-          },
-        }),
-      ]);
-
+      // 1. Fetch campaign details
+      const campaignResponse = await fetch("/api/campaign");
       if (!campaignResponse.ok) {
         throw new Error("Failed to fetch campaign data");
       }
+      const campaignJson = await campaignResponse.json();
+      setCampaignData(campaignJson);
 
-      const campaignData = await campaignResponse.json();
-      setCampaignData(campaignData);
+      // 2. Fetch user’s company data
+      //    The assumption is that if the user is logged in,
+      //    your server will return their company info automatically.
+      const userResponse = await fetch("/api/campaign/user/company", {
+        headers: {
+          "user-email": localStorage.getItem("userEmail") || "",
+        },
+      });
 
       if (userResponse.ok) {
         const userData = await userResponse.json();
-        if (userData.hasJoined) {
-          setHasJoined(true);
-          setUserCompany(userData.company);
-        }
+        // userData should contain something like { company: { name, currentProgress } }
+        setUserCompany(userData.company);
+      } else {
+        // If you want to handle the case of user not logged in / no company data
+        console.warn("No user company data found or user not logged in");
       }
     } catch (error) {
       const errorMessage =
@@ -59,12 +57,11 @@ export default function CampaignPage() {
   };
 
   useEffect(() => {
-    // Only run if we're in the browser
     if (typeof window !== "undefined") {
       fetchCampaignData();
     }
 
-    // Set up WebSocket connection for real-time updates
+    // Optional: Real-time updates via WebSocket
     const ws = new WebSocket(
       `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${
         window.location.host
@@ -91,59 +88,6 @@ export default function CampaignPage() {
     };
   }, []);
 
-  useEffect(() => {
-    const storedUserName = localStorage.getItem("userName");
-    if (storedUserName) {
-      setUserName(storedUserName);
-    }
-  }, []);
-
-  const onSubmit = async (companyValues: CompanyFormValues) => {
-    setSubmitting(true);
-    try {
-      const response = await fetch("/api/campaign/join", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          companyInfo: companyValues,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to join campaign");
-      }
-
-      // Update local state
-      setHasJoined(true);
-
-      // Refetch the campaign data to get updated information
-      await fetchCampaignData();
-
-      // Force a hard refresh of the page to ensure all components are updated
-      window.location.reload();
-
-      toast({
-        title: "Success",
-        description: "Successfully joined the campaign!",
-        className: "bg-green-100 border-green-200",
-      });
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        className: "bg-red-100 border-red-200",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -169,10 +113,11 @@ export default function CampaignPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 pb -8">
+    <div className="container mx-auto px-4 pb-8">
       <PageHeader title={campaignData.campaign.name} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Campaign Progress + Milestones */}
         <div>
           <Card className="p-6">
             <CampaignProgress
@@ -191,12 +136,6 @@ export default function CampaignPage() {
             />
           </Card>
         </div>
-
-        {hasJoined && userCompany ? (
-          <CompanyParticipation company={userCompany} />
-        ) : (
-          <JoinCampaignForm onSubmit={onSubmit} submitting={submitting} />
-        )}
       </div>
     </div>
   );

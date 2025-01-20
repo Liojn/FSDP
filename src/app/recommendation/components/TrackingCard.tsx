@@ -618,7 +618,7 @@ export function TrackingCard({
     <Card className="bg-white shadow-sm border">
       <CardHeader>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="space-y-1 w-full">
               {editMode ? (
                 <div className="space-y-2">
@@ -626,7 +626,7 @@ export function TrackingCard({
                     value={editedFields.title}
                     disabled
                     onChange={(e) => handleFieldChange("title", e.target.value)}
-                    className="font-semibold text-xl "
+                    className="font-semibold text-xl w-full"
                   />
                   <Textarea
                     value={editedFields.description}
@@ -634,7 +634,7 @@ export function TrackingCard({
                     onChange={(e) =>
                       handleFieldChange("description", e.target.value)
                     }
-                    className="mt-2 "
+                    className="mt-2 w-full"
                   />
                 </div>
               ) : (
@@ -650,7 +650,7 @@ export function TrackingCard({
             </div>
             <Badge
               variant="outline"
-              className="flex items-center gap-2 whitespace-nowrap py-2 border border-lime-200 bg-lime-100 text-lime-900"
+              className="flex items-center gap-2 whitespace-nowrap py-2 border border-lime-200 bg-lime-100 text-lime-900 mt-4 md:mt-0"
             >
               {getStatusIcon(recommendation.status)}
               {recommendation.status}
@@ -660,13 +660,16 @@ export function TrackingCard({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Scope and Impact */}
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <p className="text-sm font-medium text-gray-500 mb-1">Scope</p>
             {editMode ? (
-              <div className="flex space-x-4">
+              <div className="flex flex-wrap space-x-4">
                 {["Scope 1", "Scope 2", "Scope 3"].map((scope) => (
-                  <div key={scope} className="flex items-center">
+                  <div
+                    key={scope}
+                    className="flex items-center w-1/2 md:w-auto mb-2 md:mb-0"
+                  >
                     <Checkbox
                       id={scope}
                       checked={editedFields.scope.includes(scope)}
@@ -697,7 +700,7 @@ export function TrackingCard({
                 value={editedFields.impact}
                 disabled
                 onChange={(e) => handleFieldChange("impact", e.target.value)}
-                className=""
+                className="w-full"
               />
             ) : (
               <p className="text-gray-900">{recommendation.impact}</p>
@@ -706,7 +709,7 @@ export function TrackingCard({
         </div>
 
         {/* Additional Fields */}
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <p className="text-sm font-medium mb-1 text-gray-500">
               Priority Level
@@ -722,7 +725,7 @@ export function TrackingCard({
                 }
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
                 <SelectContent>
@@ -732,7 +735,7 @@ export function TrackingCard({
                 </SelectContent>
               </Select>
             ) : (
-              <p className="text">{editedFields.priorityLevel}</p>
+              <p className="text-gray-900">{editedFields.priorityLevel}</p>
             )}
           </div>
 
@@ -751,7 +754,7 @@ export function TrackingCard({
                     Number(e.target.value)
                   )
                 }
-                className=""
+                className="w-full"
               />
             ) : (
               <p className="text-gray-900">
@@ -761,7 +764,7 @@ export function TrackingCard({
             )}
           </div>
         </div>
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <p className="text-sm font-medium mb-1 text-gray-500">Difficulty</p>
             {editMode ? (
@@ -775,7 +778,7 @@ export function TrackingCard({
                 }
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select difficulty" />
                 </SelectTrigger>
                 <SelectContent>
@@ -785,7 +788,7 @@ export function TrackingCard({
                 </SelectContent>
               </Select>
             ) : (
-              <p className="">{editedFields.difficulty}</p>
+              <p className="text-gray-900">{editedFields.difficulty}</p>
             )}
           </div>
 
@@ -799,7 +802,7 @@ export function TrackingCard({
                 onChange={(e) =>
                   handleFieldChange("estimatedTimeframe", e.target.value)
                 }
-                className=""
+                className="w-full"
               />
             ) : (
               <p className="text-gray-900">
@@ -811,14 +814,14 @@ export function TrackingCard({
 
         {/* Progress */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-center justify-between">
             <p className="text-sm font-medium text-gray-500">Progress</p>
-            <p className="text-sm text-gray-900">
+            <p className="text-sm text-gray-900 mt-2 md:mt-0">
               {recommendation.completedSteps} of{" "}
               {recommendation.trackingImplementationSteps.length} steps
             </p>
           </div>
-          <Progress value={recommendation.progress} className="h-2" />
+          <Progress value={recommendation.progress} className="h-2 w-full" />
         </div>
 
         {/* Steps */}
@@ -828,12 +831,15 @@ export function TrackingCard({
           </p>
           <ul className="space-y-4">
             {filteredSteps.map((step, index) => (
-              <li key={step.id} className="flex items-center gap-3">
+              <li
+                key={step.id}
+                className="flex flex-col md:flex-row items-start md:items-center gap-3"
+              >
                 <Button
                   variant={step.complete ? "secondary" : "default"}
                   size="sm"
                   onClick={() => debouncedToggle(index)}
-                  className={step.complete ? "" : ""}
+                  className="w-full md:w-auto"
                 >
                   {step.complete ? "Mark Incomplete" : "Mark Complete"}
                 </Button>
@@ -847,13 +853,12 @@ export function TrackingCard({
                   {step.step}
                 </span>
                 {/* Delete Button */}
-                {/* Delete Button - Visible only in edit mode */}
                 {editMode && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteStep(step.id)}
-                    className="text-red-500 hover:text-red-700 ml-auto"
+                    className="text-red-500 hover:text-red-700 ml-auto mt-2 md:mt-0"
                     aria-label="Delete Step"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -864,18 +869,18 @@ export function TrackingCard({
           </ul>
 
           {editMode && (
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-2 mt-2">
               <Input
                 placeholder="Add new step..."
                 value={newStep}
                 onChange={(e) => setNewStep(e.target.value)}
-                className="border-lime-200 focus:ring-lime-500 focus:border-lime-500"
+                className="border-lime-200 focus:ring-lime-500 focus:border-lime-500 w-full md:w-auto"
               />
               <Button
                 variant="outline"
                 size="sm"
                 onClick={addStep}
-                className="border-lime-200 text-lime-700 hover:bg-lime-100"
+                className="border-lime-200 text-lime-700 hover:bg-lime-100 w-full md:w-auto"
               >
                 <Plus className="w-4 h-4" />
                 Add Step
@@ -914,12 +919,12 @@ export function TrackingCard({
                   placeholder="Add a new note..."
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
-                  className="bg-white border-lime-200 focus:ring-lime-500 focus:border-lime-500"
+                  className="bg-white border-lime-200 focus:ring-lime-500 focus:border-lime-500 w-full"
                 />
                 <Button
                   onClick={addNote}
                   size="sm"
-                  className="bg-lime-200 text-lime-900 hover:bg-lime-300"
+                  className="bg-lime-200 text-lime-900 hover:bg-lime-300 w-full md:w-auto"
                 >
                   Add Note
                 </Button>
@@ -929,7 +934,7 @@ export function TrackingCard({
                   {recommendation.notes.map((note) => (
                     <div
                       key={note.id}
-                      className="p-3 bg-lime-50 rounded-md flex justify-between items-start"
+                      className="p-3 bg-lime-50 rounded-md flex flex-col md:flex-row justify-between items-start md:items-center"
                     >
                       <div>
                         <p className="text-sm text-gray-900">{note.content}</p>
@@ -941,7 +946,7 @@ export function TrackingCard({
                         variant="ghost"
                         size="sm"
                         onClick={() => deleteNote(note.id)}
-                        className="text-gray-500 hover:text-lime-700"
+                        className="text-gray-500 hover:text-lime-700 mt-2 md:mt-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -954,15 +959,14 @@ export function TrackingCard({
         </div>
 
         {/* Edit / Save / Cancel Buttons */}
-        {/* Edit / Save / Cancel Buttons */}
-        <div className="flex gap-2">
+        <div className="flex flex-col md:flex-row gap-2">
           {!editMode ? (
             <>
               <Button
                 variant="secondary"
                 onClick={() => setEditMode(true)}
                 size="sm"
-                className=""
+                className="w-full md:w-auto"
               >
                 Edit Details
               </Button>
@@ -970,7 +974,7 @@ export function TrackingCard({
                 variant="ghost"
                 onClick={handleDelete}
                 size="sm"
-                className="text-red-500 hover:text-red-700"
+                className="text-red-500 hover:text-red-700 w-full md:w-auto"
               >
                 <Trash2 className="w-4 h-4 mr-1" />
                 Delete
@@ -982,7 +986,7 @@ export function TrackingCard({
                 variant="default"
                 onClick={saveChanges}
                 size="sm"
-                className="gap-2 bg-lime-200 text-lime-900 hover:bg-lime-300"
+                className="gap-2 bg-lime-200 text-lime-900 hover:bg-lime-300 w-full md:w-auto"
               >
                 <Save className="w-4 h-4" />
                 Save Changes
@@ -991,7 +995,7 @@ export function TrackingCard({
                 variant="outline"
                 onClick={cancelChanges}
                 size="sm"
-                className="border-lime-200 text-lime-700 hover:bg-lime-100"
+                className="border-lime-200 text-lime-700 hover:bg-lime-100 w-full md:w-auto"
               >
                 Cancel
               </Button>

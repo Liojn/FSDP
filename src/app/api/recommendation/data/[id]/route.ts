@@ -176,6 +176,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     const db = await connectToDatabase.connectToDatabase();
     const recommendationsCollection = db.collection("recommendations");
+    const campaignsCollection = db.collection("campaigns");
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateOperations: Record<string, any> = {};
@@ -208,6 +209,23 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       );
     }
 
+    // Fetch the current recommendation to check for status changes
+    const existingDoc = await recommendationsCollection.findOne({ userId });
+    const existingRecommendation = existingDoc?.recommendations.find(
+      (rec: { id: string }) => rec.id === recommendationId
+    );
+
+    if (!existingRecommendation) {
+      return NextResponse.json(
+        { error: "Recommendation not found" },
+        { status: 404 }
+      );
+    }
+
+    const previousStatus = existingRecommendation.status;
+    const estimatedReduction = existingRecommendation.estimatedEmissionReduction || 0;
+
+    // Perform the update
     const updateResult = await recommendationsCollection.updateOne(
       { userId },
       updateOperations,
@@ -221,6 +239,38 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       );
     }
 
+    // Check if the status changed to "Completed"
+    if (previousStatus !== "Completed" && updates.status === "Completed") {
+      // Find the active campaign
+      const activeCampaign = await campaignsCollection.findOne({ status: "Active" });
+
+      if (activeCampaign) {
+        const campaignId = activeCampaign._id;
+
+        // Update the campaign's progress
+        await campaignsCollection.updateOne(
+          { _id: campaignId },
+          {
+            $inc: { currentProgress: estimatedReduction },
+            $set: {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              milestones: activeCampaign.milestones.map((milestone: any) => {
+                if (
+                  !milestone.reached &&
+                  activeCampaign.currentProgress + estimatedReduction >=
+                    activeCampaign.targetReduction * (milestone.percentage / 100)
+                ) {
+                  return { ...milestone, reached: true, reachedAt: new Date() };
+                }
+                return milestone;
+              }),
+            },
+          }
+        );
+      }
+    }
+
+    // Fetch and return the updated recommendation
     const updatedRecommendation = await recommendationsCollection.findOne(
       { userId },
       { projection: { recommendations: { $elemMatch: { id: recommendationId } } } }
@@ -238,7 +288,6 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     );
   }
 }
-
 
 
 async function fetchWeatherData() {
