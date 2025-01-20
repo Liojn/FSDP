@@ -224,6 +224,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     const previousStatus = existingRecommendation.status;
     const estimatedReduction = existingRecommendation.estimatedEmissionReduction || 0;
+    const alreadyCounted = existingRecommendation.countedInCampaign || false;
 
     // Perform the update
     const updateResult = await recommendationsCollection.updateOne(
@@ -239,8 +240,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       );
     }
 
-    // Check if the status changed to "Completed"
-    if (previousStatus !== "Completed" && updates.status === "Completed") {
+    // Check if the status changed to "Completed" and hasn't been counted yet
+    if (previousStatus !== "Completed" && updates.status === "Completed" && !alreadyCounted) {
       // Find the active campaign
       const activeCampaign = await campaignsCollection.findOne({ status: "Active" });
 
@@ -267,6 +268,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
             },
           }
         );
+
+        // Mark the recommendation as counted
+        await recommendationsCollection.updateOne(
+          { userId, "recommendations.id": recommendationId },
+          { $set: { "recommendations.$.countedInCampaign": true } }
+        );
       }
     }
 
@@ -288,6 +295,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     );
   }
 }
+
 
 
 async function fetchWeatherData() {
