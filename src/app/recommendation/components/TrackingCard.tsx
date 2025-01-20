@@ -533,6 +533,13 @@ export function TrackingCard({
       updatedFieldsToSave.estimatedTimeframe = editedFields.estimatedTimeframe;
     }
 
+    // Check if there are any changes to save
+    if (Object.keys(updatedFieldsToSave).length === 0) {
+      // No changes detected, exit edit mode
+      setEditMode(false);
+      return;
+    }
+
     try {
       const response = await fetch(
         `/api/recommendation/data/${recommendation.id}`,
@@ -564,6 +571,7 @@ export function TrackingCard({
       setEditMode(false);
     } catch (error) {
       console.error("Error saving changes:", error);
+      alert("Failed to save changes. Please try again.");
     }
   };
 

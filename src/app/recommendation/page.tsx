@@ -71,9 +71,12 @@ export default function RecommendationPage({
 
         const scopeQuery =
           scopes.length > 0 ? `&scopes=${scopes.join(",")}` : "";
-        const res = await fetch(`/api/userData?userId=${userId}${scopeQuery}`, {
-          method: "GET",
-        });
+        const res = await fetch(
+          `/api/recommendation/data?userId=${userId}${scopeQuery}`,
+          {
+            method: "GET",
+          }
+        );
 
         if (!res.ok) {
           throw new Error(`Failed to load user data: ${res.statusText}`);

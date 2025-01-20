@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { TrackingRecommendation } from "@/types";
+import { Loader2 } from "lucide-react";
 
 interface AIRecommendationChatProps {
   userId: string;
@@ -125,7 +126,7 @@ const AIRecommendationChat: React.FC<AIRecommendationChatProps> = ({
         {/* Input and Button Container */}
         <div className="flex flex-row items-center space-x-2">
           <Input
-            placeholder="Describe what you need..."
+            placeholder="Describe what you need ... be specific!"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -133,7 +134,14 @@ const AIRecommendationChat: React.FC<AIRecommendationChatProps> = ({
             className="flex-1"
           />
           <Button onClick={handleSend} disabled={isGenerating}>
-            {isGenerating ? "Generating..." : "Send"}
+            {isGenerating ? (
+              <>
+                <Loader2 className="animate-spin mr-2" />
+                Generating...
+              </>
+            ) : (
+              "Send"
+            )}
           </Button>
         </div>
       </CardContent>
