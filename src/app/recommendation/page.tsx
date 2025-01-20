@@ -1,18 +1,20 @@
+// src/app/recommendation/page.tsx
+
 "use client";
 
 import React, { useEffect, useState, Suspense, lazy } from "react";
 import { PageHeader } from "@/components/shared/page-header";
-import { Skeleton } from "@/components/ui/skeleton"; // Assuming this is the correct import for your skeleton component.
-import { TrackingRecommendation, CreateRecommendationFormData } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TrackingRecommendation } from "@/types";
 
 // Lazy load components
-const CreateRecommendation = lazy(
-  () => import("@/app/recommendation/components/CreateRecommendation")
-);
 const TrackingCard = lazy(() =>
   import("@/app/recommendation/components/TrackingCard").then((module) => ({
     default: module.TrackingCard, // Reference the named export
   }))
+);
+const AIRecommendationChat = lazy(
+  () => import("@/app/recommendation/components/AIRecommendationChat")
 );
 
 /**
@@ -90,30 +92,21 @@ export default function RecommendationPage({
     fetchData();
   }, [userId, scopes]);
 
-  const handleCreateRecommendation = async (
-    newRecommendation: CreateRecommendationFormData
-  ) => {
-    try {
-      const res = await fetch("/api/recommendation/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newRecommendation),
-      });
-      if (!res.ok) {
-        throw new Error("Failed to create recommendation");
-      }
-      const created = await res.json();
-      setRecommendations((prev) => [...prev, created]);
-    } catch (err) {
-      console.error("Error creating recommendation:", err);
-      setError(err as Error);
-    }
+  /**
+   * Callback to add new recommendations from AIRecommendationChat
+   */
+  const addRecommendations = (newRecs: TrackingRecommendation[]) => {
+    setRecommendations((prev) => [...prev, ...newRecs]);
   };
 
   const handleUpdateRecommendation = (updatedRec: TrackingRecommendation) => {
     setRecommendations((prev) => {
       return prev.map((r) => (r.id === updatedRec.id ? updatedRec : r));
     });
+  };
+
+  const handleDelete = (id: string) => {
+    setRecommendations((prev) => prev.filter((rec) => rec.id !== id));
   };
 
   if (!userId)
@@ -132,15 +125,17 @@ export default function RecommendationPage({
     <div className="p-4 px-10">
       <PageHeader title="Farm Management Recommendations" />
 
+      {/* Integrate AIRecommendationChat without the toggle */}
       <Suspense fallback={<Skeleton className="h-10 w-full mb-6" />}>
         <div className="mb-6">
-          <CreateRecommendation
-            onSubmit={handleCreateRecommendation}
+          <AIRecommendationChat
             userId={userId}
+            onGenerate={addRecommendations}
           />
         </div>
       </Suspense>
 
+      {/* Display Recommendations */}
       <Suspense fallback={<RecommendationSkeleton />}>
         {loading ? (
           <RecommendationSkeleton />
@@ -157,6 +152,7 @@ export default function RecommendationPage({
                       key={rec.id}
                       recommendation={rec}
                       onUpdate={handleUpdateRecommendation}
+                      onDelete={handleDelete} // Pass the onDelete callback
                     />
                   ))
               ) : (
@@ -178,6 +174,7 @@ export default function RecommendationPage({
                       key={rec.id}
                       recommendation={rec}
                       onUpdate={handleUpdateRecommendation}
+                      onDelete={handleDelete} // Pass the onDelete callback
                     />
                   ))
               ) : (

@@ -93,6 +93,73 @@ export async function GET(
   }
 }
 
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const { id } = params; // Recommendation ID
+  let body: { userId: string };
+
+  try {
+    body = await req.json();
+  } catch (error) {
+    console.error("Error parsing DELETE request body:", error);
+    return NextResponse.json(
+      { error: "Invalid JSON in request body" },
+      { status: 400 }
+    );
+  }
+
+  const { userId } = body;
+
+  // Validate input
+  if (!userId || !id) {
+    return NextResponse.json(
+      { error: "Missing userId or recommendationId" },
+      { status: 400 }
+    );
+  }
+
+  // Optional: Validate userId format
+  // If userId is stored as ObjectId in DB
+  // if (!ObjectId.isValid(userId)) {
+  //   return NextResponse.json(
+  //     { error: "Invalid userId format" },
+  //     { status: 400 }
+  //   );
+  // }
+
+  try {
+    const db = await connectToDatabase.connectToDatabase();
+    const recommendationsCollection = db.collection("recommendations");
+
+    // Perform the deletion using $pull
+    const deleteResult = await recommendationsCollection.updateOne(
+      { userId: userId }, // Use ObjectId(userId) if stored as ObjectId
+      { $pull: { recommendations: { id } } }
+    );
+
+    if (deleteResult.modifiedCount === 0) {
+      return NextResponse.json(
+        { error: "Recommendation not found or already deleted" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: "Recommendation deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error in DELETE request:", error);
+    return NextResponse.json(
+      { error: "Failed to delete recommendation" },
+      { status: 500 }
+    );
+  }
+}
+
+
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -113,56 +180,34 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateOperations: Record<string, any> = {};
 
-    // Handle general updates via $set
+    // Handle updates
     Object.keys(updates).forEach((key) => {
-      if (key !== "implementationSteps" && key !== "notes") {
-        if (!updateOperations.$set) {
-          updateOperations.$set = {};
-        }
-        updateOperations.$set[`recommendations.$[elem].${key}`] = updates[key];
-      }
-
-      // Handle setting the entire 'notes' array if provided
-      if (key === "notes") {
-        if (!updateOperations.$set) {
-          updateOperations.$set = {};
-        }
-        updateOperations.$set["recommendations.$[elem].notes"] = updates.notes;
-      }
+      if (!updateOperations.$set) updateOperations.$set = {};
+      updateOperations.$set[`recommendations.$[elem].${key}`] = updates[key];
     });
 
-    // Handle adding a single note
+    // Handle notes and steps
     if (note) {
-      if (!updateOperations.$push) {
-        updateOperations.$push = {};
-      }
+      if (!updateOperations.$push) updateOperations.$push = {};
       updateOperations.$push["recommendations.$[elem].notes"] = note;
     }
 
-    // Handle adding a new step
     if (newStep) {
-      if (!updateOperations.$push) {
-        updateOperations.$push = {};
-      }
+      if (!updateOperations.$push) updateOperations.$push = {};
       updateOperations.$push["recommendations.$[elem].trackingImplementationSteps"] = newStep;
-
       if (addToBothArrays) {
         updateOperations.$push["recommendations.$[elem].implementationSteps"] = newStep.step;
       }
     }
 
-    // Clean up empty operations
-    if (updateOperations.$set && Object.keys(updateOperations.$set).length === 0) {
-      delete updateOperations.$set;
-    }
-    if (updateOperations.$push && Object.keys(updateOperations.$push).length === 0) {
-      delete updateOperations.$push;
+    // Validate operations
+    if (Object.keys(updateOperations).length === 0) {
+      return NextResponse.json(
+        { error: "No valid update operations provided" },
+        { status: 400 }
+      );
     }
 
-    // Debug logging
-    console.log("Update Operations:", JSON.stringify(updateOperations, null, 2));
-
-    // Perform the update
     const updateResult = await recommendationsCollection.updateOne(
       { userId },
       updateOperations,
@@ -171,25 +216,18 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     if (!updateResult.matchedCount) {
       return NextResponse.json(
-        { error: "No matching recommendation found for this user" },
+        { error: "No matching recommendation found" },
         { status: 404 }
       );
     }
 
-    // Fetch and return the updated recommendation for verification
     const updatedRecommendation = await recommendationsCollection.findOne(
       { userId },
       { projection: { recommendations: { $elemMatch: { id: recommendationId } } } }
     );
 
-    // Additional Logging
-    console.log("Updated Recommendation:", updatedRecommendation);
-
     return NextResponse.json(
-      {
-        message: "Recommendation updated successfully",
-        recommendation: updatedRecommendation?.recommendations?.[0],
-      },
+      { message: "Recommendation updated successfully", recommendation: updatedRecommendation?.recommendations?.[0] },
       { status: 200 }
     );
   } catch (error) {

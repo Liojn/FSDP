@@ -25,15 +25,25 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { Badge } from "@/components/ui/badge";
 import { Note, TrackingRecommendation } from "@/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface TrackingCardProps {
   recommendation: TrackingRecommendation;
   onUpdate: (updatedRecommendation: TrackingRecommendation) => void;
+  onDelete: (id: string) => void; // Add this line
 }
 
 export function TrackingCard({
   recommendation: initialRecommendation,
   onUpdate,
+  onDelete,
 }: TrackingCardProps) {
   const [recommendation, setRecommendation] = useState({
     ...initialRecommendation,
@@ -63,6 +73,50 @@ export function TrackingCard({
     ],
     notes: [...(initialRecommendation.notes || [])], // Ensure notes are initialized
   }));
+
+  // Implement handleDelete
+  const handleDelete = async () => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this recommendation? This action cannot be undone."
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      const userId = localStorage.getItem("userId") || "";
+
+      const response = await fetch(
+        `/api/recommendation/data/${recommendation.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ userId }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete recommendation.");
+      }
+
+      const data = await response.json();
+      console.log(data.message); // "Recommendation deleted successfully"
+
+      // Notify the parent component about the deletion
+      onDelete(recommendation.id);
+
+      // Optionally, display a success message
+      alert("Recommendation deleted successfully.");
+    } catch (error) {
+      console.error("Error deleting recommendation:", error);
+      alert(
+        (error instanceof Error ? error.message : "An error occurred") ||
+          "Failed to delete the recommendation. Please try again."
+      );
+    }
+  };
 
   const saveToDatabase = async (
     updatedRecommendation: TrackingRecommendation
@@ -372,6 +426,14 @@ export function TrackingCard({
     field: keyof typeof editedFields,
     value: string | number
   ) => {
+    // Prevent updates to restricted fields
+    if (
+      ["title", "description", "impact", "estimatedEmissionReduction"].includes(
+        field
+      )
+    ) {
+      return;
+    }
     setEditedFields((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -454,42 +516,23 @@ export function TrackingCard({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updatedFieldsToSave: any = {};
 
-    // Add only fields that were edited
-    if (editedFields.title !== recommendation.title) {
-      updatedFieldsToSave.title = editedFields.title;
-    }
-    if (editedFields.description !== recommendation.description) {
-      updatedFieldsToSave.description = editedFields.description;
-    }
+    // Add only fields that were edited, excluding restricted fields
     if (editedFields.scope !== recommendation.scope) {
       updatedFieldsToSave.scope = editedFields.scope;
-    }
-    if (editedFields.impact !== recommendation.impact) {
-      updatedFieldsToSave.impact = editedFields.impact;
     }
     if (editedFields.category !== recommendation.category) {
       updatedFieldsToSave.category = editedFields.category;
     }
-
-    // -- Additional fields we decided to add --
     if (editedFields.priorityLevel !== recommendation.priorityLevel) {
       updatedFieldsToSave.priorityLevel = editedFields.priorityLevel;
     }
     if (editedFields.difficulty !== recommendation.difficulty) {
       updatedFieldsToSave.difficulty = editedFields.difficulty;
     }
-    if (
-      editedFields.estimatedEmissionReduction !==
-      recommendation.estimatedEmissionReduction
-    ) {
-      updatedFieldsToSave.estimatedEmissionReduction =
-        editedFields.estimatedEmissionReduction;
-    }
     if (editedFields.estimatedTimeframe !== recommendation.estimatedTimeframe) {
       updatedFieldsToSave.estimatedTimeframe = editedFields.estimatedTimeframe;
     }
 
-    // Send the updates to the backend
     try {
       const response = await fetch(
         `/api/recommendation/data/${recommendation.id}`,
@@ -507,7 +550,6 @@ export function TrackingCard({
         throw new Error("Failed to save changes.");
       }
 
-      // Merge updates into local state
       const updatedRecommendation = {
         ...recommendation,
         ...updatedFieldsToSave,
@@ -515,7 +557,6 @@ export function TrackingCard({
       setRecommendation(updatedRecommendation);
       onUpdate(updatedRecommendation);
 
-      // Also update editedFields to match the saved state
       setEditedFields({
         ...updatedRecommendation,
       });
@@ -575,11 +616,13 @@ export function TrackingCard({
                 <div className="space-y-2">
                   <Input
                     value={editedFields.title}
+                    disabled
                     onChange={(e) => handleFieldChange("title", e.target.value)}
                     className="font-semibold text-xl "
                   />
                   <Textarea
                     value={editedFields.description}
+                    disabled
                     onChange={(e) =>
                       handleFieldChange("description", e.target.value)
                     }
@@ -613,20 +656,38 @@ export function TrackingCard({
           <div>
             <p className="text-sm font-medium text-gray-500 mb-1">Scope</p>
             {editMode ? (
-              <Input
-                value={editedFields.scope}
-                onChange={(e) => handleFieldChange("scope", e.target.value)}
-                className=""
-              />
+              <div className="flex space-x-4">
+                {["Scope 1", "Scope 2", "Scope 3"].map((scope) => (
+                  <div key={scope} className="flex items-center">
+                    <Checkbox
+                      id={scope}
+                      checked={editedFields.scope.includes(scope)}
+                      onCheckedChange={(checked) => {
+                        const updatedScopes = checked
+                          ? [...editedFields.scope.split(", "), scope]
+                          : editedFields.scope
+                              .split(", ")
+                              .filter((s) => s !== scope);
+                        handleFieldChange("scope", updatedScopes.join(", "));
+                      }}
+                    />
+                    <label htmlFor={scope} className="ml-2 text-sm">
+                      {scope}
+                    </label>
+                  </div>
+                ))}
+              </div>
             ) : (
               <p className="text-gray-900">{recommendation.scope}</p>
             )}
           </div>
+
           <div>
             <p className="text-sm font-medium text-gray-500 mb-1">Impact</p>
             {editMode ? (
               <Input
                 value={editedFields.impact}
+                disabled
                 onChange={(e) => handleFieldChange("impact", e.target.value)}
                 className=""
               />
@@ -639,23 +700,34 @@ export function TrackingCard({
         {/* Additional Fields */}
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-500 mb-1">
+            <p className="text-sm font-medium mb-1 text-gray-500">
               Priority Level
             </p>
             {editMode ? (
-              <Input
+              <Select
                 value={editedFields.priorityLevel}
-                onChange={(e) =>
-                  handleFieldChange("priorityLevel", e.target.value)
+                onValueChange={(value) =>
+                  setEditedFields((prev) => ({
+                    ...prev,
+                    priorityLevel: value as "Low" | "Medium" | "High",
+                  }))
                 }
-                className=""
-              />
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Low">Low</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                </SelectContent>
+              </Select>
             ) : (
-              <p className="text-gray-900">
-                {recommendation.priorityLevel || "—"}
-              </p>
+              <p className="text">{editedFields.priorityLevel}</p>
             )}
           </div>
+
           <div>
             <p className="text-sm font-medium text-gray-500 mb-1">
               Estimated Emission Reduction (kg CO₂e)
@@ -663,6 +735,7 @@ export function TrackingCard({
             {editMode ? (
               <Input
                 type="number"
+                disabled
                 value={editedFields.estimatedEmissionReduction}
                 onChange={(e) =>
                   handleFieldChange(
@@ -682,21 +755,32 @@ export function TrackingCard({
         </div>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-500 mb-1">Difficulty</p>
+            <p className="text-sm font-medium mb-1 text-gray-500">Difficulty</p>
             {editMode ? (
-              <Input
+              <Select
                 value={editedFields.difficulty}
-                onChange={(e) =>
-                  handleFieldChange("difficulty", e.target.value)
+                onValueChange={(value) =>
+                  setEditedFields((prev) => ({
+                    ...prev,
+                    difficulty: value as "Moderate" | "Easy" | "Hard",
+                  }))
                 }
-                className=""
-              />
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select difficulty" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Easy">Easy</SelectItem>
+                  <SelectItem value="Moderate">Moderate</SelectItem>
+                  <SelectItem value="Hard">Hard</SelectItem>
+                </SelectContent>
+              </Select>
             ) : (
-              <p className="text-gray-900">
-                {recommendation.difficulty || "—"}
-              </p>
+              <p className="">{editedFields.difficulty}</p>
             )}
           </div>
+
           <div>
             <p className="text-sm font-medium text-gray-500 mb-1">
               Estimated Timeframe
@@ -862,16 +946,28 @@ export function TrackingCard({
         </div>
 
         {/* Edit / Save / Cancel Buttons */}
+        {/* Edit / Save / Cancel Buttons */}
         <div className="flex gap-2">
           {!editMode ? (
-            <Button
-              variant="secondary"
-              onClick={() => setEditMode(true)}
-              size="sm"
-              className=""
-            >
-              Edit Details
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setEditMode(true)}
+                size="sm"
+                className=""
+              >
+                Edit Details
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={handleDelete}
+                size="sm"
+                className="text-red-500 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Delete
+              </Button>
+            </>
           ) : (
             <>
               <Button
