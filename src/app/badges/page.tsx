@@ -5,6 +5,14 @@ import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Achievement, CampaignData, CampaignMilestone } from "@/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PageHeader } from "@/components/shared/page-header";
 
 const AchievementCard = ({ achievement }: { achievement: Achievement }) => (
   <Card
@@ -107,7 +115,7 @@ const AchievementsPage = () => {
     );
   };
 
-  const fetchAndCombineData = async () => {
+  const fetchAndCombineData = React.useCallback(async () => {
     try {
       const userId = localStorage.getItem("userId");
       const userEmail = localStorage.getItem("userEmail");
@@ -195,7 +203,7 @@ const AchievementsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -214,7 +222,7 @@ const AchievementsPage = () => {
       clearInterval(fetchInterval);
       clearInterval(calculationInterval);
     };
-  }, []);
+  }, [fetchAndCombineData]);
 
   const filteredAchievements = achievements.filter(
     (achievement) => filter === "ALL" || achievement.category === filter
@@ -263,24 +271,25 @@ const AchievementsPage = () => {
     <div className="p-4 h-screen flex flex-col space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-lime-900">Achievements</h2>
+          <PageHeader title="Achievements" />
           {lastCalculated && (
-            <p className="text-sm text-gray-500">
+            <p className="text text-gray-500">
               Last calculated: {lastCalculated.toLocaleTimeString()}
             </p>
           )}
         </div>
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="bg-white border border-lime-500 rounded-md p-2 text-lime-700"
-        >
-          {categories.map((category) => (
-            <option key={category} value={category}>
-              {category}
-            </option>
-          ))}
-        </select>
+        <Select value={filter} onValueChange={(value) => setFilter(value)}>
+          <SelectTrigger className="w-[180px] border-lime-500">
+            <SelectValue placeholder="ALL" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((category) => (
+              <SelectItem key={category} value={category}>
+                {category}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
