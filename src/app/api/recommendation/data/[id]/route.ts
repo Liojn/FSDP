@@ -249,6 +249,17 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     // Check if the status changed to "Completed" and hasn't been counted yet
     if (previousStatus !== "Completed" && updates.status === "Completed" && !alreadyCounted) {
+      const contributionAmount = estimatedReduction;
+
+      await db.collection('User').updateOne(
+        { _id: new ObjectId(userId) },
+        { 
+          $inc: { 
+            totalContributions: contributionAmount 
+          }
+        }
+      );
+      
       // Find the active campaign
       const activeCampaign = await campaignsCollection.findOne({ status: "Active" });
 

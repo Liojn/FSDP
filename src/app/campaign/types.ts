@@ -76,8 +76,6 @@ export const companyFormSchema = z.object({
   email: z.string().email('Invalid email address'),
 });
 
-// Zod schema for campaign participation form validation
-
 
 // Zod schema for testimonial submission form validation
 export const testimonialFormSchema = z.object({

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { CampaignData } from "./types";
 import { PageHeader } from "@/components/shared/page-header";
 import { CampaignProgress } from "./components/CampaignProgress";
-import { CampaignMilestones } from "./components/CampaignMilestones";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -26,22 +25,6 @@ const CampaignSkeleton = () => {
             <div className="flex justify-between">
               <Skeleton className="h-4 w-[100px]" />
               <Skeleton className="h-4 w-[100px]" />
-            </div>
-          </div>
-
-          {/* Milestones skeleton */}
-          <div className="space-y-4">
-            <Skeleton className="h-4 w-[150px]" />
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-6 w-6 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-[200px]" />
-                    <Skeleton className="h-3 w-[150px]" />
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </div>
@@ -128,7 +111,7 @@ export default function CampaignPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 pb-8">
+    <div className="mx-auto px-4 pb-8">
       <PageHeader title={campaignData.campaign.name} />
 
       <div className="">
@@ -138,14 +121,6 @@ export default function CampaignPage() {
             targetReduction={campaignData.campaign.targetReduction}
             startDate={campaignData.campaign.startDate}
             endDate={campaignData.campaign.endDate}
-          />
-          <CampaignMilestones
-            milestones={campaignData.campaign.milestones.map((milestone) => ({
-              ...milestone,
-              reachedAt: milestone.reachedAt
-                ? milestone.reachedAt.toISOString()
-                : undefined,
-            }))}
           />
         </Card>
       </div>
