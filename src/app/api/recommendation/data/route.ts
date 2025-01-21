@@ -2,6 +2,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "dbConfig";
 
+// The REST of the code connects to the database, 
+// queries the "recommendations" collection for a specific userId, 
+// and returns the user's recommendations; if no recommendations are found or an error occurs, 
+// it returns an appropriate response.
+
 export async function GET(request: NextRequest) {
   try {
     // Extract query params

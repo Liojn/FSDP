@@ -5,6 +5,13 @@ import { MetricData, ResponseData} from "@/types";
 import connectToDatabase from "dbConfig";
 import { NextRequest, NextResponse } from 'next/server';
 
+// This code defines API routes for fetching, updating, and deleting recommendations in a sustainability management system. 
+// - The `GET` route retrieves a specific recommendation, combining it with metrics and weather data based on the given ID and optional scopes.
+// - The `DELETE` route removes a recommendation associated with a specific user ID.
+// - The `PUT` route updates a recommendation, with additional logic to update campaign progress if the status changes to "Completed".
+// - Helper functions `fetchWeatherData` and `getMetrics` fetch additional data (e.g., weather and metrics) to enrich the recommendation data.
+// - Metrics calculations incorporate data from multiple collections (e.g., Equipment, EmissionRates, Livestock, Crops, Waste), 
+// calculating emissions and comparing energy consumption year-over-year.
 
 
 export async function GET(

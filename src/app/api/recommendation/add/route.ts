@@ -6,6 +6,15 @@ import { Anthropic } from "@anthropic-ai/sdk";
 import { ObjectId } from "mongodb";
 import connectToDatabase from "dbConfig"; // Adjust the path to match your setup
 
+// This API endpoint handles POST requests to generate AI-powered sustainability recommendations for a user.
+// 1. Validates the incoming request body using Zod schemas to ensure `userId` and `prompt` are present and well-formed.
+// 2. Sends a structured prompt to Anthropic's AI model to generate three actionable, specific recommendations based on the user's input.
+// 3. Parses, validates, and normalizes the AI's response to ensure it adheres to the application's schema requirements (e.g., category, difficulty).
+// 4. Converts the recommendations into a trackable format, adding metadata like progress tracking and unique IDs for steps.
+// 5. Stores the validated recommendations in the database, either appending to an existing user document or creating a new one if necessary.
+// 6. Returns the generated recommendations along with a success response. Errors are logged and handled gracefully with descriptive messages.
+
+
 import {
   CategoryType,
   TrackingRecommendation,
