@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { Collection, ObjectId,  Filter } from "mongodb";
+import { Collection, ObjectId } from "mongodb";
 import dbConfig from "dbConfig";
-import { Campaign, Company, CampaignParticipant } from "../../campaign/types";
+import { Campaign} from "../../campaign/types";
 // api/campaign/route.ts
 export async function GET() {
   try {
@@ -9,8 +9,6 @@ export async function GET() {
     
     // Get all required collections
     const campaignsCollection: Collection<Campaign> = db.collection("campaigns");
-    const companiesCollection: Collection<Company> = db.collection("companies");
-    const participantsCollection: Collection<CampaignParticipant> = db.collection("campaign_participants");
 
     // Get active campaign
     const activeCampaign = await campaignsCollection.findOne({ status: "Active" });
@@ -45,32 +43,7 @@ export async function GET() {
         participants: []
       });
     }
-
-    // Get campaign participants
-    const participants = await participantsCollection
-      .find({ 
-        campaignId: activeCampaign._id instanceof ObjectId 
-          ? activeCampaign._id.toString() 
-          : activeCampaign._id 
-      })
-      .toArray();
-
-    // Get companies for all participants
-    const companyIds = participants.map(p => 
-      typeof p.companyId === 'string' ? new ObjectId(p.companyId) : p.companyId
-    );
-    
-    const query: Filter<Company> = { _id: { $in: companyIds } };
-    const companies = await companiesCollection.find(query).toArray();
-
-    // Combine participant and company data
-    const participantData = participants.map(participant => ({
-      company: companies.find(c => 
-        (c._id instanceof ObjectId ? c._id.toString() : c._id) === participant.companyId
-      ),
-      participation: participant
-    }));
-
+   
     // Return complete campaign data
     return NextResponse.json({
       campaign: {
@@ -79,7 +52,7 @@ export async function GET() {
           ? activeCampaign._id.toString() 
           : activeCampaign._id
       },
-      participants: participantData
+      
     });
   } catch (error) {
     console.error("Error fetching campaign data:", error);

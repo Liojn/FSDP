@@ -15,9 +15,7 @@ export default function CampaignPage() {
   const [error, setError] = useState<string | null>(null);
 
   // This will hold the current user's company info if they are logged in
-  const [, setUserCompany] = useState<
-    CompanyParticipationProps["company"] | null
-  >(null);
+  const [] = useState<CompanyParticipationProps["company"] | null>(null);
 
   // Fetch campaign data (and the user’s company data) from your API
   const fetchCampaignData = async () => {
@@ -29,24 +27,6 @@ export default function CampaignPage() {
       }
       const campaignJson = await campaignResponse.json();
       setCampaignData(campaignJson);
-
-      // 2. Fetch user’s company data
-      //    The assumption is that if the user is logged in,
-      //    your server will return their company info automatically.
-      const userResponse = await fetch("/api/campaign/user/company", {
-        headers: {
-          "user-email": localStorage.getItem("userEmail") || "",
-        },
-      });
-
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        // userData should contain something like { company: { name, currentProgress } }
-        setUserCompany(userData.company);
-      } else {
-        // If you want to handle the case of user not logged in / no company data
-        console.warn("No user company data found or user not logged in");
-      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "An unexpected error occurred";
@@ -116,7 +96,7 @@ export default function CampaignPage() {
     <div className="container mx-auto px-4 pb-8">
       <PageHeader title={campaignData.campaign.name} />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="">
         {/* Campaign Progress + Milestones */}
         <div>
           <Card className="p-6">

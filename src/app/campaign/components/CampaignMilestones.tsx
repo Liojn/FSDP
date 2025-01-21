@@ -18,7 +18,7 @@ export function CampaignMilestones({ milestones }: CampaignMilestonesProps) {
             key={index}
             className={`p-3 rounded-lg ${
               milestone.reached
-                ? "bg-lime-100 text-lime-700"
+                ? "bg-lime-100 text-lime-500"
                 : "bg-gray-100 text-gray-600"
             }`}
           >

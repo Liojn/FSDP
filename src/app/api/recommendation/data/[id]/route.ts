@@ -4,6 +4,7 @@ import { ObjectId } from 'mongodb';
 import { MetricData, ResponseData} from "@/types";
 import connectToDatabase from "dbConfig";
 import { NextRequest, NextResponse } from 'next/server';
+import { CampaignMilestone } from '@/app/campaign/types';
 
 
 
@@ -177,6 +178,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const db = await connectToDatabase.connectToDatabase();
     const recommendationsCollection = db.collection("recommendations");
     const campaignsCollection = db.collection("campaigns");
+    const usersCollection = db.collection("users"); // Add users collection
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateOperations: Record<string, any> = {};
@@ -254,8 +256,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
           {
             $inc: { currentProgress: estimatedReduction },
             $set: {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              milestones: activeCampaign.milestones.map((milestone: any) => {
+              milestones: activeCampaign.milestones.map((milestone: CampaignMilestone) => {
                 if (
                   !milestone.reached &&
                   activeCampaign.currentProgress + estimatedReduction >=
@@ -277,16 +278,63 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       }
     }
 
-    // Fetch and return the updated recommendation
+    // Calculate user's total contribution
+    const recs = await recommendationsCollection.findOne({ userId });
+    let userContribution = 0;
+    recs?.recommendations.forEach((r: { status: string; estimatedEmissionReduction?: number }) => {
+      if (r.status === "Completed" && r.estimatedEmissionReduction) {
+        userContribution += r.estimatedEmissionReduction;
+      }
+    });
+
+    // Fetch the updated recommendation
     const updatedRecommendation = await recommendationsCollection.findOne(
       { userId },
       { projection: { recommendations: { $elemMatch: { id: recommendationId } } } }
     );
 
+    // Fetch the user data
+    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    // Update the user's contributionSoFar
+    await usersCollection.updateOne(
+      { _id: new ObjectId(userId) },
+      { $set: { contributionSoFar: userContribution } }
+    );
+
+    // Fetch the updated user data
+    const updatedUser = await usersCollection.findOne({ _id: new ObjectId(userId) });
+
+    if (!updatedUser) {
+      return NextResponse.json(
+        { error: "User not found after update" },
+        { status: 404 }
+      );
+    }
+
+    // Prepare the response data
+    const responseData = {
+      user: {
+        _id: updatedUser._id.toString(),
+        name: updatedUser.name,
+        email: updatedUser.email,
+        contributionSoFar: updatedUser.contributionSoFar || 0,
+      },
+      recommendation: updatedRecommendation?.recommendations?.[0] || null,
+    };
+
     return NextResponse.json(
-      { message: "Recommendation updated successfully", recommendation: updatedRecommendation?.recommendations?.[0] },
+      { message: "Recommendation updated successfully", ...responseData },
       { status: 200 }
     );
+
   } catch (error) {
     console.error("Error updating recommendation:", error);
     return NextResponse.json(
