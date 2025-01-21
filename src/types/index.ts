@@ -7,6 +7,50 @@ export enum CategoryType {
   LIVESTOCK = "Livestock",
 }
 
+export interface Achievement {
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  progress: number;
+  isUnlocked: boolean;
+  dateUnlocked: string | null;
+  badge_id: string;
+}
+
+export interface CampaignMilestone {
+  percentage: number;
+  reached: boolean;
+}
+
+export interface CampaignData {
+  campaign: {
+    _id: string;
+    name: string;
+    status: string;
+    totalReduction: number;
+    targetReduction: number;
+    signeesCount: number;
+    milestones: CampaignMilestone[];
+  };
+  participants: Array<{
+    company: {
+      _id: string;
+      name: string;
+      email: string;
+    };
+    participation: {
+      _id: string;
+      campaignId: string;
+      companyId: string;
+      joinedAt: string;
+      currentProgress: number;
+      lastUpdated: string;
+    };
+  }>;
+}
+
+
 // Base Recommendation Type
 export interface Recommendation {
   id: string;

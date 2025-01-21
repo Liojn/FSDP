@@ -3,49 +3,8 @@
 
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-
-interface Achievement {
-  _id: string;
-  title: string;
-  description: string;
-  category: string;
-  progress: number;
-  isUnlocked: boolean;
-  dateUnlocked: string | null;
-  badge_id: string;
-}
-
-interface CampaignMilestone {
-  percentage: number;
-  reached: boolean;
-}
-
-interface CampaignData {
-  campaign: {
-    _id: string;
-    name: string;
-    status: string;
-    totalReduction: number;
-    targetReduction: number;
-    signeesCount: number;
-    milestones: CampaignMilestone[];
-  };
-  participants: Array<{
-    company: {
-      _id: string;
-      name: string;
-      email: string;
-    };
-    participation: {
-      _id: string;
-      campaignId: string;
-      companyId: string;
-      joinedAt: string;
-      currentProgress: number;
-      lastUpdated: string;
-    };
-  }>;
-}
+import { Skeleton } from "@/components/ui/skeleton";
+import { Achievement, CampaignData, CampaignMilestone } from "@/types";
 
 const AchievementCard = ({ achievement }: { achievement: Achievement }) => (
   <Card
@@ -263,8 +222,31 @@ const AchievementsPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-500" />
+      <div className="p-4 space-y-6">
+        {/* Header Skeleton */}
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-48 rounded-md" />
+          <Skeleton className="h-4 w-32 rounded-md" />
+        </div>
+
+        {/* Stats Skeleton */}
+        <div className="grid grid-cols-3 gap-4">
+          {[...Array(3)].map((_, index) => (
+            <Skeleton key={index} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+
+        {/* Achievements Skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, index) => (
+            <div key={index} className="p-4 space-y-4 bg-gray-100 rounded-lg">
+              {/* Title */}
+              <Skeleton className="h-6 w-3/4 rounded-md" />
+              {/* Progress Bar */}
+              <Skeleton className="h-2 w-full rounded-full" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
