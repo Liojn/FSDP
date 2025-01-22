@@ -7,7 +7,7 @@ interface CampaignProgressProps {
   endDate: Date;
 }
 
-export function CampaignProgress({
+export default function CampaignProgress({
   currentProgress = 0, // Add default value
   targetReduction = 0, // Add default value
   startDate,

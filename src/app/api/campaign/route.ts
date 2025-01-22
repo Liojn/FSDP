@@ -1,26 +1,43 @@
+// api/campaign/route.ts
 import { NextResponse } from "next/server";
 import { Collection, ObjectId } from "mongodb";
 import dbConfig from "dbConfig";
-import { Campaign} from "../../campaign/types";
-// api/campaign/route.ts
-export async function GET() {
-  try {
-    const db = await dbConfig.connectToDatabase();
-    
-    // Get all required collections
-    const campaignsCollection: Collection<Campaign> = db.collection("campaigns");
+import { Campaign, User, CampaignAPIResponse } from "@/types";
 
-    // Get active campaign
+/**
+ * GET Handler: Fetch active campaign and current user data.
+ * Expects a 'userId' query parameter.
+ */
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url);
+    const userId = url.searchParams.get("userId");
+
+    if (!userId || !ObjectId.isValid(userId)) {
+      return NextResponse.json(
+        { message: "Invalid or missing userId parameter" },
+        { status: 400 }
+      );
+    }
+
+    const db = await dbConfig.connectToDatabase();
+    const campaignsCollection: Collection<Campaign> = db.collection("campaigns");
+    const usersCollection: Collection<User> = db.collection("User"); // Ensure your users collection is named correctly
+
+    // Fetch active campaign
     const activeCampaign = await campaignsCollection.findOne({ status: "Active" });
 
-    // If no active campaign exists, create a new one
     if (!activeCampaign) {
+      // Create a default campaign if none exists
       const startDate = new Date();
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + 1); // One month campaign
 
-      const defaultCampaign: Omit<Campaign, '_id'> = {
-        name: `Campaign ${startDate.toLocaleString('default', { month: 'long', year: 'numeric' })}`,
+      const defaultCampaign: Omit<Campaign, "_id"> = {
+        name: `Campaign ${startDate.toLocaleString("default", {
+          month: "long",
+          year: "numeric",
+        })}`,
         startDate,
         endDate,
         status: "Active",
@@ -31,39 +48,68 @@ export async function GET() {
           { percentage: 25, reached: false },
           { percentage: 50, reached: false },
           { percentage: 75, reached: false },
-          { percentage: 100, reached: false }
-        ]
+          { percentage: 100, reached: false },
+        ],
       };
 
       const result = await campaignsCollection.insertOne(defaultCampaign);
-      
-      // Return empty campaign data with default campaign
-      return NextResponse.json({
-        campaign: { ...defaultCampaign, _id: result.insertedId.toString() },
-        participants: []
-      });
+      const createdCampaign: Campaign = {
+        ...defaultCampaign,
+        _id: result.insertedId.toString(),
+      };
+
+      // Fetch user data
+      const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+
+      if (!user) {
+        return NextResponse.json(
+          { message: "User not found" },
+          { status: 404 }
+        );
+      }
+
+      const response: CampaignAPIResponse = {
+        campaign: createdCampaign,
+        user: {
+          ...user,
+          _id: user._id.toString(),
+        },
+      };
+
+      return NextResponse.json(response, { status: 200 });
     }
-   
-    // Return complete campaign data
-    return NextResponse.json({
+
+    // Fetch user data
+    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+
+    if (!user) {
+      return NextResponse.json(
+        { message: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    const response: CampaignAPIResponse = {
       campaign: {
         ...activeCampaign,
-        _id: activeCampaign._id instanceof ObjectId 
-          ? activeCampaign._id.toString() 
-          : activeCampaign._id
+        _id: activeCampaign._id.toString(),
       },
-      
-    });
+      user: {
+        ...user,
+        _id: user._id.toString(),
+      },
+    };
+
+    return NextResponse.json(response, { status: 200 });
   } catch (error) {
     console.error("Error fetching campaign data:", error);
-    return NextResponse.json(
-      { message: "Error fetching campaign data" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Error fetching campaign data" }, { status: 500 });
   }
 }
 
-// Create a new campaign
+/**
+ * POST Handler: Create a new campaign.
+ */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -72,7 +118,7 @@ export async function POST(request: Request) {
     const db = await dbConfig.connectToDatabase();
     const campaignsCollection: Collection<Campaign> = db.collection("campaigns");
 
-    const newCampaign: Omit<Campaign, '_id'> = {
+    const newCampaign: Omit<Campaign, "_id"> = {
       name,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
@@ -84,8 +130,8 @@ export async function POST(request: Request) {
         { percentage: 25, reached: false },
         { percentage: 50, reached: false },
         { percentage: 75, reached: false },
-        { percentage: 100, reached: false }
-      ]
+        { percentage: 100, reached: false },
+      ],
     };
 
     const result = await campaignsCollection.insertOne(newCampaign);
@@ -103,11 +149,20 @@ export async function POST(request: Request) {
   }
 }
 
-// Update campaign progress
+/**
+ * PATCH Handler: Update campaign progress.
+ */
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
     const { campaignId, progress } = body;
+
+    if (!campaignId || !ObjectId.isValid(campaignId)) {
+      return NextResponse.json(
+        { message: "Invalid or missing campaignId" },
+        { status: 400 }
+      );
+    }
 
     const db = await dbConfig.connectToDatabase();
     const campaignsCollection: Collection<Campaign> = db.collection("campaigns");
@@ -122,14 +177,13 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const updatedTotalReduction = campaign.currentProgress + progress;
+    const updatedTotalReduction = (campaign.currentProgress || 0) + (progress || 0);
 
     // Update totalReduction and milestones
     const updatedMilestones = campaign.milestones.map((milestone) => {
       if (
         !milestone.reached &&
-        updatedTotalReduction >=
-          campaign.targetReduction * (milestone.percentage / 100)
+        updatedTotalReduction >= campaign.targetReduction * (milestone.percentage / 100)
       ) {
         return { ...milestone, reached: true, reachedAt: new Date() };
       }
@@ -140,17 +194,18 @@ export async function PATCH(request: Request) {
       { _id: campaignObjectId },
       {
         $set: {
-          totalReduction: updatedTotalReduction,
+          currentProgress: updatedTotalReduction,
           milestones: updatedMilestones,
         },
       }
     );
 
-    const updatedCampaign = await campaignsCollection.findOne({
-      _id: campaignObjectId,
-    });
+    const updatedCampaign = await campaignsCollection.findOne({ _id: campaignObjectId });
 
-    return NextResponse.json(updatedCampaign, { status: 200 });
+    return NextResponse.json(
+      { ...updatedCampaign, _id: updatedCampaign?._id.toString() },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error updating campaign progress:", error);
     return NextResponse.json(
