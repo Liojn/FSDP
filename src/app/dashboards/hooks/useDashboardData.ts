@@ -15,13 +15,13 @@ import {
   TargetGoalResponse,
   MetricsDataResponse,
   EmissionsDataResponse,
-  MetricsUpdateParams
+  MetricsUpdateParams,
 } from "../types";
 import { 
   DEFAULT_DESCRIPTIONS, 
-  METRIC_TO_SCOPE, 
   DEFAULT_METRICS 
 } from "../constants";
+
 
 export const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
@@ -43,37 +43,6 @@ export const useDashboardData = () => {
   const [categoryEmissionsData, setCategoryEmissionsData] = useState<EmissionCategoryData[] | null>(null);
   const [metricsData, setMetricsData] = useState<MetricData[]>(DEFAULT_METRICS);
   const [thresholds, setThresholds] = useState<ScopeThreshold[]>([]);
-  const [exceedingScopes, setExceedingScopes] = useState<string[]>([]);
-
-  // Fetch thresholds
-  useEffect(() => {
-    const fetchThresholds = async () => {
-      const storedUserId = localStorage.getItem("userId");
-      if (!storedUserId) {
-        console.warn("No userId found");
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/thresholds?userId=${storedUserId}`);
-        if (response.ok) {
-          const data = await response.json();
-          const userDefinedThresholds = data.thresholds.map(
-            (threshold: ScopeThreshold) => ({
-              ...threshold,
-              description: DEFAULT_DESCRIPTIONS[threshold.scope],
-            })
-          );
-          setThresholds(userDefinedThresholds);
-        } else {
-          console.error("Failed to fetch user thresholds");
-        }
-      } catch (error) {
-        console.error("Error fetching thresholds:", error);
-      }
-    };
-    fetchThresholds();
-  }, []);
 
   // Fetch years
   useEffect(() => {
@@ -149,23 +118,25 @@ export const useDashboardData = () => {
     };
 
     fetchMetricsData();
-  }, [selectedYear, selectedMonth, thresholds, userId, yearOptions]);
+  }, [selectedYear, userId, yearOptions]);
 
-  // Check thresholds
-  const checkThresholds = (metrics: MetricData[]) => {
-    const exceeding: string[] = [];
-
-    metrics.forEach((metric) => {
-      const scopeType = METRIC_TO_SCOPE[metric.title];
-      const threshold = thresholds.find((t) => t.scope === scopeType);
-
-      if (threshold && parseFloat(metric.value.toString()) > threshold.value) {
-        exceeding.push(`${threshold.scope} (${threshold.description})`);
+  // Fetch metrics data for the filtered DONUT CHART
+  useEffect(() => {
+    const fetchMetricsData = async () => {
+      if (selectedYear && userId) {
+        try {
+          const companyId = userId;
+          const fetchPromises = fetchEmissionCategory(companyId, selectedYear, selectedMonth);
+          const results = await fetchPromises;
+          setCategoryEmissionsData(results);
+        } catch (error) {
+          console.error("Failed to fetch emission data:", error);
+        }
       }
-    });
+    };
 
-    setExceedingScopes(exceeding);
-  };
+    fetchMetricsData();
+  }, [selectedMonth]);
 
   // Update metrics data
   const updateMetricsData = ({
@@ -195,7 +166,6 @@ export const useDashboardData = () => {
       ];
 
       setMetricsData(newMetricsData);
-      checkThresholds(newMetricsData);
       setCurrentYearEmissions(data["carbonAverage in CO2E"]);
     }
 
@@ -248,7 +218,6 @@ export const useDashboardData = () => {
     categoryEmissionsData,
     metricsData,
     thresholds,
-    exceedingScopes,
     handleYearFilterChange,
     handleMonthClick,
   };
