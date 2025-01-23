@@ -1,13 +1,20 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// hooks/useThresholdCheck.ts
-
 import { useEffect, useState } from "react";
-import {
-  calculateScope1,
-  calculateScope2,
-  calculateScope3,
-} from "@/app/dashboards/utils/scopeCalculations";
-import { EmissionData } from "@/types";
+import { calculateScope1, calculateScope2, calculateScope3 } from "@/app/dashboards/utils/scopeCalculations";
+import { EmissionData } from "@/types"; // or wherever you store types
+
+interface ScopeExceedance {
+  scope: string;       // "Scope 1", "Scope 2", or "Scope 3"
+  exceededBy: number;  // e.g. 20
+  unit: string;        // e.g. "kg CO₂"
+}
+
+// Adjust if you have a dedicated interface for thresholds
+interface Threshold {
+  scope: string;
+  value: number;
+  unit: string;
+  // ... maybe id, description, etc.
+}
 
 export const useThresholdCheck = (
   userId: string,
@@ -16,7 +23,8 @@ export const useThresholdCheck = (
 ) => {
   const [loading, setLoading] = useState(true);
   const [exceedingScopes, setExceedingScopes] = useState<string[]>([]);
-  const [thresholds, setThresholds] = useState([]);
+  const [exceedances, setExceedances] = useState<ScopeExceedance[]>([]);
+  const [thresholds, setThresholds] = useState<Threshold[]>([]);
   const [data, setData] = useState<EmissionData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,11 +38,7 @@ export const useThresholdCheck = (
         // Fetch thresholds and emissions data
         const [thresholdsRes, emissionsRes] = await Promise.all([
           fetch(`/api/thresholds?userId=${userId}`),
-          fetch(
-            `/api/dashboards/popup/${userId}?year=${year}${
-              month ? `&month=${month}` : ""
-            }`
-          ),
+          fetch(`/api/dashboards/popup/${userId}?year=${year}${month ? `&month=${month}` : ""}`),
         ]);
 
         if (!thresholdsRes.ok || !emissionsRes.ok) {
@@ -46,29 +50,40 @@ export const useThresholdCheck = (
 
         if (emissionsData.success) {
           const emissions = emissionsData.data;
-
           setData(emissions);
-          setThresholds(thresholdsData.thresholds);
+
+          // Convert if needed; if thresholdsData.thresholds is the actual array:
+          const thresholdArr: Threshold[] = thresholdsData.thresholds || [];
+          setThresholds(thresholdArr);
 
           // Calculate scope values
           const scope1 = calculateScope1(emissions);
           const scope2 = calculateScope2(emissions);
           const scope3 = calculateScope3(emissions);
 
-          // Check exceeding thresholds
-          const exceeding = thresholdsData.thresholds
-            .filter((threshold: any) => {
-              if (threshold.scope === "Scope 1" && scope1 > threshold.value)
-                return true;
-              if (threshold.scope === "Scope 2" && scope2 > threshold.value)
-                return true;
-              if (threshold.scope === "Scope 3" && scope3 > threshold.value)
-                return true;
+          // Determine which scopes exceeded and by how much
+          const newExceedances: ScopeExceedance[] = thresholdArr
+            .filter((threshold) => {
+              if (threshold.scope === "Scope 1" && scope1 > threshold.value) return true;
+              if (threshold.scope === "Scope 2" && scope2 > threshold.value) return true;
+              if (threshold.scope === "Scope 3" && scope3 > threshold.value) return true;
               return false;
             })
-            .map((threshold: any) => threshold.scope);
+            .map((threshold) => {
+              let actualValue = 0;
+              if (threshold.scope === "Scope 1") actualValue = scope1;
+              if (threshold.scope === "Scope 2") actualValue = scope2;
+              if (threshold.scope === "Scope 3") actualValue = scope3;
 
-          setExceedingScopes(exceeding);
+              return {
+                scope: threshold.scope,
+                exceededBy: actualValue - threshold.value,
+                unit: threshold.unit,
+              };
+            });
+
+          setExceedances(newExceedances);
+          setExceedingScopes(newExceedances.map((exc) => exc.scope));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unknown error occurred");
@@ -80,5 +95,12 @@ export const useThresholdCheck = (
     fetchThresholdsAndEmissions();
   }, [userId, year, month]);
 
-  return { data, thresholds, exceedingScopes, loading, error };
+  return {
+    data,
+    thresholds,
+    exceedingScopes,  // e.g. ["Scope 1", "Scope 3"]
+    exceedances,      // e.g. [{ scope: "Scope 1", exceededBy: 20, unit: "kg CO₂" }, ...]
+    loading,
+    error,
+  };
 };
