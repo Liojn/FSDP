@@ -152,10 +152,7 @@ export default function SignUp({
 
                   <p className="mt-4 text-sm text-gray-600 text-center">
                     Already have an account?{" "}
-                    <a
-                      href="/login"
-                      className="text-blue-500 underline underline-offset-4"
-                    >
+                    <a href="/login" className="underline underline-offset-4">
                       Login
                     </a>
                   </p>
