@@ -163,7 +163,7 @@ const AchievementsPage = () => {
         await Promise.all([
           fetch("/api/badges"),
           fetch(`/api/badges/achivements/${userId}`),
-          fetch("/api/campaign"),
+          fetch(`/api/campaign?userId=${userId}`), // Modified line
         ]);
 
       if (
