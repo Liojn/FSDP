@@ -6,18 +6,10 @@ import { Anthropic } from "@anthropic-ai/sdk";
 import { ObjectId } from "mongodb";
 import connectToDatabase from "dbConfig"; // Adjust the path to match your setup
 
-// This API endpoint handles POST requests to generate AI-powered sustainability recommendations for a user.
-// 1. Validates the incoming request body using Zod schemas to ensure `userId` and `prompt` are present and well-formed.
-// 2. Sends a structured prompt to Anthropic's AI model to generate three actionable, specific recommendations based on the user's input.
-// 3. Parses, validates, and normalizes the AI's response to ensure it adheres to the application's schema requirements (e.g., category, difficulty).
-// 4. Converts the recommendations into a trackable format, adding metadata like progress tracking and unique IDs for steps.
-// 5. Stores the validated recommendations in the database, either appending to an existing user document or creating a new one if necessary.
-// 6. Returns the generated recommendations along with a success response. Errors are logged and handled gracefully with descriptive messages.
-
-
 import {
   CategoryType,
   TrackingRecommendation,
+  WeatherData,
 } from "@/types";
 
 import { createRecommendationSchema } from "@/lib/schemas/recommendationSchema";
@@ -29,6 +21,24 @@ const requestBodySchema = z.object({
   userId: z.string().nonempty("userId is required"),
   prompt: z.string().nonempty("prompt is required"),
 });
+
+// Helper function to determine weather risk
+const determineWeatherRisk = (temperature: number, rainfall: number, windSpeed: number) => {
+  if (temperature > 30 && rainfall < 50 && windSpeed > 20) {
+    return "High risk: Hot, dry conditions with strong winds.";
+  } else if (
+    temperature >= 20 &&
+    temperature <= 30 &&
+    rainfall >= 50 &&
+    rainfall <= 100 &&
+    windSpeed >= 10 &&
+    windSpeed <= 20
+  ) {
+    return "Medium risk: Moderate conditions.";
+  } else {
+    return "Low risk: Cool, wet conditions.";
+  }
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. Anthropic SDK initialization
@@ -51,10 +61,30 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
     const { userId, prompt } = parsed.data;
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 3a. Generate the AI prompt
+    // 3a. Connect to the database and fetch Indonesia weather data
+    // ─────────────────────────────────────────────────────────────────────────
+    const db = await connectToDatabase.connectToDatabase();
+    const weatherCollection = db.collection("IndonesiaWeather");
+
+    // Fetch all documents from the IndonesiaWeather collection
+    const weatherData = await weatherCollection.find().toArray();
+
+
+    // Map weather data to a risk array
+    const weatherRisk = weatherData.map((data: WeatherData) => ({
+      location: data.location,
+      temperature: data.temperature,
+      rainfall: data.rainfall,
+      windSpeed: data.wind_speed,
+      risk: determineWeatherRisk(data.temperature, data.rainfall, data.wind_speed),
+    }));
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 3b. Generate the AI prompt with the real weather data
     // ─────────────────────────────────────────────────────────────────────────
     const aiResponse = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",
@@ -67,43 +97,61 @@ export async function POST(req: Request) {
             {
               type: "text",
               text: `Given this environmental request: "${prompt}"
+          
+Weather conditions and risks:
+${weatherRisk
+  .map(
+    (risk: { location: string; temperature: number; rainfall: number; windSpeed: number; risk: string }) =>
+      `- ${risk.location}: High temperature (${risk.temperature}°C), ` +
+      `rainfall (${risk.rainfall}mm), wind speed (${risk.windSpeed}km/h) — ` +
+      `Risk assessment: ${risk.risk}`
+  )
+  .join("\n")}
+Your goal is to provide specific, impactful, and well-structured recommendations that can be easily implemented by businesses or organizations.
 
-          Your goal is to provide specific, impactful, and well-structured recommendations that can be easily implemented by businesses or organizations.
-          Based on this request, generate environmentally conscious recommendations following these requirements:
-          1. Provide exactly 3 recommendations
-          2. Each recommendation must be specific, actionable, and directly related to the environmental request
-          3. Use British English spelling and terminology
-          4. Format your entire response as JSON only, with no additional text or formatting outside the JSON structure
-          5. Ensure that the "category" field for each recommendation is one of the following: ["Overall", "Energy", "Waste", "Crops", "Livestock"]
-          6. Ensure that the "difficulty" field for each recommendation is one of the following: ["Easy", "Moderate", "Hard"]
-          7. Ensure that the "scope" field for each recommendation is one of the following: ["Scope 1", "Scope 2", "Scope 3"]
-          Your response should strictly adhere to the following JSON structure:
-          {
-            "recommendations": [
-              {
-                "category": string,
-                "title": string,
-                "description": string,
-                "impact": string,
-                "steps": string[],
-                "priority": number,
-                "savings": number,
-                "difficulty": string,
-                "implementationTimeline": string,
-                "scope": string
-              }
-            ]
-          }
-          When generating your recommendations, consider the following guidelines:
-        - Ensure each recommendation is directly relevant to the environmental request
-        - Provide clear, concise, and informative descriptions for each field
-        - Use quantitative data or estimates where possible to support the "impact" and "savings" fields
-        - Prioritize recommendations based on their potential impact and feasibility
-        - Provide realistic and achievable implementation steps
-        - Consider both short-term and long-term environmental benefits
-        - Tailor the recommendations to be applicable to a wide range of businesses or organizations within the relevant industry
+Based on this request, generate environmentally conscious recommendations following these requirements:
+1. Provide exactly 3 recommendations
+2. Each recommendation must be specific, actionable, and directly related to the environmental request
+3. Use British English spelling and terminology
+4. Format your entire response as JSON only, with no additional text or formatting outside the JSON structure
+5. Ensure that the "category" field for each recommendation is one of the following: ["Overall", "Energy", "Waste", "Crops", "Livestock"]
+6. Ensure that the "difficulty" field for each recommendation is one of the following: ["Easy", "Moderate", "Hard"]
+7. Ensure that the "scope" field for each recommendation is one of the following: ["Scope 1", "Scope 2", "Scope 3"]
+8. Provide realistic and achievable implementation steps for each recommendation
+9. Include quantitative data or estimates to support the "impact" and "savings" fields
+10. Prioritize recommendations based on their potential impact and feasibility
+11. Make sure to think about the weather risk when you are generating your recommendation
+12. If the user decided off track and generate something not related, just generate them random recommendations.
+13. The savings should be in CO2e (kg) / year emissions unless otherwise specified
 
-        - Now, generate your response following the specified JSON structure and requirements. Ensure that your output is valid JSON and includes all required fields for each recommendation.`
+Your response should strictly adhere to the following JSON structure:
+{
+  "recommendations": [
+    {
+      "category": string,
+      "title": string,
+      "description": string,
+      "impact": string,
+      "steps": string[],
+      "priority": number,
+      "savings": number,
+      "difficulty": string,
+      "implementationTimeline": string,
+      "scope": string
+    }
+  ]
+}
+
+When generating your recommendations, consider the following guidelines:
+- Ensure each recommendation is directly relevant to the environmental request
+- Provide clear, concise, and informative descriptions for each field
+- Use quantitative data or estimates where possible to support the "impact" and "savings" fields
+- Prioritise recommendations based on their potential impact and feasibility
+- Provide realistic and achievable implementation steps
+- Consider both short-term and long-term environmental benefits
+- Tailor the recommendations to be applicable to a wide range of businesses or organizations within the relevant industry
+
+Now, generate your response following the specified JSON structure and requirements. Ensure that your output is valid JSON and includes all required fields for each recommendation.`
             }
           ]
         }
@@ -116,7 +164,6 @@ export async function POST(req: Request) {
       type: 'text';
       text: string;
     }
-
     const content = aiResponse.content[0] as MessageContent;
     if (!content || content.type !== "text") {
       throw new Error("Unexpected AI response format.");
@@ -142,58 +189,59 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validate category
     const validateCategory = (category: CategoryType) => {
       const validCategories = ["Overall", "Energy", "Waste", "Crops", "Livestock"];
       return validCategories.includes(category);
     };
 
     const validatedRecs = [];
-  for (const rec of parsedAiData.recommendations) {
-    // Sanitize and validate category
-    if (!validateCategory(rec.category)) {
-      console.warn(`Invalid category "${rec.category}" replaced with "Overall".`);
-      rec.category = "Overall";
+    for (const rec of parsedAiData.recommendations) {
+      // Sanitize and validate category
+      if (!validateCategory(rec.category)) {
+        console.warn(`Invalid category "${rec.category}" replaced with "Overall".`);
+        rec.category = "Overall";
+      }
+
+      // Normalise difficulty
+      rec.difficulty = rec.difficulty
+        ? rec.difficulty.charAt(0).toUpperCase() + rec.difficulty.slice(1).toLowerCase()
+        : "Moderate";
+
+      // Map AI fields to match your schema
+      const mapped = {
+        userId,
+        title: rec.title || "",
+        description: rec.description || "",
+        scope: rec.scope || "Scope 1",
+        impact: rec.impact || "",
+        category: rec.category,
+        estimatedEmissionReduction: rec.savings || 0,
+        priorityLevel: rec.priority
+          ? rec.priority <= 2
+            ? "High"
+            : rec.priority <= 4
+            ? "Medium"
+            : "Low"
+          : "Medium",
+        difficulty: ["Easy", "Moderate", "Hard"].includes(rec.difficulty)
+          ? rec.difficulty
+          : "Moderate",
+        estimatedTimeframe: rec.implementationTimeline || "3-6 months",
+        implementationSteps: rec.steps && rec.steps.length > 0 ? rec.steps : ["Check feasibility"],
+      };
+
+      // Validate with Zod
+      const validationResult = createRecommendationSchema.safeParse(mapped);
+      if (!validationResult.success) {
+        console.error("Validation errors for recommendation:", validationResult.error.errors);
+        continue; // Skip invalid recommendations
+      }
+
+      validatedRecs.push(validationResult.data);
     }
 
-    // Normalize difficulty to match schema expectations
-    rec.difficulty = rec.difficulty
-      ? rec.difficulty.charAt(0).toUpperCase() + rec.difficulty.slice(1).toLowerCase()
-      : "Moderate";
-
-    // Map AI fields to match schema requirements
-    const mapped = {
-      userId,
-      title: rec.title || "",
-      description: rec.description || "",
-      scope: rec.scope || "Scope 1",
-      impact: rec.impact || "",
-      category: rec.category,
-      estimatedEmissionReduction: rec.savings || 0,
-      priorityLevel: rec.priority
-        ? rec.priority <= 2
-          ? "High"
-          : rec.priority <= 4
-          ? "Medium"
-          : "Low"
-        : "Medium",
-      difficulty: ["Easy", "Moderate", "Hard"].includes(rec.difficulty)
-        ? rec.difficulty
-        : "Moderate", // Default to "Moderate" if invalid
-      estimatedTimeframe: rec.implementationTimeline || "3-6 months",
-      implementationSteps: rec.steps && rec.steps.length > 0 ? rec.steps : ["Check feasibility"],
-    };
-
-    // Validate using Zod schema
-    const validationResult = createRecommendationSchema.safeParse(mapped);
-    if (!validationResult.success) {
-      console.error("Validation errors for recommendation:", validationResult.error.errors);
-      continue; // Skip invalid recommendations
-    }
-
-    validatedRecs.push(validationResult.data);
-  }
-
-
+    // Convert to tracking format
     const trackingRecs: TrackingRecommendation[] = validatedRecs.map((item) => ({
       id: new ObjectId().toString(),
       title: item.title,
@@ -216,9 +264,8 @@ export async function POST(req: Request) {
       notes: [],
     }));
 
-    const db = await connectToDatabase.connectToDatabase();
+    // Insert or update in the "recommendations" collection
     const recommendationsCollection = db.collection("recommendations");
-
     await recommendationsCollection.updateOne(
       { userId },
       {
