@@ -231,6 +231,8 @@ export interface EmissionData {
   timestamp?: Date;
 }
 
+
+
 export interface WeatherData {
   _id: {
     $oid: string;

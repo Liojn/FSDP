@@ -8,7 +8,7 @@ import {
   Tooltip,
 } from "recharts";
 import { AlertTriangle } from "lucide-react";
-import { EmissionData } from "@/app/dashboards/types";
+import { ThresholdEmissionData } from "@/app/dashboards/types";
 import {
   calculateScope1,
   calculateScope2,
@@ -19,7 +19,7 @@ import RecommendationAlert from "@/app/dashboards/components/RecommendationAlert
 interface ScopeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  data: EmissionData | null;
+  data: ThresholdEmissionData | null;
   thresholds: { scope: string; value: number; description: string }[];
   exceedingScopes: string[];
   onViewRecommendations: (scopes: string[]) => void;

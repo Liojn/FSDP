@@ -3,6 +3,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/shared/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Achievement {
   _id: string;

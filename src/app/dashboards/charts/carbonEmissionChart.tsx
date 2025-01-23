@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { Chart } from "react-chartjs-2";
 import {
@@ -45,7 +46,6 @@ interface CarbonEmissionChartProps {
 
 const CarbonEmissionChart: React.FC<CarbonEmissionChartProps> = ({
   monthlyEmissions,
-  averageAbsorbed,
   onMonthClick,
   clickedMonthIndex,
 }) => {
@@ -83,13 +83,10 @@ const CarbonEmissionChart: React.FC<CarbonEmissionChartProps> = ({
     responsive: true,
     plugins: {
       legend: {
-        position: "top",
         position: "top" as const,
       },
     },
     scales: {
-      y: { beginAtZero: true, title: { display: true, text: "kg CO2E" } },
-      x: { title: { display: true, text: "Month" } },
       y: {
         beginAtZero: true,
         title: {
@@ -128,7 +125,5 @@ const CarbonEmissionChart: React.FC<CarbonEmissionChartProps> = ({
 
   return <Chart type="bar" data={data} options={options} />;
 };
-
-export default EmissionCategoryChart;
 
 export default CarbonEmissionChart;

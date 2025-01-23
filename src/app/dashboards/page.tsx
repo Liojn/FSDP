@@ -20,7 +20,6 @@ import ScopeModal from "@/app/dashboards/popup/scopeModal";
 import ThresholdSettings from "@/app/dashboards/components/ThresholdSettings";
 import RecommendationAlert from "@/app/dashboards/components/RecommendationAlert";
 import { useDashboardData } from "@/app/dashboards/hooks/useDashboardData";
-import { EmissionData } from "@/app/dashboards/types";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -35,6 +34,7 @@ import {
 import { MetricData } from "@/types";
 import useSWR from "swr";
 import { useThresholdCheck } from "@/app/dashboards/hooks/useThresholdCheck";
+import { ThresholdEmissionData } from "./types";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -55,7 +55,6 @@ const DashboardPage = () => {
     targetGoal,
     isEarliestYear,
     firstYearGoal,
-    thresholds,
     categoryEmissionsData,
     metricsData,
     handleYearFilterChange,
@@ -77,8 +76,6 @@ const DashboardPage = () => {
     data: emissionsData,
     thresholds: thresholdData,
     exceedingScopes,
-    loading: thresholdLoading,
-    error: thresholdError,
   } = useThresholdCheck(
     userId || "",
     selectedYear || new Date().getFullYear(),
@@ -384,7 +381,7 @@ const DashboardPage = () => {
         isOpen={isScopeModalOpen}
         onClose={() => setIsScopeModalOpen(false)}
         thresholds={thresholdData || []}
-        data={emissionsData}
+        data={emissionsData as ThresholdEmissionData | null}
         exceedingScopes={exceedingScopes}
         onViewRecommendations={handleViewRecommendations}
         year={selectedYear}

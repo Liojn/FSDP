@@ -18,7 +18,6 @@ import {
   MetricsUpdateParams,
 } from "../types";
 import { 
-  DEFAULT_DESCRIPTIONS, 
   DEFAULT_METRICS 
 } from "../constants";
 
@@ -42,7 +41,7 @@ export const useDashboardData = () => {
 
   const [categoryEmissionsData, setCategoryEmissionsData] = useState<EmissionCategoryData[] | null>(null);
   const [metricsData, setMetricsData] = useState<MetricData[]>(DEFAULT_METRICS);
-  const [thresholds, setThresholds] = useState<ScopeThreshold[]>([]);
+  const [thresholds] = useState<ScopeThreshold[]>([]);
 
   // Fetch years
   useEffect(() => {
