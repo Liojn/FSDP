@@ -34,6 +34,7 @@ import {
   LogOut,
   Medal,
   PencilLine,
+  Coins,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -50,7 +51,6 @@ const appConfig = {
   logo: "/LogoA.jpg",
 };
 
-// Memoize the entire component to prevent unnecessary re-renders
 const AppSidebar = React.memo(function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -58,13 +58,14 @@ const AppSidebar = React.memo(function AppSidebar() {
   const [userData, setUserData] = useState({
     name: "Placeholder Name",
     email: "guest@example.com",
+    storeCurrency: 0,
   });
 
-  // Use useEffect to safely access localStorage on the client side
   useEffect(() => {
     setUserData({
       name: localStorage.getItem("userName") || "Placeholder Name",
       email: localStorage.getItem("userEmail") || "guest@example.com",
+      storeCurrency: parseInt(localStorage.getItem("storeCurrency") || "0", 10),
     });
   }, []);
 
@@ -72,6 +73,7 @@ const AppSidebar = React.memo(function AppSidebar() {
     localStorage.removeItem("token");
     localStorage.removeItem("userName");
     localStorage.removeItem("userEmail");
+    localStorage.removeItem("storeCurrency");
     router.push("/login");
   }, [router]);
 
@@ -92,6 +94,12 @@ const AppSidebar = React.memo(function AppSidebar() {
           <span className="truncate text-xs text-stone-400">
             {userData.email}
           </span>
+          <div className="flex items-center gap-1 mt-1">
+            <Coins className="size-4 text-emerald-400" />
+            <span className="text-xs text-emerald-300">
+              {userData.storeCurrency.toLocaleString()} Carbon Credits
+            </span>
+          </div>
         </div>
         <ChevronsUpDown className="size-4 text-stone-400" />
       </div>
@@ -106,6 +114,12 @@ const AppSidebar = React.memo(function AppSidebar() {
           <div className="flex flex-col space-y-1">
             <span className="text-sm font-medium">{userData.name}</span>
             <span className="text-xs text-stone-400">{userData.email}</span>
+            <div className="flex items-center gap-1 mt-1">
+              <Coins className="size-4 text-emerald-400" />
+              <span className="text-xs text-emerald-300">
+                {userData.storeCurrency.toLocaleString()} Carbon Credits
+              </span>
+            </div>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator className="border-stone-800" />
@@ -157,12 +171,22 @@ const AppSidebar = React.memo(function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+       <SidebarContent>
         <SidebarGroup>
+          
+          {/* New Carbon Credits Section with more spacing */}
+          <div className="px-4 py-3 flex items-center text-emerald-300 text-xs border-b border-stone-800">
+            <Coins className="mr-2 size-4 text-emerald-400" />
+            Carbon Credits
+            <span className="ml-auto font-bold">
+              {userData.storeCurrency.toLocaleString()}
+            </span>
+          </div>
           <SidebarGroupLabel className="px-4 py-3 font-semibold text-stone-400">
             Navigation
           </SidebarGroupLabel>
-          <SidebarGroupContent>
+
+          <SidebarGroupContent className="mt-2">
             <SidebarMenu>
               {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
