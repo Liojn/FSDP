@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Flame, Leaf, Loader2, Zap } from "lucide-react";
+import { AlertCircle, Flame, Leaf, Zap } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -41,6 +41,7 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -176,8 +177,60 @@ const DashboardPage = () => {
   // Only show loading screen on initial load
   if (initialLoading || !userId) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
+      <div className="space-y-6 p-4">
+        {/* Top Bar Skeleton */}
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
+          {/* Page Title + (Possible) Alert Icon */}
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-[150px]" />
+            {/* Optionally, a smaller subline */}
+            {/* <Skeleton className="h-4 w-[120px]" /> */}
+          </div>
+          {/* Right-side buttons (Export, Threshold, Year Filter) */}
+          <div className="flex flex-col md:flex-row md:items-center gap-5">
+            {/* Export Button & Threshold */}
+            <div className="flex gap-3">
+              <Skeleton className="h-10 w-[140px] rounded" />
+              <Skeleton className="h-10 w-[140px] rounded" />
+            </div>
+            {/* Year Filter */}
+            <div className="flex flex-col md:flex-row items-start gap-3">
+              <Skeleton className="h-5 w-16" />
+              <Skeleton className="h-10 w-[130px] rounded" />
+            </div>
+          </div>
+        </div>
+
+        {/* Main Grid: Left (2/3) and Right (1/3) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Left: Key Metrics + Yearly Chart */}
+          <div className="md:col-span-2 space-y-6">
+            {/* Metric Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Skeleton className="h-[120px] rounded" />
+              <Skeleton className="h-[120px] rounded" />
+              <Skeleton className="h-[120px] rounded" />
+            </div>
+
+            {/* Yearly Carbon Emission's Progress Chart */}
+            <div className="bg-white p-4 shadow-md rounded-lg h-[350px]">
+              <Skeleton className="w-full h-full" />
+            </div>
+          </div>
+
+          {/* Right: Gauge + Category Chart */}
+          <div className="flex flex-col space-y-6">
+            {/* Emission Reduction Progress Gauge */}
+            <div className="bg-white p-4 shadow-md rounded-lg h-60">
+              <Skeleton className="w-full h-full" />
+            </div>
+
+            {/* Emissions By Category Pie/Donut */}
+            <div className="bg-white p-4 shadow-md rounded-lg h-[350px]">
+              <Skeleton className="w-full h-full" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
