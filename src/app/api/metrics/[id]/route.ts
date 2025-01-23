@@ -166,6 +166,7 @@ async function getMetrics(userId: string): Promise<MetricData> {
 });
 
     return {
+      userId,
       energy: {
         consumption: currentEnergyConsumption,
         previousYearComparison: Number(energyComparison.toFixed(2)),

@@ -201,10 +201,7 @@ export default function ThresholdSettings() {
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button
-          className="bg-emerald-500 text-emerald-50 hover:bg-emerald-600 w-full md:w-auto"
-          onClick={() => setIsOpen(true)}
-        >
+        <Button className="w-full md:w-auto" onClick={() => setIsOpen(true)}>
           Edit Threshold and Goals Settings
         </Button>
       </SheetTrigger>

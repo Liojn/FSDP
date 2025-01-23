@@ -31,6 +31,7 @@ import {
   ChartColumn,
   ChevronsUpDown,
   LayoutDashboard,
+  Lightbulb,
   LogOut,
   Medal,
   PencilLine,
@@ -44,6 +45,10 @@ const navigationItems = [
   { title: "Prediction", url: "/prediction", icon: ChartColumn },
   { title: "Badges", url: "/badges", icon: Medal },
   { title: "Campaign", url: "/campaign", icon: PencilLine },
+];
+
+const recommendationItems = [
+  { title: "Recommendation", url: "/recommendation", icon: Lightbulb },
 ];
 
 const appConfig = {
@@ -88,7 +93,7 @@ const AppSidebar = React.memo(function AppSidebar() {
     () => (
       <div className="flex w-full items-center gap-3">
         <div className="flex flex-1 flex-col text-left">
-          <span className="truncate text-sm font-semibold text-white">
+          <span className="truncate text-base font-semibold text-white">
             {userData.name}
           </span>
           <span className="truncate text-xs text-stone-400">
@@ -142,7 +147,7 @@ const AppSidebar = React.memo(function AppSidebar() {
         </DropdownMenuItem>
       </>
     ),
-    [userData, handleLogout]
+    [userData.name, userData.email, handleLogout, router]
   );
 
   return (
@@ -187,14 +192,14 @@ const AppSidebar = React.memo(function AppSidebar() {
           </SidebarGroupLabel>
 
           <SidebarGroupContent className="mt-2">
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <Link
                       href={item.url}
                       className={cn(
-                        "group relative flex items-center space-x-3 px-4 py-3 transition-colors",
+                        "group relative flex items-center space-x-3 px-4 py-5 transition-colors",
                         pathname === item.url
                           ? "bg-stone-800 text-white"
                           : "text-stone-400 hover:bg-stone-800 hover:text-white"
@@ -202,9 +207,43 @@ const AppSidebar = React.memo(function AppSidebar() {
                       onClick={() => handleNavigate(item.url)}
                     >
                       <span>
-                        <item.icon size={19} />
+                        <item.icon size={21} />
                       </span>
-                      <span className="flex-1">{item.title}</span>
+                      <span className="flex-1 text-sm font-medium">
+                        {item.title}
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel className="px-4 py-5 font-semibold text-stone-400">
+            Recommendation
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {recommendationItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <Link
+                      href={item.url}
+                      className={cn(
+                        "group relative flex items-center space-x-3 px-4 py-5 transition-colors",
+                        pathname === item.url
+                          ? "bg-stone-800 text-white"
+                          : "text-stone-400 hover:bg-stone-800 hover:text-white"
+                      )}
+                      onClick={() => handleNavigate(item.url)}
+                    >
+                      <span>
+                        <item.icon size={21} />
+                      </span>
+                      <span className="flex-1 text-sm font-medium">
+                        {item.title}
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

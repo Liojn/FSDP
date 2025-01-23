@@ -27,26 +27,26 @@ export interface DataPoint {
   targetEmissions?: number;
 }
 
-export interface NetZeroAnalysis {
-  cumulativeNetZeroYear: number | null;
-  cumulativeNetZeroMonth: number | null;
+export interface CarbonNeutralAnalysis {
+  cumulativeCarbonNeutralYear: number | null;
+  cumulativeCarbonNeutralMonth: number | null;
   ytdNetEmissions: number | null;
 }
 
 interface DataContextType {
   data: MonthlyData | null;
   chartData: DataPoint[];
-  netZeroAnalysis: NetZeroAnalysis | null;
+  carbonNeutralAnalysis: CarbonNeutralAnalysis | null;
   setData: (data: MonthlyData) => void;
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
 }
 
-const PROJECTION_YEARS = 100;
+const PROJECTION_YEARS = 100; // keep graph to show maximum of 100 years, prevent over cluttering of graph
 
 // Create the DataContext
 const DataContext = createContext<DataContextType | undefined>(undefined);
-const calculateMonthlyNetZeroPoint = (
+const calculateMonthlyCarbonNeutralPoint = (
   data: DataPoint[]
 ): { year: number | null; month: number | null } => {
   let previousPoint: DataPoint | null = null;
@@ -58,17 +58,16 @@ const calculateMonthlyNetZeroPoint = (
         previousPoint.cumulativeYTDNetEmissions! > 0 &&
         point.cumulativeYTDNetEmissions <= 0
       ) {
-        const totalDays = 365;
-        const daysToZero =
-          (Math.abs(previousPoint.cumulativeYTDNetEmissions!) /
-            (point.cumulativeYTDNetEmissions -
-              previousPoint.cumulativeYTDNetEmissions!)) *
-          totalDays;
-
-        const month = Math.floor(daysToZero / (totalDays / 12));
+        // Calculate what percentage through the year the crossing point occurs
+        const percentageThrough = 
+          Math.abs(previousPoint.cumulativeYTDNetEmissions!) /
+          Math.abs(point.cumulativeYTDNetEmissions! - previousPoint.cumulativeYTDNetEmissions!);
+        
+        // Convert percentage to month (0-11)
+        const month = Math.ceil(percentageThrough * 12); // get the month we are in and make sure it does not round down to previous month
 
         return {
-          year: previousPoint.year || null,
+          year: point.year || null,
           month: Math.min(month, 11), // Ensure month index is within 0-11
         };
       }
@@ -78,23 +77,23 @@ const calculateMonthlyNetZeroPoint = (
   return { year: null, month: null };
 };
 
-const analyzeNetZeroYears = (chartData: DataPoint[]): NetZeroAnalysis => {
+const analyzeCarbonNeutralYears = (chartData: DataPoint[]): CarbonNeutralAnalysis => {
   if (!chartData.length) {
     return {
-      cumulativeNetZeroYear: null,
-      cumulativeNetZeroMonth: null,
+      cumulativeCarbonNeutralYear: null,
+      cumulativeCarbonNeutralMonth: null,
       ytdNetEmissions: null,
     };
   }
 
   const { year: netZeroYear, month: netZeroMonth } =
-    calculateMonthlyNetZeroPoint(chartData);
+    calculateMonthlyCarbonNeutralPoint(chartData);
   const currentYear = new Date().getFullYear();
   const currentYearData = chartData.find((d) => d.year === currentYear);
 
   return {
-    cumulativeNetZeroYear: netZeroYear,
-    cumulativeNetZeroMonth: netZeroMonth,
+    cumulativeCarbonNeutralYear: netZeroYear,
+    cumulativeCarbonNeutralMonth: netZeroMonth,
     ytdNetEmissions: currentYearData?.cumulativeYTDNetEmissions || null,
   };
 };
@@ -159,7 +158,7 @@ const prepareYearlyData = (data: MonthlyData): DataPoint[] => {
     previousYearEmissions = totalEmissions;
   }
 
-  // Add projections for future years
+  // Add projections for future years, stop before reach 100
   const projectedData: DataPoint[] = [];
   if (historicalData.length > 0 && cumulativeNetEmissions > 0) {
     let projectedEmissions = previousYearEmissions;
@@ -168,7 +167,7 @@ const prepareYearlyData = (data: MonthlyData): DataPoint[] => {
       const projectedYear = lastDataYear + i;
       const targetPercentage =
         data.emissionTargets[projectedYear] || latestTarget;
-      projectedEmissions *= 1 - targetPercentage;
+      projectedEmissions *= 1 - targetPercentage; // exponential decrease or increase in percentage will result in curved graph towards goal
 
       const projectedNetEmissions = projectedEmissions - latestAnnualAbsorption;
       cumulativeNetEmissions += projectedNetEmissions;
@@ -194,8 +193,8 @@ const prepareYearlyData = (data: MonthlyData): DataPoint[] => {
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [data, setData] = useState<MonthlyData | null>(null);
   const [chartData, setChartData] = useState<DataPoint[]>([]);
-  const [netZeroAnalysis, setNetZeroAnalysis] =
-    useState<NetZeroAnalysis | null>(null);
+  const [carbonNeutralAnalysis, setCarbonNeutralAnalysis] =
+    useState<CarbonNeutralAnalysis | null>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -203,7 +202,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     if (data) {
       const processedData = prepareYearlyData(data);
       setChartData(processedData);
-      setNetZeroAnalysis(analyzeNetZeroYears(processedData));
+      setCarbonNeutralAnalysis(analyzeCarbonNeutralYears(processedData));
       setIsLoading(false);
     }
   }, [data]);
@@ -213,7 +212,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       value={{
         data,
         chartData,
-        netZeroAnalysis,
+        carbonNeutralAnalysis,
         setData,
         isLoading,
         setIsLoading,

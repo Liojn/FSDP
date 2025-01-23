@@ -1,84 +1,131 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "@/hooks/use-toast";
-import { CampaignData, CompanyFormValues } from "./types";
+import React, { useEffect, useState, Suspense } from "react";
+
+// Type Definitions
+import { CampaignAPIResponse } from "@/types";
+
+// Static Imports for Lightweight Components
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/shared/page-header";
-import { CampaignProgress } from "./components/CampaignProgress";
-import { CampaignMilestones } from "./components/CampaignMilestones";
-import { JoinCampaignForm } from "./components/JoinCampaignForm";
-import { CompanyParticipation } from "./components/CompanyParticipation";
-import { CompanyParticipationProps } from "./components/CompanyParticipation";
 import { Card } from "@/components/ui/card";
 
+// Dynamic Imports for Heavy Components
+const CampaignProgress = React.lazy(
+  () => import("./components/CampaignProgress")
+);
+const UserContribution = React.lazy(
+  () => import("./components/UserContribution")
+);
+
+// CampaignSkeleton Component (Remains Static)
+const CampaignSkeleton = () => {
+  return (
+    <div className="container mx-auto px-4 pb-8 space-y-6 animate-pulse">
+      <Card className="p-6">
+        <div className="space-y-8">
+          {/* Progress section */}
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-2 w-full rounded-full" />
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+
+          {/* Milestones section */}
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-32" />
+            <div className="grid gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* User contribution skeleton */}
+      <Card className="p-6">
+        <div className="space-y-4">
+          <Skeleton className="h-4 w-40" />
+          <div className="flex gap-4">
+            <Skeleton className="h-16 w-16 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
 export default function CampaignPage() {
-  const [campaignData, setCampaignData] = useState<CampaignData | null>(null);
+  const [campaignData, setCampaignData] = useState<CampaignAPIResponse | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasJoined, setHasJoined] = useState(false);
-  const [userCompany, setUserCompany] = useState<
-    CompanyParticipationProps["company"] | null
-  >(null);
-  const [, setUserName] = useState<string>("");
 
-  // Function to fetch campaign data
-  const fetchCampaignData = async () => {
+  // Fetch Campaign Data
+  const fetchCampaignData = async (userId: string) => {
     try {
-      const [campaignResponse, userResponse] = await Promise.all([
-        fetch("/api/campaign"),
-        fetch("/api/campaign/user/campaign-status", {
-          headers: {
-            "user-email": localStorage.getItem("userEmail") || "",
-          },
-        }),
-      ]);
+      const response = await fetch(`/api/campaign?userId=${userId}`, {
+        next: { revalidate: 60 },
+      });
 
-      if (!campaignResponse.ok) {
+      if (!response.ok) {
         throw new Error("Failed to fetch campaign data");
       }
 
-      const campaignData = await campaignResponse.json();
-      setCampaignData(campaignData);
-
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        if (userData.hasJoined) {
-          setHasJoined(true);
-          setUserCompany(userData.company);
-        }
-      }
+      const data: CampaignAPIResponse = await response.json();
+      setCampaignData(data);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      setError(errorMessage);
+      setError(
+        error instanceof Error ? error.message : "An unexpected error occurred"
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  // Preload User Data on Mount
   useEffect(() => {
-    // Only run if we're in the browser
-    if (typeof window !== "undefined") {
-      fetchCampaignData();
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) {
+      fetchCampaignData(storedUserId);
+    } else {
+      setError("User ID not found in localStorage.");
+      setLoading(false);
     }
+  }, []);
 
-    // Set up WebSocket connection for real-time updates
+  // WebSocket Setup for Real-time Updates
+  useEffect(() => {
+    if (!campaignData) return;
+
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(
-      `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${
-        window.location.host
-      }/api/campaign/ws`
+      `${wsProtocol}//${window.location.host}/api/campaign/ws`
     );
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      setCampaignData((prevData) => {
-        if (!prevData) return null;
+      setCampaignData((prev) => {
+        if (!prev) return null;
         return {
-          ...prevData,
+          ...prev,
           campaign: {
-            ...prevData.campaign,
+            ...prev.campaign,
             totalReduction: data.totalReduction,
             milestones: data.milestones,
           },
@@ -86,72 +133,15 @@ export default function CampaignPage() {
       });
     };
 
-    return () => {
-      ws.close();
-    };
-  }, []);
+    return () => ws.close();
+  }, [campaignData]);
 
-  useEffect(() => {
-    const storedUserName = localStorage.getItem("userName");
-    if (storedUserName) {
-      setUserName(storedUserName);
-    }
-  }, []);
-
-  const onSubmit = async (companyValues: CompanyFormValues) => {
-    setSubmitting(true);
-    try {
-      const response = await fetch("/api/campaign/join", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          companyInfo: companyValues,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to join campaign");
-      }
-
-      // Update local state
-      setHasJoined(true);
-
-      // Refetch the campaign data to get updated information
-      await fetchCampaignData();
-
-      // Force a hard refresh of the page to ensure all components are updated
-      window.location.reload();
-
-      toast({
-        title: "Success",
-        description: "Successfully joined the campaign!",
-        className: "bg-green-100 border-green-200",
-      });
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        className: "bg-red-100 border-red-200",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
+  // Render Loading Skeleton
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
-      </div>
-    );
+    return <CampaignSkeleton />;
   }
 
+  // Render Error State
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen text-red-600">
@@ -160,6 +150,7 @@ export default function CampaignPage() {
     );
   }
 
+  // Render No Data State
   if (!campaignData) {
     return (
       <div className="flex items-center justify-center min-h-screen text-gray-600">
@@ -168,36 +159,41 @@ export default function CampaignPage() {
     );
   }
 
+  // Main Campaign Content with Lazy Loaded Components
   return (
-    <div className="container mx-auto px-4 pb -8">
-      <PageHeader title={campaignData.campaign.name} />
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <Skeleton className="h-10 w-60" />
+        </div>
+      }
+    >
+      <div className="mx-auto px-4 pb-8">
+        {/* Page Header */}
+        <Suspense fallback={<Skeleton className="h-10 w-60 mb-6" />}>
+          <PageHeader title={campaignData.campaign.name} />
+        </Suspense>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div>
-          <Card className="p-6">
+        {/* Campaign Progress */}
+        <Card className="p-6">
+          <Suspense fallback={<Skeleton className="h-20 w-full" />}>
             <CampaignProgress
               currentProgress={campaignData.campaign.currentProgress}
               targetReduction={campaignData.campaign.targetReduction}
-              startDate={campaignData.campaign.startDate}
-              endDate={campaignData.campaign.endDate}
+              startDate={campaignData.campaign.startDate ?? new Date()}
+              endDate={campaignData.campaign.endDate ?? new Date()}
             />
-            <CampaignMilestones
-              milestones={campaignData.campaign.milestones.map((milestone) => ({
-                ...milestone,
-                reachedAt: milestone.reachedAt
-                  ? milestone.reachedAt.toISOString()
-                  : undefined,
-              }))}
-            />
-          </Card>
-        </div>
+          </Suspense>
+        </Card>
 
-        {hasJoined && userCompany ? (
-          <CompanyParticipation company={userCompany} />
-        ) : (
-          <JoinCampaignForm onSubmit={onSubmit} submitting={submitting} />
-        )}
+        {/* User Contribution */}
+        <Suspense fallback={<Skeleton className="h-20 w-full mt-6" />}>
+          <UserContribution
+            user={campaignData.user}
+            campaign={campaignData.campaign}
+          />
+        </Suspense>
       </div>
-    </div>
+    </Suspense>
   );
 }

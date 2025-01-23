@@ -61,12 +61,14 @@ export interface Crop {
   totalEmissions: number;
 }
 
-export interface EmissionData {
+export interface ThresholdEmissionData {
   equipment: Equipment[];
   livestock: Livestock[];
   waste: Waste[];
   crops: Crop[];
 }
+
+
 
 export interface EmissionsData {
   equipment: Array<{

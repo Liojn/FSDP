@@ -1,27 +1,39 @@
-import React from 'react';
-import { Chart } from 'react-chartjs-2';
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  BarElement,  
-  LineElement, 
-  PointElement, 
-  Title, 
-  Tooltip, 
-  Legend, 
-  ChartData 
-} from 'chart.js';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React from "react";
+import { Chart } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ChartData,
+} from "chart.js";
 
+//Register necessary components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend
+);
 // Register necessary components
 ChartJS.register(
-  CategoryScale, 
-  LinearScale, 
-  BarElement, 
-  LineElement, 
-  PointElement, 
-  Title, 
-  Tooltip, 
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
   Legend
 );
 
@@ -34,24 +46,36 @@ interface CarbonEmissionChartProps {
 
 const CarbonEmissionChart: React.FC<CarbonEmissionChartProps> = ({
   monthlyEmissions,
-  averageAbsorbed,
   onMonthClick,
-  clickedMonthIndex
+  clickedMonthIndex,
 }) => {
-  const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const labels = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
 
   const data: ChartData<"bar" | "line", number[], string> = {
     labels,
     datasets: [
       {
-        label: 'Total Carbon Emission (kg CO2E)',
+        label: "Total Carbon Emission (kg CO2E)",
         data: monthlyEmissions,
-        backgroundColor: monthlyEmissions.map((_, index) => 
-          index === clickedMonthIndex ? '#4BA387' : '#66CDAA'
+        backgroundColor: monthlyEmissions.map((_, index) =>
+          index === clickedMonthIndex ? "#4BA387" : "#66CDAA"
         ),
-        hoverBackgroundColor: '#448C7A',
-        type: 'bar',
-      }
+        hoverBackgroundColor: "#448C7A",
+        type: "bar",
+      },
     ],
   };
 
@@ -59,33 +83,33 @@ const CarbonEmissionChart: React.FC<CarbonEmissionChartProps> = ({
     responsive: true,
     plugins: {
       legend: {
-        position: 'top' as const,
+        position: "top" as const,
       },
     },
     scales: {
-      y: { 
-        beginAtZero: true, 
-        title: { 
-          display: true, 
-          text: 'kg CO2E',
-        } 
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: "kg CO2E",
+        },
       },
-      x: { 
-        title: { 
-          display: true, 
-          text: 'Month'
-        } 
+      x: {
+        title: {
+          display: true,
+          text: "Month",
+        },
       },
     },
     onClick: (event: any) => {
       const chart = event.chart;
       const points = chart.getElementsAtEventForMode(
         event,
-        'nearest',
+        "nearest",
         { intersect: true },
         false
       );
-      
+
       if (points.length > 0) {
         const clickedMonthIndex = points[0].index;
         onMonthClick(clickedMonthIndex);
@@ -94,7 +118,7 @@ const CarbonEmissionChart: React.FC<CarbonEmissionChartProps> = ({
     onHover: (event: any, elements: any[]) => {
       const canvas = event.native?.target;
       if (canvas) {
-        canvas.style.cursor = elements.length ? 'pointer' : 'default';
+        canvas.style.cursor = elements.length ? "pointer" : "default";
       }
     },
   };

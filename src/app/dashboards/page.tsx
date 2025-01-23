@@ -20,7 +20,6 @@ import ScopeModal from "@/app/dashboards/popup/scopeModal";
 import ThresholdSettings from "@/app/dashboards/components/ThresholdSettings";
 import RecommendationAlert from "@/app/dashboards/components/RecommendationAlert";
 import { useDashboardData } from "@/app/dashboards/hooks/useDashboardData";
-import { EmissionData } from "@/app/dashboards/types";
 
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -35,6 +34,7 @@ import {
 import { MetricData } from "@/types";
 import useSWR from "swr";
 import { useThresholdCheck } from "@/app/dashboards/hooks/useThresholdCheck";
+import { ThresholdEmissionData } from "./types";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -55,16 +55,17 @@ const DashboardPage = () => {
     targetGoal,
     isEarliestYear,
     firstYearGoal,
-    thresholds,
     categoryEmissionsData,
     metricsData,
     handleYearFilterChange,
     handleMonthClick,
   } = useDashboardData();
 
-  const getMonthAsNumber = (month: string | number | undefined): number | undefined => {
-    if (typeof month === 'number') return month;
-    if (typeof month === 'string') {
+  const getMonthAsNumber = (
+    month: string | number | undefined
+  ): number | undefined => {
+    if (typeof month === "number") return month;
+    if (typeof month === "string") {
       const parsed = parseInt(month, 10);
       return isNaN(parsed) ? undefined : parsed;
     }
@@ -75,8 +76,6 @@ const DashboardPage = () => {
     data: emissionsData,
     thresholds: thresholdData,
     exceedingScopes,
-    loading: thresholdLoading,
-    error: thresholdError,
   } = useThresholdCheck(
     userId || "",
     selectedYear || new Date().getFullYear(),
@@ -95,8 +94,9 @@ const DashboardPage = () => {
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
-  const [clickedMonthIndex, setClickedMonthIndex] = useState<number | null>(null);
-
+  const [clickedMonthIndex, setClickedMonthIndex] = useState<number | null>(
+    null
+  );
 
   // Only show loading screen on initial load
   if (initialLoading || !userId) {
@@ -107,8 +107,7 @@ const DashboardPage = () => {
     );
   }
 
- 
- const handleViewRecommendations = (exceedingScopes: string[]) => {
+  const handleViewRecommendations = (exceedingScopes: string[]) => {
     const scopes = exceedingScopes
       .map((scope) => scope.match(/(Scope [1-3])/)?.[1])
       .filter((scope): scope is string => scope !== null);
@@ -128,7 +127,7 @@ const DashboardPage = () => {
   }
 
   const handleMonthSelection = (monthIndex: number) => {
-    setClickedMonthIndex(monthIndex === clickedMonthIndex? null: monthIndex);
+    setClickedMonthIndex(monthIndex === clickedMonthIndex ? null : monthIndex);
     handleMonthClick(monthIndex);
   };
 
@@ -232,7 +231,7 @@ const DashboardPage = () => {
                     setIsAlertDialogOpen(true);
                     handleGenerateReport();
                   }}
-                  className="bg-emerald-500 text-emerald-50 hover:bg-emerald-600 w-full md:w-auto"
+                  className="w-full md:w-auto"
                 >
                   Export Report to PDF
                 </Button>
@@ -271,15 +270,15 @@ const DashboardPage = () => {
           </div>
         </div>
       </div>
-          {/* Add RecommendationAlert if there are exceeding scopes */}
-          {exceedingScopes && exceedingScopes.length > 0 && (
-            <div className="mb-4">
-              <RecommendationAlert
-                exceedingScopes={exceedingScopes}
-                onViewRecommendations={handleViewRecommendations}
-              />
-            </div>
-          )}
+      {/* Add RecommendationAlert if there are exceeding scopes */}
+      {exceedingScopes && exceedingScopes.length > 0 && (
+        <div className="mb-4">
+          <RecommendationAlert
+            exceedingScopes={exceedingScopes}
+            onViewRecommendations={handleViewRecommendations}
+          />
+        </div>
+      )}
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -287,15 +286,13 @@ const DashboardPage = () => {
               <div
                 key={index}
                 onClick={() => {
-                console.log("Clicked metric:", metric.title);
-                if (metric.title === "Total Net Carbon Emissions") {
-                  console.log("Opening ScopeModal...");
-                  setIsScopeModalOpen(true);
-                }
+                  console.log("Clicked metric:", metric.title);
+                  if (metric.title === "Total Net Carbon Emissions") {
+                    console.log("Opening ScopeModal...");
+                    setIsScopeModalOpen(true);
+                  }
                 }}
-                
               >
-                
                 <MetricCard
                   title={metric.title}
                   value={
@@ -380,16 +377,16 @@ const DashboardPage = () => {
         />
       )}
 
-    <ScopeModal
-      isOpen={isScopeModalOpen}
-      onClose={() => setIsScopeModalOpen(false)}
-      thresholds={thresholdData || []}
-      data={emissionsData}
-      exceedingScopes={exceedingScopes}
-      onViewRecommendations={handleViewRecommendations}
-      year={selectedYear}
-      month={selectedMonth}
-    />
+      <ScopeModal
+        isOpen={isScopeModalOpen}
+        onClose={() => setIsScopeModalOpen(false)}
+        thresholds={thresholdData || []}
+        data={emissionsData as ThresholdEmissionData | null}
+        exceedingScopes={exceedingScopes}
+        onViewRecommendations={handleViewRecommendations}
+        year={selectedYear}
+        month={selectedMonth}
+      />
     </div>
   );
 };

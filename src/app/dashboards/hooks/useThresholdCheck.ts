@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // hooks/useThresholdCheck.ts
 
 import { useEffect, useState } from "react";

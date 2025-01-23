@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
-import connectToDatabase from "@/../dbConfig";
+import connectToDatabase from "dbConfig";
 
 interface EmissionGoal {
   year: number;

@@ -1,7 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/shared/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Achievement {
   _id: string;
@@ -92,7 +95,7 @@ const AchievementsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastCalculated, setLastCalculated] = useState<Date | null>(null);
-  const [isParticipant, setIsParticipant] = useState(false);
+  const [, setIsParticipant] = useState(false);
 
   const FETCH_INTERVAL = 10000;
   const CALCULATION_INTERVAL = 300000;
@@ -107,18 +110,18 @@ const AchievementsPage = () => {
     "Livestock",
   ];
 
-  const checkCampaignParticipation = useCallback((
-    campaignData: CampaignData,
-    userEmail: string
-  ): boolean => {
-    if (!campaignData?.participants) {
-      return false;
-    }
-    return campaignData.participants.some(
-      (participant) =>
-        participant.company.email.toLowerCase() === userEmail.toLowerCase()
-    );
-  }, []);
+  const checkCampaignParticipation = useCallback(
+    (campaignData: CampaignData, userEmail: string): boolean => {
+      if (!campaignData?.participants) {
+        return false;
+      }
+      return campaignData.participants.some(
+        (participant) =>
+          participant.company.email.toLowerCase() === userEmail.toLowerCase()
+      );
+    },
+    []
+  );
 
   const calculateBadges = useCallback(async () => {
     try {
@@ -160,7 +163,7 @@ const AchievementsPage = () => {
         await Promise.all([
           fetch("/api/badges"),
           fetch(`/api/badges/achivements/${userId}`),
-          fetch("/api/campaign"),
+          fetch(`/api/campaign?userId=${userId}`), // Modified line
         ]);
 
       if (
@@ -238,7 +241,10 @@ const AchievementsPage = () => {
     init();
 
     const fetchInterval = setInterval(fetchAndCombineData, FETCH_INTERVAL);
-    const calculationInterval = setInterval(calculateBadges, CALCULATION_INTERVAL);
+    const calculationInterval = setInterval(
+      calculateBadges,
+      CALCULATION_INTERVAL
+    );
 
     return () => {
       clearInterval(fetchInterval);
@@ -252,8 +258,31 @@ const AchievementsPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-500" />
+      <div className="p-4 space-y-6">
+        {/* Header Skeleton */}
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-48 rounded-md" />
+          <Skeleton className="h-4 w-32 rounded-md" />
+        </div>
+
+        {/* Stats Skeleton */}
+        <div className="grid grid-cols-3 gap-4">
+          {[...Array(3)].map((_, index) => (
+            <Skeleton key={index} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+
+        {/* Achievements Skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, index) => (
+            <div key={index} className="p-4 space-y-4 bg-gray-100 rounded-lg">
+              {/* Title */}
+              <Skeleton className="h-6 w-3/4 rounded-md" />
+              {/* Progress Bar */}
+              <Skeleton className="h-2 w-full rounded-full" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -270,9 +299,9 @@ const AchievementsPage = () => {
     <div className="p-4 h-screen flex flex-col space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-lime-900">Achievements</h2>
+          <PageHeader title="Achievements" />
           {lastCalculated && (
-            <p className="text-sm text-gray-500">
+            <p className="text text-gray-500">
               Last calculated: {lastCalculated.toLocaleTimeString()}
             </p>
           )}

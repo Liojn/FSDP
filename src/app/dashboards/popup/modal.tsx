@@ -21,40 +21,23 @@ const Modal: React.FC<ModalProps> = ({
   const [details, setDetails] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [selectedMonth] = useState<string | number | null>(null);
 
   useEffect(() => {
     if (!isVisible || !category) return;
-
-    // Convert `month` to a number if it is a string, or set it to `null` if `month` is undefined
-    const parsedMonth: number | null =
-      typeof month === 'string'
-        ? parseInt(month, 10)
-        : typeof month === 'number'
-        ? month
-        : null;
-
-    // Check if `parsedMonth` is a valid number, or set to null if it's NaN
-    if (typeof parsedMonth === 'number' && !isNaN(parsedMonth)) {
-      setSelectedMonth(parsedMonth);
-    } else {
-      setSelectedMonth(null);
-      console.error("Invalid month value:", month);
-    }
-  }, [isVisible, category, month]);
-
-  // Separate useEffect for API call
-  useEffect(() => {
-    if (!isVisible || !category || selectedMonth === null) return;
 
     const fetchCategoryData = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const endpoint = selectedMonth !== null
-          ? `/api/dashboards/popup/${userId}?year=${year}&month=${selectedMonth}`
+        // Determine if we should include month in the endpoint
+        const shouldIncludeMonth = month !== "" && month !== undefined;
+        const endpoint = shouldIncludeMonth
+          ? `/api/dashboards/popup/${userId}?year=${year}&month=${month}`
           : `/api/dashboards/popup/${userId}?year=${year}`;
+
+        console.log("Fetching data with endpoint:", endpoint);
 
         const response = await fetch(endpoint);
         if (!response.ok) throw new Error("Failed to fetch data");
@@ -111,7 +94,7 @@ const Modal: React.FC<ModalProps> = ({
     };
 
     fetchCategoryData();
-  }, [isVisible, category, userId, selectedMonth, year]);
+  }, [isVisible, category, userId, selectedMonth, year, month]);
 
   if (!isVisible) return null;
 
@@ -271,4 +254,3 @@ const Modal: React.FC<ModalProps> = ({
 };
 
 export default Modal;
-

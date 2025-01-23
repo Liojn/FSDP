@@ -8,14 +8,18 @@ import {
   Tooltip,
 } from "recharts";
 import { AlertTriangle } from "lucide-react";
-import { EmissionData } from "@/app/dashboards/types";
-import { calculateScope1, calculateScope2, calculateScope3 } from "../utils/scopeCalculations";
+import { ThresholdEmissionData } from "@/app/dashboards/types";
+import {
+  calculateScope1,
+  calculateScope2,
+  calculateScope3,
+} from "../utils/scopeCalculations";
 import RecommendationAlert from "@/app/dashboards/components/RecommendationAlert";
 
 interface ScopeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  data: EmissionData | null;
+  data: ThresholdEmissionData | null;
   thresholds: { scope: string; value: number; description: string }[];
   exceedingScopes: string[];
   onViewRecommendations: (scopes: string[]) => void;
@@ -54,22 +58,22 @@ const ScopeModal = ({
   const totalEmissions = scope1 + scope2 + scope3 || 0;
 
   const scopeData = [
-    { 
-      name: "Scope 1", 
+    {
+      name: "Scope 1",
       value: scope1,
-      description: "Direct emissions from owned or controlled sources"
+      description: "Direct emissions from owned or controlled sources",
     },
-    { 
-      name: "Scope 2", 
+    {
+      name: "Scope 2",
       value: scope2,
-      description: "Indirect emissions from purchased electricity"
+      description: "Indirect emissions from purchased electricity",
     },
-    { 
-      name: "Scope 3", 
+    {
+      name: "Scope 3",
       value: scope3,
-      description: "All other indirect emissions in value chain"
-    }
-  ].filter(item => item.value > 0);
+      description: "All other indirect emissions in value chain",
+    },
+  ].filter((item) => item.value > 0);
 
   const COLORS = ["#4ade80", "#60a5fa", "#f472b6"];
 
@@ -82,7 +86,7 @@ const ScopeModal = ({
         >
           ×
         </button>
-        
+
         <div className="mb-3">
           <h2 className="text-xl font-bold">
             Carbon Emissions Breakdown {displayYear}
@@ -166,7 +170,7 @@ const ScopeModal = ({
                   <span className="font-semibold text-gray-800 text-lg">
                     {scope.name}:
                   </span>
-                  <span 
+                  <span
                     className="font-semibold text-lg ml-2"
                     style={{ color: COLORS[index] }}
                   >
