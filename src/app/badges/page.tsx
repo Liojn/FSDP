@@ -1,18 +1,51 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Achievement, CampaignData, CampaignMilestone } from "@/types";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { PageHeader } from "@/components/shared/page-header";
+
+interface Achievement {
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  progress: number;
+  isUnlocked: boolean;
+  dateUnlocked: string | null;
+  badge_id: string;
+}
+
+interface CampaignMilestone {
+  percentage: number;
+  reached: boolean;
+}
+
+interface CampaignData {
+  campaign: {
+    _id: string;
+    name: string;
+    status: string;
+    totalReduction: number;
+    targetReduction: number;
+    signeesCount: number;
+    milestones: CampaignMilestone[];
+  };
+  participants: Array<{
+    company: {
+      _id: string;
+      name: string;
+      email: string;
+    };
+    participation: {
+      _id: string;
+      campaignId: string;
+      companyId: string;
+      joinedAt: string;
+      currentProgress: number;
+      lastUpdated: string;
+    };
+  }>;
+}
 
 const AchievementCard = ({ achievement }: { achievement: Achievement }) => (
   <Card
@@ -75,7 +108,20 @@ const AchievementsPage = () => {
     "Livestock",
   ];
 
-  const calculateBadges = async () => {
+  const checkCampaignParticipation = useCallback(
+    (campaignData: CampaignData, userEmail: string): boolean => {
+      if (!campaignData?.participants) {
+        return false;
+      }
+      return campaignData.participants.some(
+        (participant) =>
+          participant.company.email.toLowerCase() === userEmail.toLowerCase()
+      );
+    },
+    []
+  );
+
+  const calculateBadges = useCallback(async () => {
     try {
       const userId = localStorage.getItem("userId");
 
@@ -100,22 +146,9 @@ const AchievementsPage = () => {
       console.error("Error calculating badges:", err);
       setError(err.message);
     }
-  };
+  }, []);
 
-  const checkCampaignParticipation = (
-    campaignData: CampaignData,
-    userEmail: string
-  ): boolean => {
-    if (!campaignData?.participants) {
-      return false;
-    }
-    return campaignData.participants.some(
-      (participant) =>
-        participant.company.email.toLowerCase() === userEmail.toLowerCase()
-    );
-  };
-
-  const fetchAndCombineData = React.useCallback(async () => {
+  const fetchAndCombineData = useCallback(async () => {
     try {
       const userId = localStorage.getItem("userId");
       const userEmail = localStorage.getItem("userEmail");
@@ -145,16 +178,10 @@ const AchievementsPage = () => {
         campaignResponse.json(),
       ]);
 
-      // Add console.log to debug campaign data and email check
-      console.log("Campaign Data:", campaignData);
-      console.log("User Email:", userEmail);
-
-      // Check participation using email
       const userIsParticipant = checkCampaignParticipation(
         campaignData,
         userEmail
       );
-      console.log("Is Participant:", userIsParticipant);
       setIsParticipant(userIsParticipant);
 
       // Map user achievements and badges data
@@ -176,7 +203,6 @@ const AchievementsPage = () => {
         }
       });
 
-      // Only add campaign milestones if user is a participant
       if (userIsParticipant && campaignData?.campaign?.milestones) {
         campaignData.campaign.milestones.forEach(
           (milestone: CampaignMilestone) => {
@@ -203,7 +229,7 @@ const AchievementsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [checkCampaignParticipation]);
 
   useEffect(() => {
     const init = async () => {
@@ -222,7 +248,7 @@ const AchievementsPage = () => {
       clearInterval(fetchInterval);
       clearInterval(calculationInterval);
     };
-  }, [fetchAndCombineData]);
+  }, [calculateBadges, fetchAndCombineData]);
 
   const filteredAchievements = achievements.filter(
     (achievement) => filter === "ALL" || achievement.category === filter
@@ -278,18 +304,17 @@ const AchievementsPage = () => {
             </p>
           )}
         </div>
-        <Select value={filter} onValueChange={(value) => setFilter(value)}>
-          <SelectTrigger className="w-[180px] border-lime-500">
-            <SelectValue placeholder="ALL" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="bg-white border border-lime-500 rounded-md p-2 text-lime-700"
+        >
+          {categories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid grid-cols-3 gap-4">

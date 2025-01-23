@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   PieChart,
   Pie,
@@ -7,174 +7,73 @@ import {
   Legend,
   Tooltip,
 } from "recharts";
-import { Loader2 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { EmissionData } from "@/app/dashboards/types";
+import {
+  calculateScope1,
+  calculateScope2,
+  calculateScope3,
+} from "../utils/scopeCalculations";
+import RecommendationAlert from "@/app/dashboards/components/RecommendationAlert";
 
 interface ScopeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  year: number;
-  month?: number;
-  userId: string;
+  data: EmissionData | null;
+  thresholds: { scope: string; value: number; description: string }[];
+  exceedingScopes: string[];
+  onViewRecommendations: (scopes: string[]) => void;
+  year: number | string | null;
+  month: number | string | null;
 }
-
-interface Equipment {
-  fuelEmissions: number;
-  electricityEmissions: number;
-}
-
-interface Livestock {
-  emissions: number;
-}
-
-interface Waste {
-  emissions: number;
-}
-
-interface Crop {
-  totalEmissions: number;
-}
-
-interface EmissionData {
-  equipment: Equipment[];
-  livestock: Livestock[];
-  waste: Waste[];
-  crops: Crop[];
-}
-
-interface EmissionsData {
-  equipment: Array<{
-    fuelEmissions: number;
-    electricityEmissions: number;
-  }>;
-  livestock: Array<{
-    emissions: number;
-  }>;
-  waste: Array<{
-    emissions: number;
-  }>;
-  crops: Array<{
-    totalEmissions: number;
-  }>;
-}
-
-export const calculateScope1 = (data: EmissionData): number => {
-  const fuelEmissions = data.equipment.reduce(
-    (sum, eq) => sum + eq.fuelEmissions,
-    0
-  );
-  const livestockEmissions = data.livestock.reduce(
-    (sum, item) => sum + item.emissions,
-    0
-  );
-  return fuelEmissions + livestockEmissions;
-};
-
-export const calculateScope2 = (data: EmissionData): number => {
-  return data.equipment.reduce((sum, eq) => sum + eq.electricityEmissions, 0);
-};
-
-export const calculateScope3 = (data: EmissionData): number => {
-  const wasteEmissions = data.waste.reduce(
-    (sum, item) => sum + item.emissions,
-    0
-  );
-  const cropEmissions = data.crops.reduce(
-    (sum, item) => sum + item.totalEmissions,
-    0
-  );
-  return wasteEmissions + cropEmissions;
-};
 
 const ScopeModal = ({
   isOpen,
   onClose,
+  data,
+  exceedingScopes,
+  onViewRecommendations,
   year,
   month,
-  userId,
 }: ScopeModalProps) => {
-  const [data, setData] = useState<EmissionsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const url = `/api/dashboards/popup/${userId}?year=${year}${
-          month ? `&month=${month}` : ""
-        }`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Failed to fetch data");
-        const json = await response.json();
-        if (json.success) {
-          setData(json.data);
-        } else {
-          throw new Error("Invalid data received");
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (isOpen) {
-      fetchData();
-    }
-  }, [isOpen, userId, year, month]);
-
-  if (!isOpen) return null;
-
-  if (loading) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 flex items-center space-x-2">
-          <Loader2 className="animate-spin" />
-          <span>Loading emissions data...</span>
-        </div>
-      </div>
-    );
+  if (!isOpen || !data) {
+    return null;
   }
 
-  if (error || !data) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6">
-          <h2 className="text-xl font-bold text-red-600">Error</h2>
-          <p className="mt-2">{error || "Failed to load emissions data"}</p>
-          <button
-            onClick={onClose}
-            className="mt-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    );
-  }
+  console.log("ScopeModal opened with data:", data);
 
-  const scope1Value = calculateScope1(data);
-  const scope2Value = calculateScope2(data);
-  const scope3Value = calculateScope3(data);
-  const totalEmissions = scope1Value + scope2Value + scope3Value;
+  // Convert year and month to numbers or use defaults
+  const displayYear = year ? Number(year) : new Date().getFullYear();
+  const displayMonth = month ? Number(month) : undefined;
+
+  // Add safety checks for scope calculations
+  const scope1 = Number(calculateScope1(data)) || 0;
+  const scope2 = Number(calculateScope2(data)) || 0;
+  const scope3 = Number(calculateScope3(data)) || 0;
+
+  console.log("Scope 1 value:", scope1);
+  console.log("Scope 2 value:", scope2);
+  console.log("Scope 3 value:", scope3);
+
+  const totalEmissions = scope1 + scope2 + scope3 || 0;
 
   const scopeData = [
     {
       name: "Scope 1",
-      value: scope1Value,
-      description: "Direct emissions from FUEL and LIVESTOCK",
+      value: scope1,
+      description: "Direct emissions from owned or controlled sources",
     },
     {
       name: "Scope 2",
-      value: scope2Value,
-      description: "Indirect emissions from purchased ELECTRICITY",
+      value: scope2,
+      description: "Indirect emissions from purchased electricity",
     },
     {
       name: "Scope 3",
-      value: scope3Value,
-      description: "Other indirect emissions from WASTE and CROP management",
+      value: scope3,
+      description: "All other indirect emissions in value chain",
     },
-  ];
+  ].filter((item) => item.value > 0);
 
   const COLORS = ["#4ade80", "#60a5fa", "#f472b6"];
 
@@ -190,13 +89,29 @@ const ScopeModal = ({
 
         <div className="mb-3">
           <h2 className="text-xl font-bold">
-            Carbon Emissions Breakdown {year}
-            {month ? `/${month}` : ""}
+            Carbon Emissions Breakdown {displayYear}
+            {displayMonth ? `/${displayMonth}` : ""}
           </h2>
-          <p className="text-gray-600 mt-1">
-            Total emissions: {totalEmissions.toFixed(2)} KG CO2e
-          </p>
+          {totalEmissions > 0 ? (
+            <p className="text-gray-600 mt-1">
+              Total emissions: {totalEmissions.toFixed(2)} KG CO2e
+            </p>
+          ) : (
+            <p className="text-gray-500 mt-1">No emissions data available</p>
+          )}
         </div>
+
+        {exceedingScopes.length > 0 && (
+          <div className="mb-4 p-3 bg-red-50 rounded-lg">
+            <AlertTriangle className="inline-block text-red-500 mr-2" />
+            <span>Exceeding thresholds in: {exceedingScopes.join(", ")}</span>
+          </div>
+        )}
+
+        <RecommendationAlert
+          exceedingScopes={exceedingScopes}
+          onViewRecommendations={onViewRecommendations}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
           {scopeData.map((scope, index) => (
@@ -215,27 +130,33 @@ const ScopeModal = ({
           ))}
         </div>
 
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={scopeData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {scopeData.map((entry, index) => (
-                  <Cell key={entry.name} fill={COLORS[index]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value: number) => value.toFixed(2)} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+        {scopeData.length > 0 ? (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={scopeData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {scopeData.map((entry, index) => (
+                    <Cell key={entry.name} fill={COLORS[index]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => value.toFixed(2)} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="h-64 flex items-center justify-center text-gray-500">
+            No scope data available to display
+          </div>
+        )}
 
         <div className="mt-2 space-y-4">
           <div>
@@ -244,10 +165,12 @@ const ScopeModal = ({
               {scopeData.map((scope, index) => (
                 <div
                   key={scope.name}
-                  className="flex hover:bg-gray-50 rounded-lg"
+                  className="flex hover:bg-gray-50 rounded-lg p-2"
                 >
-                  <span className="font-semibold text-gray-800 text-lg">{scope.name}:</span>
-                  <span 
+                  <span className="font-semibold text-gray-800 text-lg">
+                    {scope.name}:
+                  </span>
+                  <span
                     className="font-semibold text-lg ml-2"
                     style={{ color: COLORS[index] }}
                   >
