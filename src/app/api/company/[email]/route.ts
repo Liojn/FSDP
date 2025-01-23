@@ -16,6 +16,7 @@ export async function GET(request: NextRequest, { params }: { params: { email: s
         name: 1,
         email: 1,
         password: 1,
+        carbonCredits: 1,
       }).toArray();
 
       return NextResponse.json(user, { status: 200 });

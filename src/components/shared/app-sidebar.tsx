@@ -36,6 +36,7 @@ import {
   Medal,
   PencilLine,
   Coins,
+  Store,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -45,6 +46,7 @@ const navigationItems = [
   { title: "Prediction", url: "/prediction", icon: ChartColumn },
   { title: "Badges", url: "/badges", icon: Medal },
   { title: "Campaign", url: "/campaign", icon: PencilLine },
+  { title: "Store", url: "/store", icon: Store },
 ];
 
 const recommendationItems = [
