@@ -2,13 +2,18 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function Login() {
+export default function Login({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
   const [email, setEmail] = useState("");
   console.log(email);
   const [password, setPassword] = useState("");
@@ -22,32 +27,38 @@ export default function Login() {
     setMessage(reset);
     setLoading(true);
 
-    const response = await fetch("/api/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const data = await response.json();
-    setLoading(false);
-    
-    if (response.ok) {
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("userName", data.name);
-      localStorage.setItem("userEmail", email);
-      setMessage("Sign in successful!");
-      console.log("Token:", data.token);
+      const data = await response.json();
+      setLoading(false);
 
-      const userId = await fetchUserId();
-      console.log(userId);
-      localStorage.setItem("userId", userId);
+      if (response.ok) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userName", data.name);
+        localStorage.setItem("userEmail", email);
+        setMessage("Sign in successful!");
+        console.log("Token:", data.token);
 
-      // Redirect to a protected page, e.g., dashboard
-      router.push("/dashboards");
-    } else {
-      setMessage(data.message);
+        const userId = await fetchUserId();
+        console.log(userId);
+        localStorage.setItem("userId", userId || "");
+
+        // Redirect to a protected page, e.g., dashboard
+        router.push("/dashboards");
+      } else {
+        setMessage(data.message);
+      }
+    } catch (error) {
+      setLoading(false);
+      setMessage("An unexpected error occurred. Please try again.");
+      console.error("Login error:", error);
     }
   };
 
@@ -70,66 +81,85 @@ export default function Login() {
       }
     } catch (err) {
       console.error("Error fetching user ID:", err);
+      return "";
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-cover bg-center"
-      style={{ backgroundImage: "url('/landing-background.png')" }}
-    >
-      <Card className="w-full max-w-sm bg-white backdrop-blur-lg rounded-lg">
-        <CardHeader>
-          <h1 className="text-2xl font-bold text-center text-green-800">Login</h1>
-          {message && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertDescription>{message}</AlertDescription>
-            </Alert>
-          )}
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmission}>
-            <div className="space-y-4">
-              <div className="">
-                <Label htmlFor="email" className="text-green-800">Email</Label>
-                <Input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  required
-                  className="placeholder-green-400"
+    <div className="flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">
+      <div className="w-full max-w-sm md:max-w-4xl">
+        <div className={cn("flex flex-col gap-6", className)} {...props}>
+          <Card className="overflow-hidden">
+            <CardContent className="grid p-0 md:grid-cols-2">
+              <form className="p-6 md:p-8" onSubmit={handleSubmission}>
+                <div className="flex flex-col gap-6">
+                  <div className="flex flex-col items-center text-center">
+                    <h1 className="text-2xl font-bold">Welcome back</h1>
+                    <p className="text-balance text-muted-foreground">
+                      Login to your EcoVolt account
+                    </p>
+                  </div>
+                  {message && (
+                    <Alert
+                      variant={
+                        message === "Sign in successful!"
+                          ? "default"
+                          : "destructive"
+                      }
+                      className="mt-4"
+                    >
+                      <AlertDescription>{message}</AlertDescription>
+                    </Alert>
+                  )}
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="johndoe@gmail.com"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Input
+                      id="password"
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? "Logging in..." : "Login"}
+                  </Button>
+
+                  <div className="text-center text-sm pt-6">
+                    Don&apos;t have an account?{" "}
+                    <a href="/signup" className="underline underline-offset-4 ">
+                      Sign up
+                    </a>
+                  </div>
+                </div>
+              </form>
+              <div className="relative hidden bg-muted md:block">
+                <Image
+                  src="/landing-background.png"
+                  width={500}
+                  height={600}
+                  alt="Image"
+                  className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
                 />
               </div>
-              <div className="">
-                <Label htmlFor="password" className="text-green-800">Password</Label>
-                <Input
-                  type="password"
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  className="placeholder-green-400"
-                />
-              </div>
-              <Button 
-                type="submit" 
-                className="w-full"
-                disabled={loading} // Disable button when loading
-              >
-                {loading ? 'Logging in...' : 'Login'}
-              </Button>
-              <p className="mt-4 text-sm text-gray-600 text-center">
-                Don&apos;t have an account?{" "}
-                <a href="/signup" className="text-blue-500">
-                  Sign Up
-                </a>
-              </p>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+          <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">
+            By clicking continue, you agree to our Terms of Service and Privacy
+            Policy.
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
