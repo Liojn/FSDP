@@ -27,6 +27,7 @@ interface LivestockItem {
 interface CropsItem {
   fertilizer_amt_used_kg?: number;
   area_planted_ha?: number;
+  status?: string;
 }
 
 interface WasteItem {
@@ -131,7 +132,11 @@ export async function POST(req: Request) {
         monthlyData.crops[month] = cropsData.reduce((sum: number, item: CropsItem) => {
           const fertilizerEmissions = (item.fertilizer_amt_used_kg || 0) * (emissionRates.crops_emissions.nitrogen_fertilizer || 0);
           const soilEmissions = (item.area_planted_ha || 0) * (emissionRates.soil_emissions || 0);
-          return sum + fertilizerEmissions + soilEmissions;
+          let slash_emit = 0;
+          if (item.status === "Land Preparation"){
+            slash_emit = (19800 * (item.area_planted_ha || 0)); //1.98kg / m^2 = 19800 kg /ha
+          }
+          return sum + fertilizerEmissions + soilEmissions + slash_emit;
         }, 0);
 
         monthlyData.waste[month] = wasteData.reduce((sum: number, item: WasteItem) => {
@@ -139,7 +144,7 @@ export async function POST(req: Request) {
         }, 0);
 
         const totalEmissions = monthlyData.equipment[month] + monthlyData.livestock[month] +
-                             monthlyData.crops[month] + monthlyData.waste[month];
+        monthlyData.crops[month] + monthlyData.waste[month];
         monthlyData.totalMonthlyEmissions[month] = totalEmissions;
         monthlyData.netMonthlyEmissions[month] = totalEmissions - monthlyForestOffset;
 
