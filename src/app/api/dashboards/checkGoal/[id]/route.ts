@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import  connectToDatabase  from '@/../dbConfig'
-const { ObjectId } = require('mongodb');
+import { ObjectId } from 'mongodb';
 
-type User = {
-  _id: {
-    $oid: string; // MongoDB ObjectId in string format
-  };
-  emissionGoal: EmissionGoal[]; // Array of emission goals for different years
-};
 type EmissionGoal = {
   year: number;
   target: number;
@@ -70,7 +64,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             firstYearGoal: null
         });
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "An error occurred while fetching data" }, { status: 500 });
     }
 }

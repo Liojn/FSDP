@@ -1,7 +1,11 @@
 // Enum for Category Type
 export enum CategoryType {
-  OVERALL = "overall",
-  // Add other categories as needed
+  OVERALL = "Overall",
+  ENERGY = "Energy",
+  WASTE = "Waste",
+  CROPS = "Crops",
+  LIVESTOCK = "Livestock",
+  CUSTOM = "Custom", // Placeholder for dynamic categories
 }
 
 // Recommendation Type with fully optional fields
@@ -15,14 +19,36 @@ export interface Recommendation {
   estimatedEmissionReduction: number;
   priorityLevel: string;
   implementationSteps: string[];
-  estimatedROI: number;
   status: string;
   difficulty: string;
-  estimatedCost: number;
   estimatedTimeframe: string;
   relatedMetrics?: string[];
-  dashboardLink?: string;
 }
+
+export interface TrackingRecommendation extends Recommendation {
+  // Override status with narrower type if you wish
+  status: "Not Started" | "In Progress" | "Completed";
+
+  // New fields for tracking
+  progress: number;
+  trackingImplementationSteps: ImplementationStep[];
+  completedSteps: number;
+  notes: Note[];
+}
+
+
+export interface Note {
+  id: string;
+  content: string;
+  timestamp: string;
+}
+
+export interface ImplementationStep {
+  id: string;
+  step: string;
+  complete: boolean;
+}
+
 
 // Threshold Data Interface
 export interface ThresholdData {
@@ -43,6 +69,24 @@ export interface EmissionData {
   timestamp?: Date;
 }
 
+export interface WeatherData {
+  _id: {
+    $oid: string;
+  };
+  date: string;
+  temperature: number;
+  rainfall: number;
+  wind_speed: number;
+  location: string;
+}
+
+// Recommendation Response Data Interface
+export interface ResponseData {
+  metrics: MetricData;
+  weatherData: WeatherData;
+  recommendations?: Recommendation[];
+}
+
 // Recommendation Card Props
 export interface RecommendationCardProps {
   rec: Recommendation;
@@ -52,6 +96,7 @@ export interface RecommendationCardProps {
 
 // Metric Data Type (based on previous context)
 export interface MetricData {
+  userId: string;
   energy: {
     consumption: number;
     previousYearComparison: number;

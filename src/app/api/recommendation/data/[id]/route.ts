@@ -1,27 +1,154 @@
+// recommendation/data/[id]/route.ts
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ObjectId } from 'mongodb';
-import { MetricData } from "@/types";
+import { MetricData, ResponseData} from "@/types";
 import connectToDatabase from "dbConfig";
 import { NextRequest, NextResponse } from 'next/server';
+import { saveRecommendationUpdates } from '@/services/recommendationService';
 
-// Define a dynamic route handler that takes a `userId` parameter
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  console.log('GET Request Parameters:', {
+    id: params.id,
+    scopes: request.nextUrl.searchParams.get("scopes")
+  });
+
   const { id } = params;
-  
-  // Validate `id` as a valid MongoDB ObjectId
-  if (!ObjectId.isValid(id)) {
-    return NextResponse.json({ error: 'Invalid User ID format' }, { status: 400 });
-  }
+  const scopesParam = request.nextUrl.searchParams.get("scopes");
+  const scopes = scopesParam ? scopesParam.split(",").filter(Boolean) : [];
+
+
+if (!ObjectId.isValid(id)) {
+  console.warn(`Invalid User ID format: ${id}`);
+  return NextResponse.json(
+    { error: `Invalid User ID format: ${id}` },
+    { status: 400 }
+  );
+}
 
   try {
-    // Fetch metrics using `getMetrics` function
-    const metrics = await getMetrics(id);
-    return NextResponse.json(metrics);
+    console.log('Connecting to database...');
+    const db = await connectToDatabase.connectToDatabase();
+    console.log('Database connected successfully');
+
+    console.log('Fetching metrics and weather data...');
+    // Fetch metrics and weather data
+    const [metrics, weatherData] = await Promise.all([
+      getMetrics(id),
+      fetchWeatherData(),
+    ]);
+    console.log('Metrics and weather data fetched:', { 
+      metricsReceived: !!metrics,
+      weatherDataReceived: !!weatherData 
+    });
+
+    console.log('Querying recommendations with scopes:', scopes);
+    // Fetch recommendations from the database based on userId and scopes
+    const recommendationsCollection = db.collection("recommendations");
+    const recommendations = await recommendationsCollection.findOne({
+      userId: id,
+      ...(scopes.length > 0 && { scopes: { $all: scopes } }),
+    });
+    console.log('Recommendations found:', !!recommendations);
+
+    const responseData: ResponseData = { metrics, weatherData };
+    if (recommendations) {
+      responseData.recommendations = recommendations.recommendations;
+    }
+    console.log('Sending response with data:', {
+      hasMetrics: !!responseData.metrics,
+      hasWeather: !!responseData.weatherData,
+      hasRecommendations: !!responseData.recommendations
+    });
+
+    return NextResponse.json(responseData);
   } catch (error) {
-    console.error("Error fetching data:", error); // Log detailed error
-    return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 });
+    console.error("Error in GET request:", error);
+    return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
   }
 }
+
+// recommendation/data/[id]/route.ts
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
+  try {
+    const recommendationId = params.id; // ID of the recommendation to update
+    const body = await req.json(); // Request body contains partial updates
+
+    const { userId, newStep, ...updates } = body;
+
+    if (!userId || !recommendationId) {
+      return NextResponse.json(
+        { error: "Missing userId or recommendationId" },
+        { status: 400 }
+      );
+    }
+
+    const db = await connectToDatabase.connectToDatabase();
+    const recommendationsCollection = db.collection("recommendations");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateOperations: any = { $set: {}, $push: {} };
+
+    // Add general updates to $set
+    Object.keys(updates).forEach((key) => {
+      updateOperations.$set[`recommendations.$[elem].${key}`] = updates[key];
+    });
+
+    // Append new step if provided
+    if (newStep) {
+      updateOperations.$push["recommendations.$[elem].trackingImplementationSteps"] = newStep;
+    }
+
+    // Clean up empty operations
+    if (Object.keys(updateOperations.$set).length === 0) delete updateOperations.$set;
+    if (Object.keys(updateOperations.$push).length === 0) delete updateOperations.$push;
+
+    // Perform the update
+    const updateResult = await recommendationsCollection.updateOne(
+      { userId },
+      updateOperations,
+      { arrayFilters: [{ "elem.id": recommendationId }] }
+    );
+
+    if (!updateResult.matchedCount) {
+      return NextResponse.json(
+        { error: "No matching recommendation found for this user" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: "Recommendation updated successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error updating recommendation:", error);
+    return NextResponse.json(
+      { error: "Failed to update recommendation" },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+
+async function fetchWeatherData() {
+  try {
+    const db = await connectToDatabase.connectToDatabase();
+    const collection = db.collection("IndonesiaWeather");
+    return await collection.find({}).toArray();
+  } catch (error) {
+    console.error("Error fetching weather data:", error);
+    return [];
+  }
+}
+
+
+
 
 // Helper function to fetch and calculate metrics based on userId
 async function getMetrics(userId: string): Promise<MetricData> {
@@ -87,6 +214,7 @@ async function getMetrics(userId: string): Promise<MetricData> {
       (emissionRates?.waste_emissions?.[wasteData?.waste_type?.toLowerCase()] || 0);
 
     return {
+      userId,
       energy: {
         consumption: currentEnergyConsumption,
         previousYearComparison: Number(energyComparison.toFixed(2))
