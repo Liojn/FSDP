@@ -68,12 +68,33 @@ const AppSidebar = React.memo(function AppSidebar() {
     storeCurrency: 0,
   });
 
-  useEffect(() => {
-    setUserData({
-      name: localStorage.getItem("userName") || "Placeholder Name",
-      email: localStorage.getItem("userEmail") || "guest@example.com",
-      storeCurrency: parseInt(localStorage.getItem("storeCurrency") || "0", 10),
-    });
+useEffect(() => {
+  const fetchUserData = async () => {
+    const storedEmail = localStorage.getItem("userEmail");
+    if (storedEmail) {
+      try {
+        const response = await fetch(`/api/company/${storedEmail}`);
+        if (response.ok) {
+          const userData = await response.json();
+          setUserData({
+            name: userData.name || "Placeholder Name",
+            email: userData.email || "guest@example.com",
+            storeCurrency: userData.carbonCredits || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch user data:", error);
+        // Fallback to local storage if fetch fails
+        setUserData({
+          name: localStorage.getItem("userName") || "Placeholder Name",
+          email: localStorage.getItem("userEmail") || "guest@example.com",
+          storeCurrency: parseInt(localStorage.getItem("storeCurrency") || "0", 10),
+        });
+      }
+    }
+  };
+
+  fetchUserData();
   }, []);
 
   const handleLogout = useCallback(async () => {
