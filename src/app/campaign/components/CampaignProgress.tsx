@@ -30,11 +30,11 @@ export default function CampaignProgress({
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <p className="text-sm text-gray-500">Current Progress</p>
-          <p className="text-2xl font-bold ">{formattedCurrent} tons</p>
+          <p className="text-2xl font-bold ">{formattedCurrent} (kg CO₂e) </p>
         </div>
         <div className="text-right">
           <p className="text-sm text-gray-500">Target Reduction</p>
-          <p className="text-2xl font-bold ">{formattedTarget} tons</p>
+          <p className="text-2xl font-bold ">{formattedTarget} (kg CO₂e)</p>
         </div>
       </div>
       {/* Progress bar */}

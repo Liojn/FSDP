@@ -741,7 +741,7 @@ export function TrackingCard({
 
           <div>
             <p className="text-sm font-medium text-gray-500 mb-1">
-              Estimated Emission Reduction (kg CO₂e)
+              Estimated Emission Reduction (kg CO₂e) / Year
             </p>
             {editMode ? (
               <Input
