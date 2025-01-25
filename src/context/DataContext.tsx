@@ -40,6 +40,7 @@ interface DataContextType {
   setData: (data: MonthlyData) => void;
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
+  setError: (error: boolean) => void;
 }
 
 const PROJECTION_YEARS = 100; // keep graph to show maximum of 100 years, prevent over cluttering of graph
