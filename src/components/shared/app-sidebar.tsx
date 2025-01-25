@@ -31,6 +31,7 @@ import {
   ChartColumn,
   ChevronsUpDown,
   ClipboardList,
+  Handshake,
   LayoutDashboard,
   Lightbulb,
   LogOut,
