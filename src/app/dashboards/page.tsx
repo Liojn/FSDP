@@ -2,7 +2,9 @@
 
 import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Flame, Leaf, Loader2, Zap } from "lucide-react";
+import { Flame, Leaf, Loader2, Zap, Calendar, AlertTriangle, Sprout, Thermometer } from "lucide-react";
+
+
 import {
   Select,
   SelectContent,
@@ -15,6 +17,8 @@ import { MetricCard } from "@/components/shared/metric-card";
 import CarbonEmissionChart from "@/app/dashboards/charts/carbonEmissionChart";
 import GaugeChartComponent from "@/app/dashboards/charts/gaugeGoal";
 import EmissionCategoryChart from "@/app/dashboards/charts/emissionCategory";
+import ElectricityConsumptionChart from "@/app/dashboards/charts/electricityTopChart";
+
 import Modal from "@/app/dashboards/popup/modal";
 import ScopeModal from "@/app/dashboards/popup/scopeModal";
 import ThresholdSettings from "@/app/dashboards/components/ThresholdSettings";
@@ -56,6 +60,8 @@ const DashboardPage = () => {
     categoryEmissionsData,
     metricsData,
     exceedingScopes,
+    machineryData, //just added
+    calendarData, //just added
     handleYearFilterChange,
     handleMonthClick,
   } = useDashboardData();
@@ -74,6 +80,130 @@ const DashboardPage = () => {
   const [clickedMonthIndex, setClickedMonthIndex] = useState<number | null>(
     null
   );
+
+  const cropData = [ 
+  {  
+    month: 'Jan',  
+    phase: 'Harvesting',  
+    burnRisk: 'Low',
+    temperature: 27,
+    crops: [ 
+      { type: 'Rice' }, 
+      { type: 'Corn' } 
+    ] 
+  }, 
+  {  
+    month: 'Feb',  
+    phase: 'Land Preparation',  
+    burnRisk: 'High',
+    temperature: 28,
+    crops: [ 
+      { type: 'Rice' }, 
+      { type: 'Cassava' } 
+    ] 
+  }, 
+  {  
+    month: 'Mar',  
+    phase: 'Planting',  
+    burnRisk: 'Low',
+    temperature: 29,
+    crops: [ 
+      { type: 'Rice' }, 
+      { type: 'Cassava' } 
+    ] 
+  }, 
+  {  
+    month: 'Apr',  
+    phase: 'Growing',  
+    burnRisk: 'Low',
+    temperature: 30,
+    crops: [ 
+      { type: 'Rice' }, 
+      { type: 'Cassava' } 
+    ] 
+  }, 
+  {  
+    month: 'May',  
+    phase: 'Growing',  
+    burnRisk: 'Low',
+    temperature: 29.5,
+    crops: [ 
+      { type: 'Rice' }, 
+      { type: 'Cassava' } 
+    ] 
+  }, 
+  {  
+    month: 'Jun',  
+    phase: 'Harvesting',  
+    burnRisk: 'Medium',
+    temperature: 28.5,
+    crops: [ 
+      { type: 'Rice' }, 
+      { type: 'Palm Oil' } 
+    ] 
+  }, 
+  {  
+    month: 'Jul',  
+    phase: 'Land Preparation',  
+    burnRisk: 'High',
+    temperature: 28,
+    crops: [ 
+      { type: 'Rice' }, 
+      { type: 'Sugarcane' } 
+    ] 
+  }, 
+  {  
+    month: 'Aug',  
+    phase: 'Planting',  
+    burnRisk: 'Low',
+    temperature: 28,
+    crops: [ 
+      { type: 'Rice' }, 
+      { type: 'Sugarcane' } 
+    ] 
+  }, 
+  {  
+    month: 'Sep',  
+    phase: 'Growing',  
+    burnRisk: 'Low',
+    temperature: 27.5,
+    crops: [ 
+      { type: 'Rice' }, 
+      { type: 'Sugarcane' } 
+    ] 
+  }, 
+  {  
+    month: 'Oct',  
+    phase: 'Growing',  
+    burnRisk: 'Low',
+    temperature: 27,
+    crops: [ 
+      { type: 'Rice' }, 
+      { type: 'Sugarcane' } 
+    ] 
+  }, 
+  {  
+    month: 'Nov',  
+    phase: 'Harvesting',  
+    burnRisk: 'Medium',
+    temperature: 26.5,
+    crops: [ 
+      { type: 'Rice' }, 
+      { type: 'Sugarcane' } 
+    ] 
+  },
+  {  
+    month: 'Dec',  
+    phase: 'Harvesting',  
+    burnRisk: 'Low',
+    temperature: 26.5,
+    crops: [ 
+      { type: 'Rice' }, 
+      { type: 'Sugarcane' } 
+    ] 
+  }
+  ]; 
+
 
   // Only show loading screen on initial load
   if (initialLoading || !userId) {
@@ -247,6 +377,7 @@ const DashboardPage = () => {
 
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metricsData.map((metric, index) => (
               <div
@@ -290,6 +421,7 @@ const DashboardPage = () => {
         </div>
 
         <div className="flex flex-col space-y-6">
+
           <div className="bg-white p-4 shadow-md rounded-lg h-60 flex flex-col">
             <h3 className="text-lg font-semibold text-gray-700 mb-4 flex-shrink-0">
               Emission Reduction Progress
@@ -328,6 +460,72 @@ const DashboardPage = () => {
             </div>
           </div>
         </div>
+
+      </div>
+      {/* New row with 2/5 - 3/5 split, for assg2 additional feature */}
+      <div className="grid grid-cols-5 gap-6">
+        {/* Left side (2/5) */}
+        <div className="col-span-5 md:col-span-2 bg-white p-4 shadow-md rounded-lg">
+          <h3 className="text-lg font-semibold text-gray-700 mb-4">
+            Top Electricity Consuming Machinery (kWh)
+          </h3>
+          <div className="h-64 flex justify-center items-center" style={{ height: '256px' }}>
+            <ElectricityConsumptionChart data={machineryData}/>
+          </div>
+        </div>
+        
+        {/* Right side (3/5) */}
+         <div className="col-span-5 md:col-span-3 bg-white p-4 shadow-md rounded-lg">
+          <h3 className="text-lg font-semibold text-gray-700 mb-4">
+            Crop Cycle Analysis
+          </h3>
+          <div className="h-64 overflow-y-auto">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {calendarData.map((month, index) => (
+                <div 
+                  key={index} 
+                  className="border rounded-lg p-3 hover:bg-gray-50 flex flex-col h-full"
+                >
+                  {/* Month Header */}
+                  <div className="border-b pb-2 mb-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span className="font-medium">{month.month}</span>
+                      </div>
+                      <div className={`flex items-center ${
+                        month.burnRisk === 'High' ? 'text-red-500' :
+                        month.burnRisk === 'Medium' ? 'text-yellow-500' :
+                        'text-green-500'
+                      }`}>
+                        {month.burnRisk === 'High' && <AlertTriangle className="h-4 w-4 mr-1" />}
+                        <span className="text-xs">{month.burnRisk}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-xs text-gray-600">{month.phase}</span>
+                      <div className="flex items-center text-xs text-gray-600">
+                        <Thermometer className="h-3 w-3 mr-1" />
+                        <span>{month.temperature}°C</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Crops List */}
+                  <div className="flex-1 space-y-2 text-sm">
+                    {month.crops.map((crop, cropIndex) => (
+                      <div key={cropIndex} className="flex items-center">
+                        <Sprout className="h-4 w-4 text-green-500 mr-1 flex-shrink-0" />
+                        <span className="font-medium">{crop.type}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        { /* end of the crop cycle analysis */}
       </div>
 
       {showModal && (

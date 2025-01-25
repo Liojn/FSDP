@@ -34,10 +34,30 @@ export interface EmissionsDataResponse {
   averageAbsorb: number;
 }
 
+//Top ranking of machinery consumed
+export interface EquipmentTopData{
+  name: string;
+  consumption: number;
+}
+
+//Interface for CropCycle Analysis
+type Crop = {
+  type: string;
+};
+export interface CropCalendarData{
+  month: string;
+  phase: string;
+  burnRisk: 'High' | 'Medium' | 'Low';
+  temperature: number;
+  crops: Crop[];
+};
+
 export interface MetricsUpdateParams {
   data: MetricsDataResponse | null;
   emissionsData: EmissionsDataResponse | null;
   previousEmissionsData: MetricsDataResponse | null;
   targetGoalData: TargetGoalResponse;
   emissionCategoryData: EmissionCategoryData[];
+  topEquipmentData: EquipmentTopData[];
+  cropCycleData: CropCalendarData[];
 }

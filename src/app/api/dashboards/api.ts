@@ -135,6 +135,58 @@ export const fetchEmissionCategory = async (companyId: string, year: number, mon
 
   } catch (error) {
     console.error("Error fetching category breakdown for carbon emission:", error);
-    return null; // You can return a default value if needed
+    return null; //return a default value
   }
 };
+
+//Function to get the top 3 machinery's electricity consumption
+export const fetchEquipmentTopThree = async (companyId: string, year: number, month: number | string) => {
+  try{
+    //Fetch data from the API
+    const response = await fetch(`/api/dashboards/electricityTop/${companyId}?year=${year}&month=${month}`,{
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+    // Check if the response is successful
+    if (!response.ok) {
+      throw new Error(`Error fetching data: ${response.statusText}`);
+    }
+
+    // Parse and return the JSON response
+    const data = await response.json();
+    return data;
+
+  }catch(error) {
+    console.error("Error fetching top 3 electricity consumption", error);
+    return null; 
+  }
+}
+
+
+//API to handle the crop cycle data
+//Function to get the top 3 machinery's electricity consumption
+export const fetchCropCycle = async (companyId: string, year: number, location: string) => {
+  try{
+    //Fetch data from the API
+    const response = await fetch(`/api/dashboards/cropcycle/${companyId}?year=${year}&location=${location}`,{
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+    // Check if the response is successful
+    if (!response.ok) {
+      throw new Error(`Error fetching data: ${response.statusText}`);
+    }
+
+    // Parse and return the JSON response
+    const data = await response.json();
+    return data;
+
+  }catch(error) {
+    console.error("Error fetching crop cycle data with weather comparison", error);
+    return null; 
+  }
+}
