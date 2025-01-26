@@ -3,24 +3,13 @@ import { PageHeader } from "@/components/shared/page-header";
 import { useData, MonthlyData } from "@/context/DataContext";
 import { useRef, useEffect } from "react";
 import NetZeroGraph from "./netZeroGraph/netZeroGraph";
-import EmissionsChart from "./predictionComponents/predictionGraph";
+import EmissionsChart from "./carbonNeutralGraph/predictionGraph";
 
-export interface UserGoals {
-  annualEmissionsTarget: number;
-  targetYear: number;
-  percentageReduction: number;
-}
-
-export const userGoals: UserGoals = {
-  annualEmissionsTarget: 10000,
-  targetYear: 2030,
-  percentageReduction: 50,
-};
 
 export default function PredictionPage() {
   const netZeroGraphRef = useRef<HTMLDivElement>(null);
   const emissionsChartRef = useRef<HTMLDivElement>(null);
-  const { setData, setIsLoading } = useData();
+  const { setData, setIsLoading, setError} = useData();
 
   useEffect(() => {
     const fetchHistoricalData = async () => {
@@ -74,14 +63,15 @@ export default function PredictionPage() {
 
         setData(combinedData); // Use setData from context
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        console.error(err);
+        setError(true);
       } finally {
         setIsLoading(false); // Use setIsLoading from context
       }
     };
 
     fetchHistoricalData();
-  }, []);
+  }, [setData, setError, setIsLoading]);
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -89,15 +79,11 @@ export default function PredictionPage() {
         <PageHeader title="Prediction" />
       </div>
       <div className="" ref={netZeroGraphRef}>
-        <NetZeroGraph userGoals={userGoals} />
+        <NetZeroGraph/>
       </div>
       <div className="" ref={emissionsChartRef}>
         <EmissionsChart />
       </div>
     </div>
   );
-}
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function setError(arg0: string) {
-  throw new Error("Function not implemented.");
 }
