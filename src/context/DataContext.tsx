@@ -198,6 +198,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     useState<CarbonNeutralAnalysis | null>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<boolean>(false); // Add this line
 
   React.useEffect(() => {
     if (data) {
@@ -205,6 +206,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setChartData(processedData);
       setCarbonNeutralAnalysis(analyzeCarbonNeutralYears(processedData));
       setIsLoading(false);
+      setError(false);
     }
   }, [data]);
 
@@ -217,6 +219,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         setData,
         isLoading,
         setIsLoading,
+        setError,
       }}
     >
       {children}

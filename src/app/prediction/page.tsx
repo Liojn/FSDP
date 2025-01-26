@@ -5,7 +5,6 @@ import { useRef, useEffect } from "react";
 import NetZeroGraph from "./netZeroGraph/netZeroGraph";
 import EmissionsChart from "./carbonNeutralGraph/predictionGraph";
 
-
 export default function PredictionPage() {
   const netZeroGraphRef = useRef<HTMLDivElement>(null);
   const emissionsChartRef = useRef<HTMLDivElement>(null);
@@ -79,7 +78,7 @@ export default function PredictionPage() {
         <PageHeader title="Prediction" />
       </div>
       <div className="" ref={netZeroGraphRef}>
-        <NetZeroGraph/>
+        <NetZeroGraph />
       </div>
       <div className="" ref={emissionsChartRef}>
         <EmissionsChart />
