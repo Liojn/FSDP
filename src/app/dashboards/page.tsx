@@ -33,6 +33,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MetricData } from "@/types";
 import useSWR from "swr";
+
+import { useThresholdCheck } from "@/app/dashboards/hooks/useThresholdCheck";
+import { ThresholdEmissionData } from "./types";
 import NetZeroGraph from "../prediction/netZeroGraph/netZeroGraph";
 import EmissionsChart from "../prediction/predictionComponents/predictionGraph";
 import html2canvas from 'html2canvas';
@@ -44,7 +47,7 @@ const DashboardPage = () => {
   const router = useRouter();
 
   const {
-    loading: initialLoading, // Renamed to be more specific
+    loading: initialLoading,
     yearFilter,
     yearOptions,
     selectedYear,
@@ -59,15 +62,36 @@ const DashboardPage = () => {
     firstYearGoal,
     categoryEmissionsData,
     metricsData,
-    exceedingScopes,
     handleYearFilterChange,
     handleMonthClick,
   } = useDashboardData();
+
+  const getMonthAsNumber = (
+    month: string | number | undefined
+  ): number | undefined => {
+    if (typeof month === "number") return month;
+    if (typeof month === "string") {
+      const parsed = parseInt(month, 10);
+      return isNaN(parsed) ? undefined : parsed;
+    }
+    return undefined;
+  };
+
+  const {
+    data: emissionsData,
+    thresholds: thresholdData,
+    exceedingScopes,
+  } = useThresholdCheck(
+    userId || "",
+    selectedYear || new Date().getFullYear(),
+    getMonthAsNumber(selectedMonth)
+  );
 
   const { data: metricsDataToUse } = useSWR<MetricData>(
     userId ? `/api/metrics/${userId}` : null,
     fetcher
   );
+
   const [showModal, setShowModal] = useState(false);
   const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -166,8 +190,16 @@ const DashboardPage = () => {
     router.push(`/recommendation?${query}`);
   };
 
+  if (initialLoading || !userId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
+      </div>
+    );
+  }
+
   const handleMonthSelection = (monthIndex: number) => {
-    setClickedMonthIndex(monthIndex === clickedMonthIndex? null: monthIndex);
+    setClickedMonthIndex(monthIndex === clickedMonthIndex ? null : monthIndex);
     handleMonthClick(monthIndex);
   };
 
@@ -308,7 +340,7 @@ const DashboardPage = () => {
                     setIsAlertDialogOpen(true);
                     handleGenerateReport();
                   }}
-                  className="bg-emerald-500 text-emerald-50 hover:bg-emerald-600 w-full md:w-auto"
+                  className="w-full md:w-auto"
                 >
                   Export Report to PDF
                 </Button>
@@ -347,12 +379,15 @@ const DashboardPage = () => {
           </div>
         </div>
       </div>
-
-      <RecommendationAlert
-        exceedingScopes={exceedingScopes}
-        onViewRecommendations={handleViewRecommendations}
-      />
-
+      {/* Add RecommendationAlert if there are exceeding scopes */}
+      {exceedingScopes && exceedingScopes.length > 0 && (
+        <div className="mb-4">
+          <RecommendationAlert
+            exceedingScopes={exceedingScopes}
+            onViewRecommendations={handleViewRecommendations}
+          />
+        </div>
+      )}
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -360,7 +395,9 @@ const DashboardPage = () => {
               <div
                 key={index}
                 onClick={() => {
+                  console.log("Clicked metric:", metric.title);
                   if (metric.title === "Total Net Carbon Emissions") {
+                    console.log("Opening ScopeModal...");
                     setIsScopeModalOpen(true);
                   }
                 }}
@@ -466,9 +503,12 @@ const DashboardPage = () => {
       <ScopeModal
         isOpen={isScopeModalOpen}
         onClose={() => setIsScopeModalOpen(false)}
-        year={selectedYear || new Date().getFullYear()}
-        month={typeof selectedMonth === "number" ? selectedMonth : undefined}
-        userId={userId || ""}
+        thresholds={thresholdData || []}
+        data={emissionsData as ThresholdEmissionData | null}
+        exceedingScopes={exceedingScopes}
+        onViewRecommendations={handleViewRecommendations}
+        year={selectedYear}
+        month={selectedMonth}
       />
 
 

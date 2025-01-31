@@ -4,7 +4,14 @@ import { ObjectId } from 'mongodb';
 import { MetricData, ResponseData} from "@/types";
 import connectToDatabase from "dbConfig";
 import { NextRequest, NextResponse } from 'next/server';
-import { saveRecommendationUpdates } from '@/services/recommendationService';
+
+// This code defines API routes for fetching, updating, and deleting recommendations in a sustainability management system. 
+// - The `GET` route retrieves a specific recommendation, combining it with metrics and weather data based on the given ID and optional scopes.
+// - The `DELETE` route removes a recommendation associated with a specific user ID.
+// - The `PUT` route updates a recommendation, with additional logic to update campaign progress if the status changes to "Completed".
+// - Helper functions `fetchWeatherData` and `getMetrics` fetch additional data (e.g., weather and metrics) to enrich the recommendation data.
+// - Metrics calculations incorporate data from multiple collections (e.g., Equipment, EmissionRates, Livestock, Crops, Waste), 
+// calculating emissions and comparing energy consumption year-over-year.
 
 
 export async function GET(
@@ -16,18 +23,17 @@ export async function GET(
     scopes: request.nextUrl.searchParams.get("scopes")
   });
 
-  const { id } = params;
+  const { id } = params; // This is the recommendation ID
   const scopesParam = request.nextUrl.searchParams.get("scopes");
   const scopes = scopesParam ? scopesParam.split(",").filter(Boolean) : [];
 
-
-if (!ObjectId.isValid(id)) {
-  console.warn(`Invalid User ID format: ${id}`);
-  return NextResponse.json(
-    { error: `Invalid User ID format: ${id}` },
-    { status: 400 }
-  );
-}
+  if (!ObjectId.isValid(id)) {
+    console.warn(`Invalid Recommendation ID format: ${id}`);
+    return NextResponse.json(
+      { error: `Invalid Recommendation ID format: ${id}` },
+      { status: 400 }
+    );
+  }
 
   try {
     console.log('Connecting to database...');
@@ -37,7 +43,7 @@ if (!ObjectId.isValid(id)) {
     console.log('Fetching metrics and weather data...');
     // Fetch metrics and weather data
     const [metrics, weatherData] = await Promise.all([
-      getMetrics(id),
+      getMetrics(id), // Ensure this function fetches metrics correctly
       fetchWeatherData(),
     ]);
     console.log('Metrics and weather data fetched:', { 
@@ -46,38 +52,127 @@ if (!ObjectId.isValid(id)) {
     });
 
     console.log('Querying recommendations with scopes:', scopes);
-    // Fetch recommendations from the database based on userId and scopes
+    // Fetch the document containing the recommendation
     const recommendationsCollection = db.collection("recommendations");
-    const recommendations = await recommendationsCollection.findOne({
-      userId: id,
+    const doc = await recommendationsCollection.findOne({
+      "recommendations.id": id,
       ...(scopes.length > 0 && { scopes: { $all: scopes } }),
     });
-    console.log('Recommendations found:', !!recommendations);
 
-    const responseData: ResponseData = { metrics, weatherData };
-    if (recommendations) {
-      responseData.recommendations = recommendations.recommendations;
+    if (!doc) {
+      console.log('No document found containing the recommendation.');
+      return NextResponse.json(
+        { metrics, weatherData, error: "No recommendation found" },
+        { status: 404 }
+      );
     }
+
+    // Extract the specific recommendation
+    const singleRec = doc.recommendations.find(
+      (r: { id: string }) => r.id === id
+    );
+
+    if (!singleRec) {
+      console.log('Recommendation not found within the document.');
+      return NextResponse.json(
+        { metrics, weatherData, error: "Recommendation not found" },
+        { status: 404 }
+      );
+    }
+
+    // Combine metrics, weatherData, and the single recommendation
+    const responseData = {
+      metrics,
+      weatherData,
+      recommendation: singleRec, // Return only the specific recommendation
+    };
+
     console.log('Sending response with data:', {
       hasMetrics: !!responseData.metrics,
       hasWeather: !!responseData.weatherData,
-      hasRecommendations: !!responseData.recommendations
+      hasRecommendation: !!responseData.recommendation
     });
 
-    return NextResponse.json(responseData);
+    return NextResponse.json(responseData, { status: 200 });
   } catch (error) {
     console.error("Error in GET request:", error);
     return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
   }
 }
 
-// recommendation/data/[id]/route.ts
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const { id } = params; // Recommendation ID
+  let body: { userId: string };
+
+  try {
+    body = await req.json();
+  } catch (error) {
+    console.error("Error parsing DELETE request body:", error);
+    return NextResponse.json(
+      { error: "Invalid JSON in request body" },
+      { status: 400 }
+    );
+  }
+
+  const { userId } = body;
+
+  // Validate input
+  if (!userId || !id) {
+    return NextResponse.json(
+      { error: "Missing userId or recommendationId" },
+      { status: 400 }
+    );
+  }
+
+  // Optional: Validate userId format
+  // If userId is stored as ObjectId in DB
+  // if (!ObjectId.isValid(userId)) {
+  //   return NextResponse.json(
+  //     { error: "Invalid userId format" },
+  //     { status: 400 }
+  //   );
+  // }
+
+  try {
+    const db = await connectToDatabase.connectToDatabase();
+    const recommendationsCollection = db.collection("recommendations");
+
+    // Perform the deletion using $pull
+    const deleteResult = await recommendationsCollection.updateOne(
+      { userId: userId }, // Use ObjectId(userId) if stored as ObjectId
+      { $pull: { recommendations: { id } } }
+    );
+
+    if (deleteResult.modifiedCount === 0) {
+      return NextResponse.json(
+        { error: "Recommendation not found or already deleted" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: "Recommendation deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error in DELETE request:", error);
+    return NextResponse.json(
+      { error: "Failed to delete recommendation" },
+      { status: 500 }
+    );
+  }
+}
+
+
+
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
-    const recommendationId = params.id; // ID of the recommendation to update
-    const body = await req.json(); // Request body contains partial updates
-
-    const { userId, newStep, ...updates } = body;
+    const recommendationId = params.id;
+    const body = await req.json();
+    const { userId, newStep, addToBothArrays, note, ...updates } = body;
 
     if (!userId || !recommendationId) {
       return NextResponse.json(
@@ -88,23 +183,55 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     const db = await connectToDatabase.connectToDatabase();
     const recommendationsCollection = db.collection("recommendations");
+    const campaignsCollection = db.collection("campaigns");
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updateOperations: any = { $set: {}, $push: {} };
+    const updateOperations: Record<string, any> = {};
 
-    // Add general updates to $set
+    // Handle updates
     Object.keys(updates).forEach((key) => {
+      if (!updateOperations.$set) updateOperations.$set = {};
       updateOperations.$set[`recommendations.$[elem].${key}`] = updates[key];
     });
 
-    // Append new step if provided
-    if (newStep) {
-      updateOperations.$push["recommendations.$[elem].trackingImplementationSteps"] = newStep;
+    // Handle notes and steps
+    if (note) {
+      if (!updateOperations.$push) updateOperations.$push = {};
+      updateOperations.$push["recommendations.$[elem].notes"] = note;
     }
 
-    // Clean up empty operations
-    if (Object.keys(updateOperations.$set).length === 0) delete updateOperations.$set;
-    if (Object.keys(updateOperations.$push).length === 0) delete updateOperations.$push;
+    if (newStep) {
+      if (!updateOperations.$push) updateOperations.$push = {};
+      updateOperations.$push["recommendations.$[elem].trackingImplementationSteps"] = newStep;
+      if (addToBothArrays) {
+        updateOperations.$push["recommendations.$[elem].implementationSteps"] = newStep.step;
+      }
+    }
+
+    // Validate operations
+    if (Object.keys(updateOperations).length === 0) {
+      return NextResponse.json(
+        { error: "No valid update operations provided" },
+        { status: 400 }
+      );
+    }
+
+    // Fetch the current recommendation to check for status changes
+    const existingDoc = await recommendationsCollection.findOne({ userId });
+    const existingRecommendation = existingDoc?.recommendations.find(
+      (rec: { id: string }) => rec.id === recommendationId
+    );
+
+    if (!existingRecommendation) {
+      return NextResponse.json(
+        { error: "Recommendation not found" },
+        { status: 404 }
+      );
+    }
+
+    const previousStatus = existingRecommendation.status;
+    const estimatedReduction = existingRecommendation.estimatedEmissionReduction || 0;
+    const alreadyCounted = existingRecommendation.countedInCampaign || false;
 
     // Perform the update
     const updateResult = await recommendationsCollection.updateOne(
@@ -115,13 +242,67 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     if (!updateResult.matchedCount) {
       return NextResponse.json(
-        { error: "No matching recommendation found for this user" },
+        { error: "No matching recommendation found" },
         { status: 404 }
       );
     }
 
+    // Check if the status changed to "Completed" and hasn't been counted yet
+    if (previousStatus !== "Completed" && updates.status === "Completed" && !alreadyCounted) {
+      const contributionAmount = estimatedReduction;
+
+      await db.collection('User').updateOne(
+        { _id: new ObjectId(userId) },
+        { 
+          $inc: { 
+            totalContributions: contributionAmount 
+          }
+        }
+      );
+      
+      // Find the active campaign
+      const activeCampaign = await campaignsCollection.findOne({ status: "Active" });
+
+      if (activeCampaign) {
+        const campaignId = activeCampaign._id;
+
+        // Update the campaign's progress
+        await campaignsCollection.updateOne(
+          { _id: campaignId },
+          {
+            $inc: { currentProgress: estimatedReduction },
+            $set: {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              milestones: activeCampaign.milestones.map((milestone: any) => {
+                if (
+                  !milestone.reached &&
+                  activeCampaign.currentProgress + estimatedReduction >=
+                    activeCampaign.targetReduction * (milestone.percentage / 100)
+                ) {
+                  return { ...milestone, reached: true, reachedAt: new Date() };
+                }
+                return milestone;
+              }),
+            },
+          }
+        );
+
+        // Mark the recommendation as counted
+        await recommendationsCollection.updateOne(
+          { userId, "recommendations.id": recommendationId },
+          { $set: { "recommendations.$.countedInCampaign": true } }
+        );
+      }
+    }
+
+    // Fetch and return the updated recommendation
+    const updatedRecommendation = await recommendationsCollection.findOne(
+      { userId },
+      { projection: { recommendations: { $elemMatch: { id: recommendationId } } } }
+    );
+
     return NextResponse.json(
-      { message: "Recommendation updated successfully" },
+      { message: "Recommendation updated successfully", recommendation: updatedRecommendation?.recommendations?.[0] },
       { status: 200 }
     );
   } catch (error) {
@@ -135,7 +316,6 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
 
 
-
 async function fetchWeatherData() {
   try {
     const db = await connectToDatabase.connectToDatabase();
@@ -146,9 +326,6 @@ async function fetchWeatherData() {
     return [];
   }
 }
-
-
-
 
 // Helper function to fetch and calculate metrics based on userId
 async function getMetrics(userId: string): Promise<MetricData> {
