@@ -55,6 +55,7 @@ type Crop = {
     company_id: { $oid: string };
     crop_type: string;
     area_planted_ha: number;
+    status: string;
     fertilizer_amt_used_kg: number,
     date: string; //string for direct access
     yield_tons: number;
@@ -128,8 +129,13 @@ const CalcluteEmissionsMonth = (equipmentData: Equipment[], livestockData: Lives
         const month = new Date(crop.date).getUTCMonth(); // Adjusted here
         if (month == givenMonth) {
             const fert_emit = crop.fertilizer_amt_used_kg * emissionData[0].crops_emissions["nitrogen_fertilizer"];
-            const soil_emit = crop.area_planted_ha * emissionData[0].crops_emissions["soil_emissions"];    
-            totalcrop_emit = (fert_emit + soil_emit);
+            const soil_emit = crop.area_planted_ha * emissionData[0].crops_emissions["soil_emissions"]; 
+            let slash_emit = 0;
+            //Extra, for land prep
+            if (crop.status === "Land Preparation"){
+                slash_emit += (19800 * crop.area_planted_ha); //1.98kg / m^2 = 19800 kg /ha
+            }
+            totalcrop_emit = (fert_emit + soil_emit + slash_emit);
             fert_amt = crop.fertilizer_amt_used_kg;
             crop_type = crop.crop_type;
         }
@@ -212,9 +218,14 @@ const CalculateNormal = (equipmentData: Equipment[], livestockData: Livestock[],
     let total_crop_emit = 0;
     for (const crop of cropsData) {
         //get crops emission
+        let slash_emit = 0;
+        //Extra, for land prep
+        if (crop.status === "Land Preparation"){
+            slash_emit += (19800 * crop.area_planted_ha); //1.98kg / m^2 = 19800 kg /ha
+        }
         const fert_emit = crop.fertilizer_amt_used_kg * emissionData[0].crops_emissions["nitrogen_fertilizer"];
         const soil_emit = crop.area_planted_ha * emissionData[0].crops_emissions["soil_emissions"];
-        total_crop_emit += (fert_emit + soil_emit);
+        total_crop_emit += (fert_emit + soil_emit + slash_emit);
     }
     
     let total_waste_emit = 0;
