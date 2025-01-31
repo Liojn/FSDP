@@ -2,23 +2,9 @@
 
 import { PageHeader } from "@/components/shared/page-header";
 import { useData, MonthlyData } from "@/context/DataContext";
-import { useRef, useEffect, useState, memo } from "react";
-import dynamic from "next/dynamic";
-import { Skeleton } from "@/components/ui/skeleton";
-
-// Define UserGoals interface
-export interface UserGoals {
-  annualEmissionsTarget: number;
-  targetYear: number;
-  percentageReduction: number;
-}
-
-// Define userGoals constant
-export const userGoals: UserGoals = {
-  annualEmissionsTarget: 10000,
-  targetYear: 2030,
-  percentageReduction: 50,
-};
+import { useRef, useEffect } from "react";
+import NetZeroGraph from "./netZeroGraph/netZeroGraph";
+import EmissionsChart from "./carbonNeutralGraph/predictionGraph";
 
 // Dynamically import components with skeleton fallback
 const NetZeroGraph = dynamic(() => import("./netZeroGraph/netZeroGraph"), {
@@ -41,10 +27,7 @@ const MemoizedEmissionsChart = memo(EmissionsChart);
 export default function PredictionPage() {
   const netZeroGraphRef = useRef<HTMLDivElement>(null);
   const emissionsChartRef = useRef<HTMLDivElement>(null);
-  const { setData, setIsLoading, isLoading } = useData();
-
-  // Local error state
-  const [error, setError] = useState<string | null>(null);
+  const { setData, setIsLoading, setError} = useData();
 
   useEffect(() => {
     const fetchHistoricalData = async () => {
@@ -110,21 +93,17 @@ export default function PredictionPage() {
             }
           });
         });
-
-        setData(combinedData);
-      } catch (err: Error | unknown) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "An error occurred while fetching data.";
-        setError(errorMessage);
+        setData(combinedData); // Use setData from context
+      } catch (err) {
+        console.error(err);
+        setError(true);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchHistoricalData();
-  }, [setData, setIsLoading]);
+  }, [setData, setError, setIsLoading]);
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -136,20 +115,8 @@ export default function PredictionPage() {
           <PageHeader title="Prediction" />
         )}
       </div>
-
-      {/* Error Message */}
-      {error && <div className="text-red-500">Error: {error}</div>}
-
-      {/* Net Zero Graph Section */}
-      <div ref={netZeroGraphRef}>
-        {isLoading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-64 w-full" />
-            <Skeleton className="h-64 w-full" />
-          </div>
-        ) : (
-          <MemoizedNetZeroGraph userGoals={userGoals} />
-        )}
+      <div className="" ref={netZeroGraphRef}>
+        <NetZeroGraph />
       </div>
 
       {/* Emissions Chart Section */}
