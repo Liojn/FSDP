@@ -130,6 +130,8 @@ function formatCropCycleData(cropData: Crop[], emissionRateData: EmissionsRate[]
             }
         }
     }
+    //Arrange by Jan to Dec
+    ReturnArray.sort((a, b) => monthlyArray.indexOf(a.month) - monthlyArray.indexOf(b.month));
     return ReturnArray;
 }
 

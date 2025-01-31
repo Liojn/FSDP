@@ -36,7 +36,7 @@ const ElectricityConsumptionChart: React.FC<ChartProps> = ({ data }) => {
       {
         label: 'Electricity Consumption (kWh)',
         data: data.map(item => item.consumption), // Map consumption values
-        backgroundColor: ['#0088FE', '#00C49F', '#FFBB28'], // Custom colors
+        backgroundColor: [ "#C0F58F", "#2BAEAB", "#F2D9A0"], // Custom colors
         borderRadius: 2,
         barThickness: 30,
       },

@@ -52,6 +52,7 @@ type Crop = {
     _id: { $oid: string };
     company_id: { $oid: string };
     crop_type: string;
+    status: string;
     area_planted_ha: number;
     fertilizer_amt_used_kg: number;
     date: string;
@@ -150,9 +151,14 @@ const calculateDetailedEmissions = (
         const matchesMonth = month === null || cropDate.getUTCMonth() === month;
 
         if (matchesMonth) {
+            let slash_emit = 0;
+            //Extra, for land prep
+            if (crop.status === "Land Preparation"){
+                slash_emit += (19800 * crop.area_planted_ha); //1.98kg / m^2 = 19800 kg /ha
+            }
             const fertEmission = crop.fertilizer_amt_used_kg * emissionData[0].crops_emissions["nitrogen_fertilizer"];
             const soilEmission = crop.area_planted_ha * emissionData[0].crops_emissions["soil_emissions"];
-            const totalCropEmission = fertEmission + soilEmission;
+            const totalCropEmission = fertEmission + soilEmission + slash_emit;
 
             emissions.crops.push({
                 date: crop.date,

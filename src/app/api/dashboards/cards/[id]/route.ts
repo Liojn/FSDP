@@ -59,7 +59,12 @@ const CalcluteCarbonEmission = (equipmentData: Equipment[], livestockData: Lives
         //get crops emission
         const fert_emit = crop.fertilizer_amt_used_kg * emissionData[0].crops_emissions["nitrogen_fertilizer"];
         const soil_emit = crop.area_planted_ha * emissionData[0].crops_emissions["soil_emissions"];
-        tempCrop += (fert_emit + soil_emit);
+        let slash_emit = 0;
+        //Extra, for land prep
+        if (crop.status === "Land Preparation"){
+            slash_emit += (19800 * crop.area_planted_ha); //1.98kg / m^2 = 19800 kg /ha
+        }
+        tempCrop += (fert_emit + soil_emit + slash_emit);
         //console.log(tempCrop); test code
     }
     //console.log("CROP"+ tempCrop);
@@ -134,6 +139,7 @@ type Crop = {
     _id: { $oid: string };
     company_id: { $oid: string };
     crop_type: string;
+    status: string;
     area_planted_ha: number;
     fertilizer_amt_used_kg: number,
     date: { $date: string };
