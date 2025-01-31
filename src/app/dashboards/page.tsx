@@ -34,7 +34,7 @@ import {
 import { MetricData } from "@/types";
 import useSWR from "swr";
 import NetZeroGraph from "../prediction/netZeroGraph/netZeroGraph";
-import EmissionsChart from "../prediction/predictionComponents/predictionGraph";
+import EmissionsChart from "../prediction/carbonNeutralGraph/predictionGraph";
 import html2canvas from 'html2canvas';
 import { useData, MonthlyData } from "@/context/DataContext";
 

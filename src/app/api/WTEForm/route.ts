@@ -3,35 +3,40 @@ import connectToDatabase from "dbConfig";
 
 export async function POST(req: Request) {
   try {
-    // Connect to the database
     const db = await connectToDatabase.connectToDatabase();
     
     // Get request body and headers
-    const { tracking_id, weight_tons } = await req.json();
+    const { tracking_id, weight_tons, waste_category, transport_mode } = await req.json();
     const userName = req.headers.get('userName');
 
-    // Validate required fields
-    if (!userName || !tracking_id || !weight_tons) {
+    // Enhanced validation
+    if (!userName || !tracking_id || !weight_tons || !waste_category || waste_category.length === 0) {
       return NextResponse.json({ 
-        error: 'Missing required fields (userName in headers, tracking_id and weight_tons in body)' 
+        error: 'Missing required fields' 
       }, { status: 400 });
     }
 
-    // Get company_id from User collection
+    // Validate weight_tons is positive
+    if (weight_tons <= 0) {
+      return NextResponse.json({ 
+        error: 'Weight must be greater than 0' 
+      }, { status: 400 });
+    }
+
+    // Get user and company info
     const user = await db.collection('User').findOne({ name: userName });
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Generate unique shipment_id
-    // Find the highest existing shipment number
+    // Generate shipment ID
     const lastShipment = await db.collection('WTEData')
       .find({}, { shipment_id: 1 })
       .sort({ shipment_id: -1 })
       .limit(1)
       .toArray();
 
-    let nextNumber = 2383; // Default starting number
+    let nextNumber = 2383;
     if (lastShipment.length > 0) {
       const lastNumber = parseInt(lastShipment[0].shipment_id.split('-')[1]);
       if (!isNaN(lastNumber)) {
@@ -40,15 +45,32 @@ export async function POST(req: Request) {
     }
     const shipment_id = `WTE-${nextNumber}`;
 
+    // Calculate energy generation based on waste type
+    let energyMultiplier = 433; // Base multiplier
+    if (waste_category.includes('organic')) energyMultiplier *= 1.2; // 20% more efficient
+    if (waste_category.includes('process')) energyMultiplier *= 1.1; // 10% more efficient
+    if (waste_category.includes('animal')) energyMultiplier *= 1.3; // 30% more efficient
     
-    // Create new WTE data document
+    const estimatedEnergyKwh = weight_tons * energyMultiplier;
+    
+    // Calculate carbon credits (1 credit per 100 kWh)
+    const carbonCredits = Math.floor(estimatedEnergyKwh / 100);
+    
+    // Create enhanced WTE data document
     const newWTEData = {
       company_id: user._id,
       shipment_id,
-      weight_tons: Number(weight_tons),
-      status: "In Progress",
-      date_sent: new Date(), // Store as Date object directly
       tracking_id,
+      weight_tons: Number(weight_tons),
+      waste_category,
+      transport_mode,
+      status: "In Progress",
+      date_sent: new Date(),
+      energy_generated_kwh: estimatedEnergyKwh,
+      rate_cents_per_kwh: 18.5, // Current Singapore electricity rate
+      total_energy_value_sgd: (estimatedEnergyKwh * 0.185), // Value in SGD
+      carbon_credits: carbonCredits,
+      compensation_sgd: (estimatedEnergyKwh * 0.185 * 0.3), // 30% compensation rate
     };
 
     // Insert into database
