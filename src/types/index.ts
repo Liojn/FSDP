@@ -229,7 +229,7 @@ export interface EmissionData {
   value: number;
   unit: string;
   timestamp?: Date;
-}
+} 
 
 
 

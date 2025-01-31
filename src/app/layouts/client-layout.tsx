@@ -14,13 +14,16 @@ export default function ClientLayout({
 
   // Modify the condition to exclude the root path (`/`) along with `/login` and `/signup` and `landing`
   const shouldShowSidebar =
-    pathname !== "/" && pathname !== "/login" && pathname !== "/signup" && pathname !== "/landing";
+    pathname !== "/" &&
+    pathname !== "/login" &&
+    pathname !== "/signup" &&
+    pathname !== "/landing";
 
   return (
     <SidebarProvider>
       {shouldShowSidebar && <AppSidebar />}
       <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto px-4 py-6">{children}</div>
+        <div className="mx-auto ">{children}</div>
       </main>
     </SidebarProvider>
   );

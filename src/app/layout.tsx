@@ -22,7 +22,6 @@ export default function RootLayout({
         className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}
       >
         <DataProvider>
-          {" "}
           {/* Wrap children with DataProvider */}
           <ClientLayout>{children}</ClientLayout>
           <Toaster />

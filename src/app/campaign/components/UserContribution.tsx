@@ -31,13 +31,13 @@ export default function UserContribution({
         <MetricCard
           title="Total Contribution"
           value={userContribution}
-          unit="tons"
+          unit="(kg CO₂e)"
           icon={<Trees className="text-green-500 w-6 h-6" />} // Lucide Tree Icon
         />
         <MetricCard
           title="Your Percentage of Goal Contribution"
           value={`${userContributionPercentage.toFixed(2)}%`}
-          unit={`of ${totalCampaignTarget.toLocaleString()} tons`}
+          unit={`of ${totalCampaignTarget.toLocaleString()} (kg CO₂e)`}
           icon={<Percent className="text-blue-500 w-6 h-6" />} // Lucide Percent Icon
         />
       </div>

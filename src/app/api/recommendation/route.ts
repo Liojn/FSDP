@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 // src/app/api/recommendation/route.ts
 
 import { NextResponse } from "next/server";
-import { Recommendation, MetricData, CategoryType } from "@/types";
+import { Recommendation, MetricData, CategoryType, WeatherData } from "@/types";
 import Anthropic from "@anthropic-ai/sdk";
 import connectToDatabase from "dbConfig";
 import { ObjectId } from "mongodb";
@@ -76,7 +76,7 @@ const determineWeatherRisk = (temperature: number, rainfall: number, windSpeed: 
 
 const generatePrompt = async (
   metrics: MetricData,
-  weatherData: any[],
+  weatherData: WeatherData[],
   scopes?: string[]
 ) => {
   const scopeEmissions = calculateScopeEmissions(metrics);
@@ -166,7 +166,7 @@ export async function POST(req: Request) {
   try {
     const { metrics, weatherData, scopes } = (await req.json()) as {
       metrics: MetricData;
-      weatherData: any[];
+      weatherData: WeatherData[];
       scopes?: string[];
     };
     console.log("Request payload:", { metrics, weatherData, scopes });
@@ -209,6 +209,7 @@ export async function POST(req: Request) {
       ],
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const assistantReply = (msg.content[0] as any).text;
     const parsedResponse = cleanAndParseJSON(assistantReply);
 
