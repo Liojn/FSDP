@@ -30,6 +30,8 @@ import {
   BadgeCheck,
   ChartColumn,
   ChevronsUpDown,
+  ClipboardList,
+  Handshake,
   LayoutDashboard,
   Lightbulb,
   LogOut,
@@ -47,6 +49,7 @@ const navigationItems = [
   { title: "Badges", url: "/badges", icon: Medal },
   { title: "Campaign", url: "/campaign", icon: PencilLine },
   { title: "Store", url: "/store", icon: Store },
+  { title: "WTE Operation", url: "/wasteToEnergy", icon: Handshake },
 ];
 
 const recommendationItems = [
