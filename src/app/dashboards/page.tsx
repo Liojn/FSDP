@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Flame, Leaf, Loader2, Zap } from "lucide-react";
 import {
@@ -33,6 +33,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MetricData } from "@/types";
 import useSWR from "swr";
+import NetZeroGraph from "../prediction/netZeroGraph/netZeroGraph";
+import EmissionsChart from "../prediction/predictionComponents/predictionGraph";
+import html2canvas from 'html2canvas';
+import { useData, MonthlyData } from "@/context/DataContext";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -74,6 +78,73 @@ const DashboardPage = () => {
   const [clickedMonthIndex, setClickedMonthIndex] = useState<number | null>(
     null
   );
+
+  // Create refs for invisible divs
+  const netZeroGraphRef = useRef<HTMLDivElement>(null);
+  const emissionsChartRef = useRef<HTMLDivElement>(null);
+  const { setData, setIsLoading } = useData();
+
+  const fetchHistoricalData = async () => {
+        const userName = localStorage.getItem("userName");
+        try {
+          const endYear = new Date().getFullYear();
+          const startYear = endYear - 4;
+  
+          const promises = Array.from({ length: 5 }, (_, i) => {
+            return fetch("/api/prediction", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                userName: userName || "",
+              },
+              body: JSON.stringify({
+                endYear: startYear + i,
+                dataType: "carbon-emissions",
+              }),
+            }).then((res) => res.json());
+          });
+  
+          const results = await Promise.all(promises);
+  
+          const combinedData: MonthlyData = {
+            equipment: [],
+            livestock: [],
+            crops: [],
+            waste: [],
+            totalMonthlyEmissions: [],
+            totalMonthlyAbsorption: [],
+            netMonthlyEmissions: [],
+            emissionTargets: {},
+          };
+  
+          results.forEach((result) => {
+            Object.keys(result.monthlyData).forEach((key) => {
+              if (key === "emissionTargets") {
+                combinedData.emissionTargets = {
+                  ...combinedData.emissionTargets,
+                  ...result.monthlyData.emissionTargets,
+                };
+              } else {
+                combinedData[key as keyof MonthlyData] = [
+                  ...(combinedData[key as keyof MonthlyData] as number[]),
+                  ...result.monthlyData[key as keyof MonthlyData],
+                ];
+              }
+            });
+          });
+  
+          setData(combinedData); // Use setData from context
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "An error occurred");
+        } finally {
+          setIsLoading(false); // Use setIsLoading from context
+        }
+  };
+  
+  // Run `fetchHistoricalData` once on component load
+  useEffect(() => {
+    fetchHistoricalData();
+  }, []); // Empty dependency array ensures it runs only once
 
   // Only show loading screen on initial load
   if (initialLoading || !userId) {
@@ -129,6 +200,11 @@ const DashboardPage = () => {
       return;
     }
 
+    const invisibleDiv = document.getElementById('invisible-div');
+    if (invisibleDiv) {
+        invisibleDiv.style.display = 'block'; // Show the div
+    }
+
     setIsCancelled(false);
     setExportProgress(10);
 
@@ -137,6 +213,31 @@ const DashboardPage = () => {
 
     try {
       setTimeout(async () => {
+
+        let netZeroImage = null;
+        let emissionsChartImage = null;
+
+      if (netZeroGraphRef.current) {
+        try {
+          console.log("Capturing Net Zero Graph...");
+          const canvas = await html2canvas(netZeroGraphRef.current);
+          netZeroImage = canvas.toDataURL("image/png");
+          console.log("Net Zero Graph captured successfully.");
+        } catch (error) {
+          console.error("Error capturing Net Zero Graph:", error);
+        }
+      }
+      if (emissionsChartRef.current) {
+        try {
+          console.log("Capturing Net Zero Graph...");
+          const canvas = await html2canvas(emissionsChartRef.current);
+          emissionsChartImage = canvas.toDataURL("image/png");
+          console.log("Net Zero Graph captured successfully.");
+        } catch (error) {
+          console.error("Error capturing Net Zero Graph:", error);
+        }
+      }
+
         if (isCancelled) return;
         setExportProgress(30);
 
@@ -147,6 +248,8 @@ const DashboardPage = () => {
           },
           body: JSON.stringify({
             metrics: metricsDataToUse,
+            netZeroImage,
+            emissionsChartImage,
           }),
           signal: controller.signal,
         });
@@ -167,6 +270,11 @@ const DashboardPage = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
+        // Step 5: Once the report is generated, hide the invisible div
+        if (invisibleDiv) {
+            invisibleDiv.style.display = 'none'; // Hide the div after completion
+        }
 
         setExportProgress(100);
         setTimeout(() => {
@@ -330,6 +438,20 @@ const DashboardPage = () => {
         </div>
       </div>
 
+      {/* Invisible div section */}
+      <div
+        id="invisible-div"
+        className="container mx-auto p-4 space-y-6"
+        style={{ display: "none" }}
+      >
+        <div className="" ref={netZeroGraphRef}>
+          <NetZeroGraph />
+        </div>
+        <div className="" ref={emissionsChartRef}>
+          <EmissionsChart />
+        </div>
+      </div>
+
       {showModal && (
         <Modal
           isVisible={showModal}
@@ -348,8 +470,15 @@ const DashboardPage = () => {
         month={typeof selectedMonth === "number" ? selectedMonth : undefined}
         userId={userId || ""}
       />
+
+
     </div>
   );
 };
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function setError(arg0: string) {
+  throw new Error("Function not implemented.");
+}
 
 export default DashboardPage;

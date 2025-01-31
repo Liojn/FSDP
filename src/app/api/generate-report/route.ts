@@ -89,7 +89,7 @@ Present the report in a clear, professional format using Markdown. Do not includ
 // Main handler for the PDF generation request
 export async function POST(request: NextRequest) {
   try {
-    const { metrics } = (await request.json()) as { metrics: MetricData };
+    const { metrics, netZeroImage, emissionsChartImage } = (await request.json()) as { metrics: MetricData, netZeroImage: string, emissionsChartImage: string };
 
     if (!metrics) {
       return NextResponse.json({ error: "Metrics data is missing" }, { status: 400 });
@@ -112,8 +112,16 @@ export async function POST(request: NextRequest) {
 
     const assistantReply = (msg.content[0] as any).text;
 
+    const scopeEmissions = calculateScopeEmissions(metrics);
+
+    const scopeEmissionsGroup = {
+      scope1: scopeEmissions.scope1,
+      scope2: scopeEmissions.scope2,
+      scope3: scopeEmissions.scope3,
+    }
+
     // Parse the assistant's reply from Markdown to HTML
-    const htmlContent = generateHTMLReport(await marked(assistantReply), new Date().toLocaleDateString());
+    const htmlContent = generateHTMLReport(await marked(assistantReply), new Date().toLocaleDateString(), scopeEmissionsGroup, netZeroImage, emissionsChartImage);
 
     const browser = await puppeteer.launch({
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -122,6 +130,7 @@ export async function POST(request: NextRequest) {
     const page = await browser.newPage();
 
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 2000))); // Wait for chart rendering
 
     // Generate PDF from the page content
     const pdfBuffer = await page.pdf({
