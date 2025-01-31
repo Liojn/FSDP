@@ -4,11 +4,13 @@ export const DEFAULT_DESCRIPTIONS: Record<string, string> = {
   "Scope 3": "All other indirect emissions in the value chain",
 };
 
+/*
 export const METRIC_TO_SCOPE: { [key: string]: "Scope 1" | "Scope 2" | "Scope 3" } = {
   "Total Energy Consumption": "Scope 1",
   "Total Net Carbon Emissions": "Scope 2",
   "Total Carbon Neutral Emissions": "Scope 3",
 };
+*/
 
 export const DEFAULT_METRICS = [
   { title: "Total Energy Consumption", value: "Loading...", unit: "kWh" },
