@@ -37,7 +37,7 @@ import useSWR from "swr";
 import { useThresholdCheck } from "@/app/dashboards/hooks/useThresholdCheck";
 import { ThresholdEmissionData } from "./types";
 import NetZeroGraph from "../prediction/netZeroGraph/netZeroGraph";
-import EmissionsChart from "../prediction/predictionComponents/predictionGraph";
+import EmissionsChart from "../prediction/carbonNeutralGraph/predictionGraph";
 import html2canvas from 'html2canvas';
 import { useData, MonthlyData } from "@/context/DataContext";
 
