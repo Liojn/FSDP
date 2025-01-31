@@ -61,3 +61,47 @@ export interface MetricsUpdateParams {
   topEquipmentData: EquipmentTopData[];
   cropCycleData: CropCalendarData[];
 }
+
+// Emission Data Interfaces
+export interface Equipment {
+  fuelEmissions: number;
+  electricityEmissions: number;
+}
+
+export interface Livestock {
+  emissions: number;
+}
+
+export interface Waste {
+  emissions: number;
+}
+
+
+export interface Crop {
+  totalEmissions: number;
+}
+
+export interface ThresholdEmissionData {
+  equipment: Equipment[];
+  livestock: Livestock[];
+  waste: Waste[];
+  crops: Crop[];
+}
+
+
+
+export interface EmissionsData {
+  equipment: Array<{
+    fuelEmissions: number;
+    electricityEmissions: number;
+  }>;
+  livestock: Array<{
+    emissions: number;
+  }>;
+  waste: Array<{
+    emissions: number;
+  }>;
+  crops: Array<{
+    totalEmissions: number;
+  }>;
+}

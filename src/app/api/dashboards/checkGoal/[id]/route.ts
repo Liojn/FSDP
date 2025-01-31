@@ -2,12 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import  connectToDatabase  from '@/../dbConfig'
 import { ObjectId } from 'mongodb';
 
-type User = {
-  _id: {
-    $oid: string; // MongoDB ObjectId in string format
-  };
-  emissionGoal: EmissionGoal[]; // Array of emission goals for different years
-};
 type EmissionGoal = {
   year: number;
   target: number;

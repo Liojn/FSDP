@@ -19,13 +19,12 @@ import {
   TargetGoalResponse,
   MetricsDataResponse,
   EmissionsDataResponse,
-  MetricsUpdateParams
+  MetricsUpdateParams,
 } from "../types";
 import { 
-  DEFAULT_DESCRIPTIONS, 
-  METRIC_TO_SCOPE, 
   DEFAULT_METRICS 
 } from "../constants";
+
 
 export const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
@@ -46,108 +45,10 @@ export const useDashboardData = () => {
 
   const [categoryEmissionsData, setCategoryEmissionsData] = useState<EmissionCategoryData[] | null>(null);
   const [metricsData, setMetricsData] = useState<MetricData[]>(DEFAULT_METRICS);
-  const [thresholds, setThresholds] = useState<ScopeThreshold[]>([]);
-  const [exceedingScopes, setExceedingScopes] = useState<string[]>([]);
-
   //ASSG2 onwards
   const [machineryData, setMachineryData] = useState<EquipmentTopData[]>([]);
   const [calendarData, setCalendarData] = useState<CropCalendarData[]>([]);
-
-// Update metrics data
-// Memoize the updateMetricsData function
-const updateMetricsData = useCallback(
-  ({
-    data,
-    emissionsData,
-    previousEmissionsData,
-    targetGoalData,
-    emissionCategoryData,
-    topEquipmentData,
-    cropCycleData,
-  }: MetricsUpdateParams) => {
-    if (data) {
-      const newMetricsData: MetricData[] = [
-        {
-          title: "Total Energy Consumption",
-          value: data["energyAverage in kWh"].toFixed(0),
-          unit: "kWh",
-        },
-        {
-          title: "Total Net Carbon Emissions",
-          value: data["carbonAverage in CO2E"].toFixed(0),
-          unit: "KG CO2",
-        },
-        {
-          title: "Total Carbon Neutral Emissions",
-          value: data["netAverage in CO2E"].toFixed(0),
-          unit: "KG CO2",
-        },
-      ];
-
-      setMetricsData(newMetricsData);
-      checkThresholds(newMetricsData);
-      setCurrentYearEmissions(data["carbonAverage in CO2E"]);
-    }
-
-    if (emissionsData) {
-      setMonthlyEmissions(emissionsData.monthlyEmissions);
-      setAverageAbsorbed(emissionsData.averageAbsorb);
-    }
-
-    setPreviousYearEmissions(
-      previousEmissionsData ? previousEmissionsData["carbonAverage in CO2E"] : 0
-    );
-
-    if (targetGoalData) {
-      setTargetGoal(targetGoalData.target);
-      setIsEarliestYear(targetGoalData.isEarliestYear);
-      setFirstYearGoal(targetGoalData.firstYearGoal);
-    }
-
-    if (emissionCategoryData) {
-      setCategoryEmissionsData(emissionCategoryData);
-    }
-
-    if (topEquipmentData) {
-      setMachineryData(topEquipmentData);
-    }
-
-    if (cropCycleData) {
-      setCalendarData(cropCycleData);
-    }
-  },
-  [] // Empty array means it won't depend on any other variables
-);
-
-  // Fetch thresholds
-  useEffect(() => {
-    const fetchThresholds = async () => {
-      const storedUserId = localStorage.getItem("userId");
-      if (!storedUserId) {
-        console.warn("No userId found");
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/thresholds?userId=${storedUserId}`);
-        if (response.ok) {
-          const data = await response.json();
-          const userDefinedThresholds = data.thresholds.map(
-            (threshold: ScopeThreshold) => ({
-              ...threshold,
-              description: DEFAULT_DESCRIPTIONS[threshold.scope],
-            })
-          );
-          setThresholds(userDefinedThresholds);
-        } else {
-          console.error("Failed to fetch user thresholds");
-        }
-      } catch (error) {
-        console.error("Error fetching thresholds:", error);
-      }
-    };
-    fetchThresholds();
-  }, []);
+  const [thresholds] = useState<ScopeThreshold[]>([]);
 
   // Fetch years
   useEffect(() => {
@@ -231,7 +132,7 @@ const updateMetricsData = useCallback(
     };
 
     fetchMetricsData();
-  }, [selectedYear, thresholds, userId, yearOptions, updateMetricsData]);
+  }, [selectedYear, userId, yearOptions]);
 
   // Fetch metrics data for the filtered DONUT CHART
   useEffect(() => {
@@ -254,22 +155,67 @@ const updateMetricsData = useCallback(
     fetchMetricsData();
   }, [selectedMonth]);
 
-  // Check thresholds
-  const checkThresholds = (metrics: MetricData[]) => {
-    const exceeding: string[] = [];
 
-    metrics.forEach((metric) => {
-      const scopeType = METRIC_TO_SCOPE[metric.title];
-      const threshold = thresholds.find((t) => t.scope === scopeType);
+  // Update metrics data
+  const updateMetricsData = ({
+    data,
+    emissionsData,
+    previousEmissionsData,
+    targetGoalData,
+    emissionCategoryData,
+    topEquipmentData,
+    cropCycleData,
+  }: MetricsUpdateParams) => {
+    if (data) {
+      const newMetricsData: MetricData[] = [
+        {
+          title: "Total Energy Consumption",
+          value: data["energyAverage in kWh"].toFixed(0),
+          unit: "kWh",
+        },
+        {
+          title: "Total Net Carbon Emissions",
+          value: data["carbonAverage in CO2E"].toFixed(0),
+          unit: "KG CO2",
+        },
+        {
+          title: "Total Carbon Neutral Emissions",
+          value: data["netAverage in CO2E"].toFixed(0),
+          unit: "KG CO2",
+        },
+      ];
 
-      if (threshold && parseFloat(metric.value.toString()) > threshold.value) {
-        exceeding.push(`${threshold.scope} (${threshold.description})`);
-      }
-    });
+      setMetricsData(newMetricsData);
+      setCurrentYearEmissions(data["carbonAverage in CO2E"]);
+    }
 
-    setExceedingScopes(exceeding);
+    if (emissionsData) {
+      setMonthlyEmissions(emissionsData.monthlyEmissions);
+      setAverageAbsorbed(emissionsData.averageAbsorb);
+    }
+
+    setPreviousYearEmissions(
+      previousEmissionsData ? previousEmissionsData["carbonAverage in CO2E"] : 0
+    );
+
+    if (targetGoalData) {
+      setTargetGoal(targetGoalData.target);
+      setIsEarliestYear(targetGoalData.isEarliestYear);
+      setFirstYearGoal(targetGoalData.firstYearGoal);
+    }
+
+    if (emissionCategoryData) {
+      setCategoryEmissionsData(emissionCategoryData);
+    }
+    
+     if (topEquipmentData) {
+      setMachineryData(topEquipmentData);
+    }
+
+    if (cropCycleData) {
+      setCalendarData(cropCycleData);
+    }
   };
-
 
   // Handlers
   const handleYearFilterChange = (value: string) => {

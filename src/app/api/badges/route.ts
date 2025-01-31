@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import connectToDatabase from "@/../dbConfig";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const db = await connectToDatabase.connectToDatabase();
     if (!db) {
@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
         _id: 1,
         title: 1,
         description: 1,
-        category: 1
+        category: 1,
+        credits: 1, 
+        status: 1,
       })
       .toArray();
 

@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Flame, Leaf, Loader2, Zap, Calendar, AlertTriangle, Sprout, Thermometer } from "lucide-react";
-
+import { AlertCircle, Flame, Leaf, Loader2, Zap, Calendar, AlertTriangle, Sprout, Thermometer } from "lucide-react";
 
 import {
   Select,
@@ -22,7 +21,6 @@ import ElectricityConsumptionChart from "@/app/dashboards/charts/electricityTopC
 import Modal from "@/app/dashboards/popup/modal";
 import ScopeModal from "@/app/dashboards/popup/scopeModal";
 import ThresholdSettings from "@/app/dashboards/components/ThresholdSettings";
-import RecommendationAlert from "@/app/dashboards/components/RecommendationAlert";
 import { useDashboardData } from "@/app/dashboards/hooks/useDashboardData";
 
 import { Button } from "@/components/ui/button";
@@ -38,13 +36,92 @@ import {
 import { MetricData } from "@/types";
 import useSWR from "swr";
 
+import { useThresholdCheck } from "@/app/dashboards/hooks/useThresholdCheck";
+import { ThresholdEmissionData } from "./types";
+import NetZeroGraph from "../prediction/netZeroGraph/netZeroGraph";
+import EmissionsChart from "../prediction/carbonNeutralGraph/predictionGraph";
+import html2canvas from 'html2canvas';
+import { useData, MonthlyData } from "@/context/DataContext";
+
+// Popover components
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+/**
+ * A small overlay icon that displays threshold-exceeded info on hover/click.
+ */
+function AlertIconOverlay({
+  exceedances,
+  onViewRecommendations,
+}: {
+  exceedances: Array<{
+    scope: string;
+    exceededBy: number;
+    unit: string;
+  }>;
+  onViewRecommendations: (scopes: string[]) => void;
+}) {
+  if (exceedances.length === 0) return null;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <div className="relative">
+          {/* Increase the icon size */}
+          <AlertCircle className="ml-3 w-8 h-8 text-red-500 cursor-pointer animate-pulse" />
+        </div>
+      </PopoverTrigger>
+
+      <PopoverContent align="start" className="w-96">
+        {" "}
+        {/* Increase width */}
+        <div className="p-4 space-y-3">
+          {" "}
+          {/* Add padding and spacing */}
+          <p className="font-medium text-base">
+            {" "}
+            {/* Slightly larger font */}
+            {exceedances.length === 1
+              ? "1 emission scope has exceeded its threshold."
+              : `${exceedances.length} emission scopes have exceeded their thresholds.`}
+          </p>
+          <ul className="list-disc list-inside text-base">
+            {" "}
+            {/* Increase font size */}
+            {exceedances.map(({ scope, exceededBy, unit }) => (
+              <li key={scope}>
+                {scope}: Exceeded by{" "}
+                <span className="font-semibold">
+                  {exceededBy.toFixed(2)} {unit}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <Button
+            onClick={() =>
+              onViewRecommendations(exceedances.map((e) => e.scope))
+            }
+            className="bg-red-500 hover:bg-red-600 text-white w-full "
+          >
+            View Recommendations
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 const DashboardPage = () => {
   const router = useRouter();
 
   const {
-    loading: initialLoading, // Renamed to be more specific
+    loading: initialLoading,
     yearFilter,
     yearOptions,
     selectedYear,
@@ -66,10 +143,32 @@ const DashboardPage = () => {
     handleMonthClick,
   } = useDashboardData();
 
+  const getMonthAsNumber = (
+    month: string | number | undefined
+  ): number | undefined => {
+    if (typeof month === "number") return month;
+    if (typeof month === "string") {
+      const parsed = parseInt(month, 10);
+      return isNaN(parsed) ? undefined : parsed;
+    }
+    return undefined;
+  };
+
+  const {
+    data: emissionsData,
+    thresholds: thresholdData,
+    exceedingScopes,
+  } = useThresholdCheck(
+    userId || "",
+    selectedYear || new Date().getFullYear(),
+    getMonthAsNumber(selectedMonth)
+  );
+
   const { data: metricsDataToUse } = useSWR<MetricData>(
     userId ? `/api/metrics/${userId}` : null,
     fetcher
   );
+
   const [showModal, setShowModal] = useState(false);
   const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -80,6 +179,78 @@ const DashboardPage = () => {
   const [clickedMonthIndex, setClickedMonthIndex] = useState<number | null>(
     null
   );
+  const { exceedances } = useThresholdCheck(
+    userId || "",
+    selectedYear || new Date().getFullYear(),
+    getMonthAsNumber(selectedMonth)
+  );
+
+  // Create refs for invisible divs
+  const netZeroGraphRef = useRef<HTMLDivElement>(null);
+  const emissionsChartRef = useRef<HTMLDivElement>(null);
+  const { setData, setIsLoading } = useData();
+
+  const fetchHistoricalData = async () => {
+        const userName = localStorage.getItem("userName");
+        try {
+          const endYear = new Date().getFullYear();
+          const startYear = endYear - 4;
+  
+          const promises = Array.from({ length: 5 }, (_, i) => {
+            return fetch("/api/prediction", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                userName: userName || "",
+              },
+              body: JSON.stringify({
+                endYear: startYear + i,
+                dataType: "carbon-emissions",
+              }),
+            }).then((res) => res.json());
+          });
+  
+          const results = await Promise.all(promises);
+  
+          const combinedData: MonthlyData = {
+            equipment: [],
+            livestock: [],
+            crops: [],
+            waste: [],
+            totalMonthlyEmissions: [],
+            totalMonthlyAbsorption: [],
+            netMonthlyEmissions: [],
+            emissionTargets: {},
+          };
+  
+          results.forEach((result) => {
+            Object.keys(result.monthlyData).forEach((key) => {
+              if (key === "emissionTargets") {
+                combinedData.emissionTargets = {
+                  ...combinedData.emissionTargets,
+                  ...result.monthlyData.emissionTargets,
+                };
+              } else {
+                combinedData[key as keyof MonthlyData] = [
+                  ...(combinedData[key as keyof MonthlyData] as number[]),
+                  ...result.monthlyData[key as keyof MonthlyData],
+                ];
+              }
+            });
+          });
+  
+          setData(combinedData); // Use setData from context
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "An error occurred");
+        } finally {
+          setIsLoading(false); // Use setIsLoading from context
+        }
+  };
+  
+  // Run `fetchHistoricalData` once on component load
+  useEffect(() => {
+    fetchHistoricalData();
+  }, []); // Empty dependency array ensures it runs only once
 
 
   //Function for Crop Cycle Analysis
@@ -105,12 +276,65 @@ const DashboardPage = () => {
   // Only show loading screen on initial load
   if (initialLoading || !userId) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-lime-600" />
+      <div className="space-y-6 p-4">
+        {/* Top Bar Skeleton */}
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
+          {/* Page Title + (Possible) Alert Icon */}
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-[150px]" />
+            {/* Optionally, a smaller subline */}
+            {/* <Skeleton className="h-4 w-[120px]" /> */}
+          </div>
+          {/* Right-side buttons (Export, Threshold, Year Filter) */}
+          <div className="flex flex-col md:flex-row md:items-center gap-5">
+            {/* Export Button & Threshold */}
+            <div className="flex gap-3">
+              <Skeleton className="h-10 w-[140px] rounded" />
+              <Skeleton className="h-10 w-[140px] rounded" />
+            </div>
+            {/* Year Filter */}
+            <div className="flex flex-col md:flex-row items-start gap-3">
+              <Skeleton className="h-5 w-16" />
+              <Skeleton className="h-10 w-[130px] rounded" />
+            </div>
+          </div>
+        </div>
+
+        {/* Main Grid: Left (2/3) and Right (1/3) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Left: Key Metrics + Yearly Chart */}
+          <div className="md:col-span-2 space-y-6">
+            {/* Metric Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Skeleton className="h-[120px] rounded" />
+              <Skeleton className="h-[120px] rounded" />
+              <Skeleton className="h-[120px] rounded" />
+            </div>
+
+            {/* Yearly Carbon Emission's Progress Chart */}
+            <div className="bg-white p-4 shadow-md rounded-lg h-[350px]">
+              <Skeleton className="w-full h-full" />
+            </div>
+          </div>
+
+          {/* Right: Gauge + Category Chart */}
+          <div className="flex flex-col space-y-6">
+            {/* Emission Reduction Progress Gauge */}
+            <div className="bg-white p-4 shadow-md rounded-lg h-60">
+              <Skeleton className="w-full h-full" />
+            </div>
+
+            {/* Emissions By Category Pie/Donut */}
+            <div className="bg-white p-4 shadow-md rounded-lg h-[350px]">
+              <Skeleton className="w-full h-full" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // Handle the "View Recommendations" action
   const handleViewRecommendations = (exceedingScopes: string[]) => {
     const scopes = exceedingScopes
       .map((scope) => scope.match(/(Scope [1-3])/)?.[1])
@@ -123,7 +347,7 @@ const DashboardPage = () => {
   };
 
   const handleMonthSelection = (monthIndex: number) => {
-    setClickedMonthIndex(monthIndex === clickedMonthIndex? null: monthIndex);
+    setClickedMonthIndex(monthIndex === clickedMonthIndex ? null : monthIndex);
     handleMonthClick(monthIndex);
   };
  
@@ -156,6 +380,11 @@ const DashboardPage = () => {
       return;
     }
 
+    const invisibleDiv = document.getElementById('invisible-div');
+    if (invisibleDiv) {
+        invisibleDiv.style.display = 'block'; // Show the div
+    }
+
     setIsCancelled(false);
     setExportProgress(10);
 
@@ -164,6 +393,31 @@ const DashboardPage = () => {
 
     try {
       setTimeout(async () => {
+
+        let netZeroImage = null;
+        let emissionsChartImage = null;
+
+      if (netZeroGraphRef.current) {
+        try {
+          console.log("Capturing Net Zero Graph...");
+          const canvas = await html2canvas(netZeroGraphRef.current);
+          netZeroImage = canvas.toDataURL("image/png");
+          console.log("Net Zero Graph captured successfully.");
+        } catch (error) {
+          console.error("Error capturing Net Zero Graph:", error);
+        }
+      }
+      if (emissionsChartRef.current) {
+        try {
+          console.log("Capturing Net Zero Graph...");
+          const canvas = await html2canvas(emissionsChartRef.current);
+          emissionsChartImage = canvas.toDataURL("image/png");
+          console.log("Net Zero Graph captured successfully.");
+        } catch (error) {
+          console.error("Error capturing Net Zero Graph:", error);
+        }
+      }
+
         if (isCancelled) return;
         setExportProgress(30);
 
@@ -174,6 +428,8 @@ const DashboardPage = () => {
           },
           body: JSON.stringify({
             metrics: metricsDataToUse,
+            netZeroImage,
+            emissionsChartImage,
           }),
           signal: controller.signal,
         });
@@ -195,6 +451,11 @@ const DashboardPage = () => {
         link.click();
         document.body.removeChild(link);
 
+        // Step 5: Once the report is generated, hide the invisible div
+        if (invisibleDiv) {
+            invisibleDiv.style.display = 'none'; // Hide the div after completion
+        }
+
         setExportProgress(100);
         setTimeout(() => {
           setExportProgress(0);
@@ -212,9 +473,25 @@ const DashboardPage = () => {
 
   return (
     <div className="pt-0 p-4 space-y-6">
+      {/* Top Bar */}
       <div className="pt-0 flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
-        <PageHeader title="Dashboard" />
+        {/* Page Title + Overlay Alert Icon */}
+        <PageHeader
+          title={
+            <div className="flex items-center space-x-2">
+              <span>Dashboard</span>
+              {/* Show only if there are exceeding thresholds */}
+              {exceedingScopes && exceedingScopes.length > 0 && (
+                <AlertIconOverlay
+                  exceedances={exceedances}
+                  onViewRecommendations={handleViewRecommendations}
+                />
+              )}
+            </div>
+          }
+        />
 
+        {/* Right-side buttons (Export, Threshold, Year Filter) */}
         <div className="flex flex-col md:flex-row md:items-center gap-5 space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center gap-5">
             <AlertDialog
@@ -227,7 +504,7 @@ const DashboardPage = () => {
                     setIsAlertDialogOpen(true);
                     handleGenerateReport();
                   }}
-                  className="bg-emerald-500 text-emerald-50 hover:bg-emerald-600 w-full md:w-auto"
+                  className="w-full md:w-auto"
                 >
                   Export Report to PDF
                 </Button>
@@ -267,10 +544,7 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      <RecommendationAlert
-        exceedingScopes={exceedingScopes}
-        onViewRecommendations={handleViewRecommendations}
-      />
+      {/* ======= Removed old RecommendationAlert block ======= */}
 
       <div className="m-0 p-0 grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
         {/* Left Side (Main Content) */}
@@ -281,6 +555,7 @@ const DashboardPage = () => {
               <div
                 key={index}
                 onClick={() => {
+                  // Example: open the Scope Modal if "Total Net Carbon Emissions" is clicked
                   if (metric.title === "Total Net Carbon Emissions") {
                     setIsScopeModalOpen(true);
                   }
@@ -460,6 +735,20 @@ const DashboardPage = () => {
         { /* end of the crop cycle analysis */}
       </div>
 
+      {/* Invisible div section */}
+      <div
+        id="invisible-div"
+        className="container mx-auto p-4 space-y-6"
+        style={{ display: "none" }}
+      >
+        <div className="" ref={netZeroGraphRef}>
+          <NetZeroGraph />
+        </div>
+        <div className="" ref={emissionsChartRef}>
+          <EmissionsChart />
+        </div>
+      </div>
+        
       {showModal && (
         <Modal
           isVisible={showModal}
@@ -471,15 +760,29 @@ const DashboardPage = () => {
         />
       )}
 
+      {/* Scope Details Modal */}
       <ScopeModal
         isOpen={isScopeModalOpen}
         onClose={() => setIsScopeModalOpen(false)}
-        year={selectedYear || new Date().getFullYear()}
-        month={typeof selectedMonth === "number" ? selectedMonth : undefined}
-        userId={userId || ""}
+        thresholds={(thresholdData || []).map((t) => ({
+          ...t,
+          description: `Threshold for ${t.scope}`,
+        }))}
+        data={emissionsData as ThresholdEmissionData | null}
+        exceedingScopes={exceedingScopes}
+        onViewRecommendations={handleViewRecommendations}
+        year={selectedYear}
+        month={selectedMonth}
       />
+
+
     </div>
   );
 };
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function setError(arg0: string) {
+  throw new Error("Function not implemented.");
+}
 
 export default DashboardPage;

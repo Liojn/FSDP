@@ -40,6 +40,7 @@ interface DataContextType {
   setData: (data: MonthlyData) => void;
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
+  setError: (error: boolean) => void;
 }
 
 const PROJECTION_YEARS = 100; // keep graph to show maximum of 100 years, prevent over cluttering of graph
@@ -197,6 +198,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     useState<CarbonNeutralAnalysis | null>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<boolean>(false); // Add this line
 
   React.useEffect(() => {
     if (data) {
@@ -204,6 +206,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setChartData(processedData);
       setCarbonNeutralAnalysis(analyzeCarbonNeutralYears(processedData));
       setIsLoading(false);
+      setError(false);
     }
   }, [data]);
 
@@ -216,6 +219,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         setData,
         isLoading,
         setIsLoading,
+        setError,
       }}
     >
       {children}
