@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import  connectToDatabase  from '@/../dbConfig'
-import { MongoClient, ObjectId } from 'mongodb';
+import { ObjectId } from 'mongodb';
 
 type EquipmentConsumption = {
   name: string;

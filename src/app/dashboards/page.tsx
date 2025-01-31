@@ -126,7 +126,7 @@ const DashboardPage = () => {
     setClickedMonthIndex(monthIndex === clickedMonthIndex? null: monthIndex);
     handleMonthClick(monthIndex);
   };
-
+ 
   const handleCategoryClick = (category: string) => {
     setSelectedCategory(category);
     setShowModal(true);

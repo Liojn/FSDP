@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   fetchUniqueYears,
   getMetricsData,
@@ -52,6 +52,72 @@ export const useDashboardData = () => {
   //ASSG2 onwards
   const [machineryData, setMachineryData] = useState<EquipmentTopData[]>([]);
   const [calendarData, setCalendarData] = useState<CropCalendarData[]>([]);
+
+// Update metrics data
+// Memoize the updateMetricsData function
+const updateMetricsData = useCallback(
+  ({
+    data,
+    emissionsData,
+    previousEmissionsData,
+    targetGoalData,
+    emissionCategoryData,
+    topEquipmentData,
+    cropCycleData,
+  }: MetricsUpdateParams) => {
+    if (data) {
+      const newMetricsData: MetricData[] = [
+        {
+          title: "Total Energy Consumption",
+          value: data["energyAverage in kWh"].toFixed(0),
+          unit: "kWh",
+        },
+        {
+          title: "Total Net Carbon Emissions",
+          value: data["carbonAverage in CO2E"].toFixed(0),
+          unit: "KG CO2",
+        },
+        {
+          title: "Total Carbon Neutral Emissions",
+          value: data["netAverage in CO2E"].toFixed(0),
+          unit: "KG CO2",
+        },
+      ];
+
+      setMetricsData(newMetricsData);
+      checkThresholds(newMetricsData);
+      setCurrentYearEmissions(data["carbonAverage in CO2E"]);
+    }
+
+    if (emissionsData) {
+      setMonthlyEmissions(emissionsData.monthlyEmissions);
+      setAverageAbsorbed(emissionsData.averageAbsorb);
+    }
+
+    setPreviousYearEmissions(
+      previousEmissionsData ? previousEmissionsData["carbonAverage in CO2E"] : 0
+    );
+
+    if (targetGoalData) {
+      setTargetGoal(targetGoalData.target);
+      setIsEarliestYear(targetGoalData.isEarliestYear);
+      setFirstYearGoal(targetGoalData.firstYearGoal);
+    }
+
+    if (emissionCategoryData) {
+      setCategoryEmissionsData(emissionCategoryData);
+    }
+
+    if (topEquipmentData) {
+      setMachineryData(topEquipmentData);
+    }
+
+    if (cropCycleData) {
+      setCalendarData(cropCycleData);
+    }
+  },
+  [] // Empty array means it won't depend on any other variables
+);
 
   // Fetch thresholds
   useEffect(() => {
@@ -129,8 +195,8 @@ export const useDashboardData = () => {
                 getMetricsData(companyId, selectedYear),
                 fetchMonthlyCarbonEmissions(companyId, selectedYear),
                 fetchEmissionTarget(companyId, selectedYear),
-                fetchEmissionCategory(companyId, selectedYear, selectedMonth),
-                fetchEquipmentTopThree(companyId, selectedYear, selectedMonth),
+                fetchEmissionCategory(companyId, selectedYear, ''),
+                fetchEquipmentTopThree(companyId, selectedYear, ''),
                 fetchCropCycle(companyId, selectedYear, "Samarinda"),
               ]);
 
@@ -165,7 +231,7 @@ export const useDashboardData = () => {
     };
 
     fetchMetricsData();
-  }, [selectedYear, thresholds, userId, yearOptions]);
+  }, [selectedYear, thresholds, userId, yearOptions, updateMetricsData]);
 
   // Fetch metrics data for the filtered DONUT CHART
   useEffect(() => {
@@ -204,68 +270,6 @@ export const useDashboardData = () => {
     setExceedingScopes(exceeding);
   };
 
-  // Update metrics data
-  const updateMetricsData = ({
-    data,
-    emissionsData,
-    previousEmissionsData,
-    targetGoalData,
-    emissionCategoryData,
-    topEquipmentData,
-    cropCycleData,
-  }: MetricsUpdateParams) => {
-    if (data) {
-      const newMetricsData: MetricData[] = [
-        {
-          title: "Total Energy Consumption",
-          value: data["energyAverage in kWh"].toFixed(0),
-          unit: "kWh",
-        },
-        {
-          title: "Total Net Carbon Emissions",
-          value: data["carbonAverage in CO2E"].toFixed(0),
-          unit: "KG CO2",
-        },
-        {
-          title: "Total Carbon Neutral Emissions",
-          value: data["netAverage in CO2E"].toFixed(0),
-          unit: "KG CO2",
-        },
-      ];
-
-      setMetricsData(newMetricsData);
-      checkThresholds(newMetricsData);
-      setCurrentYearEmissions(data["carbonAverage in CO2E"]);
-    }
-
-    if (emissionsData) {
-      setMonthlyEmissions(emissionsData.monthlyEmissions);
-      setAverageAbsorbed(emissionsData.averageAbsorb);
-    }
-
-    setPreviousYearEmissions(
-      previousEmissionsData ? previousEmissionsData["carbonAverage in CO2E"] : 0
-    );
-
-    if (targetGoalData) {
-      setTargetGoal(targetGoalData.target);
-      setIsEarliestYear(targetGoalData.isEarliestYear);
-      setFirstYearGoal(targetGoalData.firstYearGoal);
-    }
-
-    if (emissionCategoryData) {
-      setCategoryEmissionsData(emissionCategoryData);
-    }
-
-    //replacing by calling set in useState
-    if (topEquipmentData){
-      setMachineryData(topEquipmentData);
-    }
-
-    if (cropCycleData){
-      setCalendarData(cropCycleData);
-    }
-  };
 
   // Handlers
   const handleYearFilterChange = (value: string) => {

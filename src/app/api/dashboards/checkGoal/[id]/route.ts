@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import  connectToDatabase  from '@/../dbConfig'
-const { ObjectId } = require('mongodb');
+import { ObjectId } from 'mongodb';
 
 type User = {
   _id: {
@@ -47,10 +47,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         if (!user) {
         throw new Error("User not found.");
         }
+
+        // Assert the type of user to User
+        const userTyped = user as User;
+
+
         // Find the emission target for the requested year
-        const emissionGoalForYear = (user.emissionGoal as EmissionGoal[]).find(
-            (goal) => goal.year === year
-        );
+        const emissionGoalForYear = userTyped.emissionGoal.find((goal) => goal.year === year);
 
          if (emissionGoalForYear) {
             // Check if it's the earliest year
@@ -71,6 +74,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         });
     }
   } catch (error) {
+    console.error(error); // Log the error
     return NextResponse.json({ error: "An error occurred while fetching data" }, { status: 500 });
     }
 }

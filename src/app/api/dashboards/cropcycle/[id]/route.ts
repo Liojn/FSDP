@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import connectToDatabase  from '@/../dbConfig'
-const { ObjectId } = require('mongodb');
+import { ObjectId } from 'mongodb';
 
 //List of Collections that we would be using
 const collections = [
@@ -66,24 +66,33 @@ type CollectionData = {
     Crops: Crop[];                 //Array of Crop objects
     IndonesiaWeather: IndonesiaWeather[];
 };
+type CropCycleData = {
+  month: string;
+  phase: string;
+  burnRisk: 'Low' | 'Medium' | 'High';
+  crops: { type: string }[];  // Array of crop types
+  temperature: number;
+};
 
 
 //Function for calculation
-function formatCropCycleData(cropData: Crop[], emissionRateData: EmissionsRate[], weatherData: IndonesiaWeather[]){
+function formatCropCycleData(cropData: Crop[], emissionRateData: EmissionsRate[], weatherData: IndonesiaWeather[]): CropCycleData[] {
     const monthlyArray = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const ReturnArray: any[] = [];
-    for (const crop of cropData){
+    const ReturnArray: CropCycleData[] = [];  // Use the defined type here
+
+    for (const crop of cropData) {
         const cropType = crop.crop_type;
-        const month = new Date(crop.date).getUTCMonth(); // Adjusted here
+        const month = new Date(crop.date).getUTCMonth();
         const status = crop.status;
+
         for (const weather of weatherData) {
             const currentMonth = new Date(weather.date).getUTCMonth();
             if (currentMonth === month) {
                 const rainfall = weather.rainfall;
                 const temperature = weather.temperature;
                 const wind_speed = weather.wind_speed;
-                
-                //Calculate risk and append
+
+                // Calculate risk and append
                 const temperatureRisk = temperature > 28 ? 1 : temperature > 26 ? 0.5 : 0;
                 const rainfallRisk = rainfall < 3 ? 1 : rainfall < 20 ? 0.5 : 0;
                 const windSpeedRisk = wind_speed > 8 ? 1 : wind_speed > 3 ? 0.5 : 0;
@@ -98,11 +107,9 @@ function formatCropCycleData(cropData: Crop[], emissionRateData: EmissionsRate[]
                 }
 
                 const cropCycleScore = cropcycleRisk * 0.30;
-                // Step 3: Calculate total risk percentage
                 const totalRiskPercentage = (weatherScore + cropCycleScore) * 100;
 
-                // Step 4: Determine risk category
-                let burnRisk = 'Low';
+                let burnRisk: 'Low' | 'Medium' | 'High' = 'Low';
                 if (totalRiskPercentage > 60) {
                     burnRisk = 'High';
                 } else if (totalRiskPercentage > 30) {
@@ -116,7 +123,7 @@ function formatCropCycleData(cropData: Crop[], emissionRateData: EmissionsRate[]
                     existingMonth.crops.push({ type: cropType });
                 } else {
                     // Create a new entry for the month
-                    const insertedObject = {
+                    const insertedObject: CropCycleData = {
                         month: monthlyArray[month],
                         phase: status,
                         burnRisk,
@@ -130,10 +137,25 @@ function formatCropCycleData(cropData: Crop[], emissionRateData: EmissionsRate[]
             }
         }
     }
-    //Arrange by Jan to Dec
+
+    // Arrange by Jan to Dec
     ReturnArray.sort((a, b) => monthlyArray.indexOf(a.month) - monthlyArray.indexOf(b.month));
     return ReturnArray;
 }
+
+
+//Type FOR THE QUERY
+type EmissionRatesQuery = Record<string, never>; // Ensures no properties allowed, No filter for this collection
+type IndonesiaWeatherQuery = {
+  location: { $regex: string, $options: string },
+  date: { $gte: Date, $lt: Date }
+};
+type DefaultQuery = {
+  company_id: ObjectId,
+  date: { $gte: Date, $lt: Date }
+};
+
+type Query = EmissionRatesQuery | IndonesiaWeatherQuery | DefaultQuery;
 
 //API route handler, for calculation of metrics for the 3 Cards
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -183,7 +205,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             const collection = db.collection(collectionName);
 
             // Define the base query
-            let query: any;
+            let query: Query;
 
             if (collectionName === 'EmissionRates') {
                 // No filter, get everything for calculations
@@ -209,7 +231,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
             // Execute the query
             const documents = await collection.find(query).toArray();
-            console.log(documents);
+            //console.log(documents);
             //Store results in an object keyed by collection name
             switch (collectionName) {
                 case 'EmissionRates':
