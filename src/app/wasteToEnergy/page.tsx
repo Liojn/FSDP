@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
@@ -92,30 +92,31 @@ const WasteTrackingPage = () => {
     totalCarbonCredits: 0,
     wasteAcceptanceRate: 0
   });
-
-  // Calculate dashboard metrics
-  const calculateMetrics = (data: WasteData[]) => {
-    // Filter out in-progress records
-    const completedRecords = data.filter(item => item.status !== "In Progress");
-    
-    const metrics = {
-      totalWaste: data.reduce((sum, item) => sum + item.weight_tons, 0),
-      totalEnergy: data.reduce((sum, item) => sum + (item.energy_generated_kwh || 0), 0),
-      totalCarbonCredits: data.reduce((sum, item) => sum + (item.carbon_credits || 0), 0),
-      wasteAcceptanceRate: calculateAcceptanceRate(completedRecords)
-    };
-    setMetrics(metrics);
-  };
-
-  // Helper function to calculate acceptance rate
-  const calculateAcceptanceRate = (completedRecords: WasteData[]) => {
+  
+    const calculateAcceptanceRate = useCallback((completedRecords: WasteData[]) => {
     if (completedRecords.length === 0) return 0;
 
     const totalWeightSent = completedRecords.reduce((sum, item) => sum + item.weight_tons, 0);
     const totalWeightAccepted = completedRecords.reduce((sum, item) => sum + (item.weight_accepted || 0), 0);
 
     return (totalWeightAccepted / totalWeightSent) * 100;
-  };
+  }, []);
+
+  const calculateMetrics = useCallback((data: WasteData[]) => {
+    // Filter out in-progress records
+    const completedRecords = data.filter(item => item.status !== "In Progress");
+
+    const metrics = {
+      totalWaste: data.reduce((sum, item) => sum + item.weight_tons, 0),
+      totalEnergy: data.reduce((sum, item) => sum + (item.energy_generated_kwh || 0), 0),
+      totalCarbonCredits: data.reduce((sum, item) => sum + (item.carbon_credits || 0), 0),
+      wasteAcceptanceRate: calculateAcceptanceRate(completedRecords),
+    };
+
+    setMetrics(metrics);
+  }, [calculateAcceptanceRate]);
+
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData(prev => ({
@@ -178,7 +179,7 @@ const WasteTrackingPage = () => {
     }
   };
 
-  const fetchWasteData = async () => {
+  const fetchWasteData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -207,21 +208,12 @@ const WasteTrackingPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [calculateMetrics]);
 
   useEffect(() => {
     fetchWasteData();
-  }, []);
+  }, [fetchWasteData]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-SG', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   // Dashboard component
   const Dashboard = () => (
