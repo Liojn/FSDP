@@ -21,6 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: { email: s
       }
     });
 
+    console.log("User:", user);
     return NextResponse.json(user, { status: 200 });
   } catch (error) {
     console.error("Error fetching user:", error);

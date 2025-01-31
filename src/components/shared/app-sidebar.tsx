@@ -69,6 +69,34 @@ const AppSidebar = React.memo(function AppSidebar() {
   });
 
 useEffect(() => {
+  const handleStoreCurrencyUpdate = (event: CustomEvent) => {
+    console.log("Store Currency Update Event Received:", event.detail);
+    
+    const newStoreCurrency = Number(event.detail?.newStoreCurrency);
+    
+    console.log("Parsed New Store Currency:", newStoreCurrency);
+    
+    if (!isNaN(newStoreCurrency)) {
+      setUserData(prev => ({
+        ...prev,
+        storeCurrency: newStoreCurrency
+      }));
+      
+      // Optional: Update localStorage for persistence
+      localStorage.setItem("storeCurrency", newStoreCurrency.toString());
+    } else {
+      console.error("Invalid store currency value received");
+    }
+  };
+
+  window.addEventListener('updateStoreCurrency', handleStoreCurrencyUpdate as EventListener);
+
+  return () => {
+    window.removeEventListener('updateStoreCurrency', handleStoreCurrencyUpdate as EventListener);
+  };
+}, []);
+
+useEffect(() => {
   const fetchUserData = async () => {
     const storedEmail = localStorage.getItem("userEmail");
     if (storedEmail) {
@@ -76,26 +104,28 @@ useEffect(() => {
         const response = await fetch(`/api/company/${storedEmail}`);
         if (response.ok) {
           const userData = await response.json();
+          const storeCurrency = Number(userData.carbonCredits) || 0; // Ensure it's a number
           setUserData({
             name: userData.name || "Placeholder Name",
             email: userData.email || "guest@example.com",
-            storeCurrency: userData.carbonCredits || 0,
+            storeCurrency,
           });
+          localStorage.setItem("storeCurrency", storeCurrency.toString()); // Initialize in localStorage
         }
       } catch (error) {
         console.error("Failed to fetch user data:", error);
-        // Fallback to local storage if fetch fails
+        const storeCurrency = parseInt(localStorage.getItem("storeCurrency") || "0", 10); // Fallback to localStorage
         setUserData({
           name: localStorage.getItem("userName") || "Placeholder Name",
           email: localStorage.getItem("userEmail") || "guest@example.com",
-          storeCurrency: parseInt(localStorage.getItem("storeCurrency") || "0", 10),
+          storeCurrency,
         });
       }
     }
   };
 
   fetchUserData();
-  }, []);
+}, []);
 
   const handleLogout = useCallback(async () => {
     localStorage.removeItem("token");

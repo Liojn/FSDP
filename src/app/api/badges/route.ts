@@ -15,7 +15,9 @@ export async function GET() {
         _id: 1,
         title: 1,
         description: 1,
-        category: 1
+        category: 1,
+        credits: 1, 
+        status: 1,
       })
       .toArray();
 

@@ -47,7 +47,7 @@ export default function Login({
         console.log("Token:", data.token);
 
         const userId = await fetchUserId();
-        console.log(userId);
+        console.log("User Id: " , userId);
         localStorage.setItem("userId", userId || "");
 
         // Redirect to a protected page, e.g., dashboard
@@ -62,28 +62,30 @@ export default function Login({
     }
   };
 
+  
+  
   const fetchUserId = async () => {
-    try {
-      const email = localStorage.getItem("userEmail");
-      if (!email) {
-        throw new Error("No email found in local storage.");
-      }
-      const res = await fetch(`/api/company/${encodeURIComponent(email)}`, {
-        method: "GET",
-      });
-      const data = await res.json();
-      console.log(data);
-
-      if (res.ok) {
-        return data[0]?._id; // Assuming API returns array with `user_id`
-      } else {
-        throw new Error(data.error || "Failed to fetch user ID");
-      }
-    } catch (err) {
-      console.error("Error fetching user ID:", err);
-      return "";
+  try {
+    const email = localStorage.getItem("userEmail");
+    if (!email) {
+      throw new Error("No email found in local storage.");
     }
-  };
+    const res = await fetch(`/api/company/${encodeURIComponent(email)}`, {
+      method: "GET",
+    });
+    const data = await res.json();
+    console.log("In page.tsx fetchUserId: ", data);
+
+    if (res.ok) {
+      return data._id; // Access _id directly from the response object
+    } else {
+      throw new Error(data.error || "Failed to fetch user ID");
+    }
+  } catch (err) {
+    console.error("Error fetching user ID:", err);
+    return "";
+  }
+};
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">

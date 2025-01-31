@@ -7,7 +7,7 @@ export async function POST(
 ) {
   try {
     const email = params.email;
-    const { carbonCredits, totalPurchases, totalSpent } = await request.json();
+    const { carbonCredits, totalPurchase, totalSpent } = await request.json();
 
     const db = await connectToDatabase.connectToDatabase();
     if (!db) {
@@ -20,7 +20,7 @@ export async function POST(
       { 
         $set: { 
           carbonCredits: carbonCredits,
-          totalPurchase: totalPurchases,
+          totalPurchase: totalPurchase,
           totalSpent: totalSpent 
         } 
       }
@@ -33,7 +33,7 @@ export async function POST(
     return NextResponse.json({ 
       message: "Credits and purchase metrics updated successfully", 
       carbonCredits, 
-      totalPurchases, 
+      totalPurchase, 
       totalSpent 
     }, { status: 200 });
   } catch (error) {

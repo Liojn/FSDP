@@ -60,7 +60,7 @@ type Crop = {
     area_planted_ha: number;
     fertilizer_amt_used_kg: number,
     date: { $date: string };
-    yield_tons: number;
+    status: string;
 };
 
 // Type for Livestock
@@ -114,6 +114,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         progress: 1,
         isUnlocked: 1,
         dateUnlocked: 1,
+        creditsAwarded: 1, // Include creditsAwarded field
       })
       .toArray();
 
