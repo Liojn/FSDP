@@ -49,11 +49,10 @@ const navigationItems = [
   { title: "Campaign", url: "/campaign", icon: PencilLine },
   { title: "Store", url: "/store", icon: Store },
   { title: "WTE Operation", url: "/wasteToEnergy", icon: Handshake },
-];
-
-const recommendationItems = [
   { title: "Recommendation", url: "/recommendation", icon: Lightbulb },
 ];
+
+
 
 const appConfig = {
   name: "AgriTech",
@@ -263,38 +262,6 @@ const AppSidebar = React.memo(function AppSidebar() {
           <SidebarGroupContent className="mt-2">
             <SidebarMenu className="space-y-1">
               {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <Link
-                      href={item.url}
-                      className={cn(
-                        "group relative flex items-center space-x-3 px-4 py-5 transition-colors",
-                        pathname === item.url
-                          ? "bg-stone-800 text-white"
-                          : "text-stone-400 hover:bg-stone-800 hover:text-white"
-                      )}
-                      onClick={() => handleNavigate(item.url)}
-                    >
-                      <span>
-                        <item.icon size={21} />
-                      </span>
-                      <span className="flex-1 text-sm font-medium">
-                        {item.title}
-                      </span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel className="px-4 py-5 font-semibold text-stone-400">
-            Recommendation
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {recommendationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <Link
