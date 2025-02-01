@@ -189,65 +189,64 @@ const DashboardPage = () => {
   const emissionsChartRef = useRef<HTMLDivElement>(null);
   const { setData, setIsLoading } = useData();
 
-  const fetchHistoricalData = async () => {
-        const userName = localStorage.getItem("userName");
-        try {
-          const endYear = new Date().getFullYear();
-          const startYear = endYear - 4;
-  
-          const promises = Array.from({ length: 5 }, (_, i) => {
-            return fetch("/api/prediction", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                userName: userName || "",
-              },
-              body: JSON.stringify({
-                endYear: startYear + i,
-                dataType: "carbon-emissions",
-              }),
-            }).then((res) => res.json());
-          });
-  
-          const results = await Promise.all(promises);
-  
-          const combinedData: MonthlyData = {
-            equipment: [],
-            livestock: [],
-            crops: [],
-            waste: [],
-            totalMonthlyEmissions: [],
-            totalMonthlyAbsorption: [],
-            netMonthlyEmissions: [],
-            emissionTargets: {},
-          };
-  
-          results.forEach((result) => {
-            Object.keys(result.monthlyData).forEach((key) => {
-              if (key === "emissionTargets") {
-                combinedData.emissionTargets = {
-                  ...combinedData.emissionTargets,
-                  ...result.monthlyData.emissionTargets,
-                };
-              } else {
-                combinedData[key as keyof MonthlyData] = [
-                  ...(combinedData[key as keyof MonthlyData] as number[]),
-                  ...result.monthlyData[key as keyof MonthlyData],
-                ];
-              }
-            });
-          });
-  
-          setData(combinedData); // Use setData from context
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "An error occurred");
-        } finally {
-          setIsLoading(false); // Use setIsLoading from context
-        }
-  };
-  
-  // Run `fetchHistoricalData` once on component load
   useEffect(() => {
+    const fetchHistoricalData = async () => {
+      const userName = localStorage.getItem("userName");
+      try {
+        const endYear = new Date().getFullYear();
+        const startYear = endYear - 4;
+
+        const promises = Array.from({ length: 5 }, (_, i) => {
+          return fetch("/api/prediction", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              userName: userName || "",
+            },
+            body: JSON.stringify({
+              endYear: startYear + i,
+              dataType: "carbon-emissions",
+            }),
+          }).then((res) => res.json());
+        });
+
+        const results = await Promise.all(promises);
+
+        const combinedData: MonthlyData = {
+          equipment: [],
+          livestock: [],
+          crops: [],
+          waste: [],
+          totalMonthlyEmissions: [],
+          totalMonthlyAbsorption: [],
+          netMonthlyEmissions: [],
+          emissionTargets: {},
+        };
+
+        results.forEach((result) => {
+          Object.keys(result.monthlyData).forEach((key) => {
+            if (key === "emissionTargets") {
+              combinedData.emissionTargets = {
+                ...combinedData.emissionTargets,
+                ...result.monthlyData.emissionTargets,
+              };
+            } else {
+              combinedData[key as keyof MonthlyData] = [
+                ...(combinedData[key as keyof MonthlyData] as number[]),
+                ...result.monthlyData[key as keyof MonthlyData],
+              ];
+            }
+          });
+        });
+
+        setData(combinedData); // Use setData from context
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setIsLoading(false); // Use setIsLoading from context
+      }
+    };
+
     fetchHistoricalData();
   }, []); // Empty dependency array ensures it runs only once
 

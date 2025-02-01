@@ -66,7 +66,7 @@ const ScopeModal = ({
     {
       name: "Scope 2",
       value: scope2,
-      description: "Indirect emissions from purchased electricity (Eg. Purchased Energy's Emission)",
+      description: "Indirect emissions from purchased electricity",
     },
     {
       name: "Scope 3",
