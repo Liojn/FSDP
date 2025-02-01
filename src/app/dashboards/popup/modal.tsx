@@ -29,7 +29,6 @@ const Modal: React.FC<ModalProps> = ({
     const fetchCategoryData = async () => {
       setLoading(true);
       setError(null);
-
       try {
         // Determine if we should include month in the endpoint
         const shouldIncludeMonth = month !== "" && month !== undefined;
@@ -238,19 +237,29 @@ const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-96 max-w-full max-h-[50vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">{category} Emission Details</h2>
-        {renderDetails()}
-        <button
-          className="mt-4 bg-lime-700 text-white px-4 py-2 rounded hover:bg-lime-500"
-          onClick={onClose}
-        >
-          Close
-        </button>
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+      <div className="bg-white rounded-lg shadow-xl w-[28rem] max-w-full max-h-[60vh] flex flex-col">
+        
+        {/* Fixed Header with Close Button */}
+        <div className="flex justify-between items-center p-4 border-b">
+          <h2 className="text-lg font-bold text-gray-800">{category} Emission Details</h2>
+          <button 
+            className="text-gray-500 hover:text-gray-700"
+            onClick={onClose}
+          >
+            ✖
+          </button>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="p-6 overflow-auto flex-1 text-gray-700">
+          {renderDetails()}
+        </div>
+
       </div>
     </div>
   );
+
 };
 
 export default Modal;

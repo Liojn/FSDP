@@ -3,31 +3,32 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { useData, MonthlyData } from "@/context/DataContext";
 import { useRef, useEffect } from "react";
-import NetZeroGraph from "./netZeroGraph/netZeroGraph";
-import EmissionsChart from "./carbonNeutralGraph/predictionGraph";
+import { Skeleton } from "@/components/ui/skeleton";
+import dynamic from "next/dynamic";
+import { memo } from "react";
 
 // Dynamically import components with skeleton fallback
-const NetZeroGraph = dynamic(() => import("./netZeroGraph/netZeroGraph"), {
+const DynamicNetZeroGraph = dynamic(() => import("./netZeroGraph/netZeroGraph"), {
   loading: () => <Skeleton className="h-64 w-full" />,
-  ssr: false, // Set to false if the component relies on client-side only APIs
+  ssr: false,
 });
 
-const EmissionsChart = dynamic(
-  () => import("./predictionComponents/predictionGraph"),
+const DynamicEmissionsChart = dynamic(
+  () => import("./carbonNeutralGraph/predictionGraph"),
   {
     loading: () => <Skeleton className="h-48 w-full" />,
-    ssr: false, // Set to false if the component relies on client-side only APIs
+    ssr: false,
   }
 );
 
 // Memoize components to prevent unnecessary re-renders
-const MemoizedNetZeroGraph = memo(NetZeroGraph);
-const MemoizedEmissionsChart = memo(EmissionsChart);
+const MemoizedNetZeroGraph = memo(DynamicNetZeroGraph);
+const MemoizedEmissionsChart = memo(DynamicEmissionsChart);
 
 export default function PredictionPage() {
   const netZeroGraphRef = useRef<HTMLDivElement>(null);
   const emissionsChartRef = useRef<HTMLDivElement>(null);
-  const { setData, setIsLoading, setError} = useData();
+  const { setData, setIsLoading, setError } = useData();
 
   useEffect(() => {
     const fetchHistoricalData = async () => {
@@ -35,7 +36,7 @@ export default function PredictionPage() {
         typeof window !== "undefined" ? localStorage.getItem("userName") : null;
 
       if (!userName) {
-        setError("User not authenticated.");
+        setError(true);
         setIsLoading(false);
         return;
       }
@@ -93,7 +94,7 @@ export default function PredictionPage() {
             }
           });
         });
-        setData(combinedData); // Use setData from context
+        setData(combinedData);
       } catch (err) {
         console.error(err);
         setError(true);
@@ -107,28 +108,16 @@ export default function PredictionPage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      {/* Header Section */}
       <div className="pt-0 flex justify-between items-center mb-4">
-        {isLoading ? (
-          <Skeleton className="w-1/3 h-8" />
-        ) : (
-          <PageHeader title="Prediction" />
-        )}
+        <PageHeader title="Prediction" />
       </div>
+      
       <div className="" ref={netZeroGraphRef}>
-        <NetZeroGraph />
+        <MemoizedNetZeroGraph />
       </div>
 
-      {/* Emissions Chart Section */}
       <div ref={emissionsChartRef}>
-        {isLoading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-48 w-full" />
-          </div>
-        ) : (
-          <MemoizedEmissionsChart />
-        )}
+        <MemoizedEmissionsChart />
       </div>
     </div>
   );
