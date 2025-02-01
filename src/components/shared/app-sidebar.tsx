@@ -316,7 +316,7 @@ useEffect(() => {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="w-full px-3 py-3 hover:bg-stone-800"
+                  className="w-full px-3 py-10 hover:bg-stone-800"
                 >
                   {renderUserProfile}
                 </SidebarMenuButton>
@@ -325,7 +325,7 @@ useEffect(() => {
                 className="w-60 rounded-lg border border-stone-800 bg-stone-900 text-white"
                 side="top"
                 align="end"
-                sideOffset={4}
+                sideOffset={8}
               >
                 {renderDropdownContent}
               </DropdownMenuContent>
