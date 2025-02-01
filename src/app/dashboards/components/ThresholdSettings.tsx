@@ -26,8 +26,7 @@ interface ScopeThreshold {
 
 const defaultDescriptions = {
   "Scope 1": "Direct emissions from owned or controlled sources",
-  "Scope 2":
-    "Indirect emissions from purchased electricity, steam, heating, and cooling",
+  "Scope 2": "Indirect emissions from purchased electricity, steam, heating, and cooling",
   "Scope 3": "All other indirect emissions in the value chain",
 };
 
@@ -36,21 +35,21 @@ const defaultThresholds: ScopeThreshold[] = [
     id: "scope1",
     scope: "Scope 1",
     value: 500,
-    unit: "tons CO₂e",
+    unit: "kg CO₂e",
     description: defaultDescriptions["Scope 1"],
   },
   {
     id: "scope2",
     scope: "Scope 2",
     value: 1000,
-    unit: "tons CO₂e",
+    unit: "kg CO₂e",
     description: defaultDescriptions["Scope 2"],
   },
   {
     id: "scope3",
     scope: "Scope 3",
     value: 1500,
-    unit: "tons CO₂e",
+    unit: "kg CO₂e",
     description: defaultDescriptions["Scope 3"],
   },
 ];
@@ -159,8 +158,8 @@ export default function ThresholdSettings() {
             body: JSON.stringify({
               userId,
               scope: threshold.scope,
-              value: threshold.value,
-              unit: threshold.unit,
+              value: threshold.value, // This is now in kg
+              unit: "kg CO₂e",
             }),
           }).then(async (response) => {
             if (!response.ok) {
@@ -202,10 +201,7 @@ export default function ThresholdSettings() {
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button
-          className="bg-emerald-500 text-emerald-50 hover:bg-emerald-600 w-full md:w-auto"
-          onClick={() => setIsOpen(true)}
-        >
+        <Button className="w-full md:w-auto" onClick={() => setIsOpen(true)}>
           Edit Threshold and Goals Settings
         </Button>
       </SheetTrigger>

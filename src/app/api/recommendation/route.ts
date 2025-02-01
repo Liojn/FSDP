@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 // src/app/api/recommendation/route.ts
 
 import { NextResponse } from "next/server";
-import { Recommendation, MetricData, CategoryType } from "@/types";
+import { Recommendation, MetricData, CategoryType, WeatherData } from "@/types";
 import Anthropic from "@anthropic-ai/sdk";
 import connectToDatabase from "dbConfig";
 import { ObjectId } from "mongodb";
@@ -76,7 +76,7 @@ const determineWeatherRisk = (temperature: number, rainfall: number, windSpeed: 
 
 const generatePrompt = async (
   metrics: MetricData,
-  weatherData: any[],
+  weatherData: WeatherData[],
   scopes?: string[]
 ) => {
   const scopeEmissions = calculateScopeEmissions(metrics);
@@ -129,6 +129,7 @@ ${weatherRisk
 - Compare user metrics against industry benchmarks where available.
 - Maximum 5 steps per recommendation, with clear and actionable instructions.
 - You can assume the savings is in C02e (kg) / year emissions unless otherwise specified.
+- Your english should be in British English.
 
 
 **Return the response as valid JSON only**, with no additional text or explanations.
@@ -147,7 +148,6 @@ Use the following structure:
       "savings": 100,
       "difficulty": "easy",
       "implementationTimeline": "3 months",
-      "sourceData": "source of metrics used",
       "scope": "Scope 1"
     }
   ]
@@ -166,7 +166,7 @@ export async function POST(req: Request) {
   try {
     const { metrics, weatherData, scopes } = (await req.json()) as {
       metrics: MetricData;
-      weatherData: any[];
+      weatherData: WeatherData[];
       scopes?: string[];
     };
     console.log("Request payload:", { metrics, weatherData, scopes });
@@ -209,6 +209,7 @@ export async function POST(req: Request) {
       ],
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const assistantReply = (msg.content[0] as any).text;
     const parsedResponse = cleanAndParseJSON(assistantReply);
 
@@ -228,8 +229,11 @@ export async function POST(req: Request) {
             ? "Medium"
             : "Low"
           : "Medium",
-        implementationSteps: rec.steps || [],
-        estimatedROI: rec.roi || 0,
+        trackingImplementationSteps: (rec.steps || []).map((step, index) => ({
+      id: `${new ObjectId().toString()}-step-${index}`,
+      step,
+      complete: false, // Default completion status
+    })),
         status: "Not Started",
         difficulty:
           rec.difficulty === "easy"
@@ -242,7 +246,6 @@ export async function POST(req: Request) {
         estimatedCost: 0,
         estimatedTimeframe: rec.implementationTimeline || "3-6 months",
         relatedMetrics: rec.sourceData ? [rec.sourceData] : [],
-        dashboardLink: rec.dashboardLink || "",
       })
     );
 

@@ -1,14 +1,147 @@
-// Enum for Category Type
+import { ObjectId } from "mongodb";
+import { z } from "zod";
+
+/* ------------------------------------------------------------------ */
+/*  1. Enums & Constants                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Enum for different Recommendation (or Emission) categories.
+ */
 export enum CategoryType {
   OVERALL = "Overall",
   ENERGY = "Energy",
   WASTE = "Waste",
   CROPS = "Crops",
   LIVESTOCK = "Livestock",
-  CUSTOM = "Custom", // Placeholder for dynamic categories
 }
 
-// Recommendation Type with fully optional fields
+/**
+ * Campaign can have the following statuses.
+ */
+export type CampaignStatus = "Active" | "Upcoming" | "Completed";
+
+/* ------------------------------------------------------------------ */
+/*  2. Shared Interfaces                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Represents a milestone within a campaign,
+ * showing at what percentage of the target the milestone is reached,
+ * and whether it has been reached (plus optional date).
+ */
+export interface CampaignMilestone {
+  percentage: number;
+  reached: boolean;
+  reachedAt?: Date;
+}
+
+
+/**
+ * For unlocking achievements, awarding badges, etc.
+ */
+export interface Achievement {
+  _id: string;
+  title: string;
+  description: string;
+  category: string; // could be "Energy", "Waste", etc.
+  progress: number;
+  isUnlocked: boolean;
+  dateUnlocked: string | null;
+  badge_id: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  3. Campaign & User Entities                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Main Campaign document interface.
+ * "totalReduction" is from your DB sample. 
+ * "currentProgress" is also in your sample.
+ * If you want to unify them, rename one or remove if unneeded.
+ */
+/**
+ * Represents your main Campaign document in the database.
+ */
+export interface Campaign {
+  _id?: string | ObjectId;
+  name: string;
+  startDate?: Date;
+  endDate?: Date;
+  status: string; // e.g., "Active", "Upcoming", or "Completed"
+  totalReduction?: number; // optional, if your DB stores it
+  currentProgress: number;
+  targetReduction: number;
+  signeesCount: number;
+  milestones: CampaignMilestone[];
+}
+
+/**
+ * The shape of data returned by /api/campaign
+ * when you fetch the active campaign.
+ */
+export interface CampaignData {
+  campaign: Campaign;
+}
+
+
+/**
+ * For user accounts, as in your sample DB.
+ * If you’re using "Company" as a separate concept, rename accordingly.
+ */
+export interface User {
+  _id?: string | ObjectId;
+  name: string;
+  email: string;
+  password?: string;
+  emissionGoal?: Array<{
+    year: number;
+    target: number; // e.g., 0.05 = 5%
+  }>;
+  firstYearGoal?: number;
+  location?: string;
+  /**
+   * Aggregated total contributions (in tons of CO2, presumably).
+   */
+  totalContributions?: number;
+}
+
+/* ------------------------------------------------------------------ */
+/*  4. Validation Schemas (Zod)                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Example schema for a company or user registration form.
+ * Adjust as necessary.
+ */
+export const companyFormSchema = z.object({
+  name: z.string().min(1, "Company name (or user name) is required"),
+  contactPerson: z.string().min(1, "Contact person is required"),
+  email: z.string().email("Invalid email address"),
+});
+
+export type CompanyFormValues = z.infer<typeof companyFormSchema>;
+
+/**
+ * For user-submitted testimonials.
+ */
+export const testimonialFormSchema = z.object({
+  content: z
+    .string()
+    .min(10, "Testimonial must be at least 10 characters")
+    .max(500, "Testimonial must not exceed 500 characters"),
+});
+
+export type TestimonialFormValues = z.infer<typeof testimonialFormSchema>;
+
+/* ------------------------------------------------------------------ */
+/*  5. Recommendation Interfaces                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Base Recommendation type
+ */
 export interface Recommendation {
   id: string;
   title: string;
@@ -18,39 +151,66 @@ export interface Recommendation {
   category: CategoryType;
   estimatedEmissionReduction: number;
   priorityLevel: string;
-  implementationSteps: string[];
   status: string;
   difficulty: string;
   estimatedTimeframe: string;
-  relatedMetrics?: string[];
 }
 
-export interface TrackingRecommendation extends Recommendation {
-  // Override status with narrower type if you wish
-  status: "Not Started" | "In Progress" | "Completed";
-
-  // New fields for tracking
-  progress: number;
-  trackingImplementationSteps: ImplementationStep[];
-  completedSteps: number;
-  notes: Note[];
-}
-
-
-export interface Note {
-  id: string;
-  content: string;
-  timestamp: string;
-}
-
+/**
+ * Implementation step used in TrackingRecommendation
+ */
 export interface ImplementationStep {
   id: string;
   step: string;
   complete: boolean;
 }
 
+/**
+ * Notes attached to a recommendation
+ */
+export interface Note {
+  id: string;
+  content: string;
+  timestamp: string;
+}
 
-// Threshold Data Interface
+/**
+ * Extended recommendation with tracking details
+ */
+export interface TrackingRecommendation extends Recommendation {
+  // Override status with specific tracking states
+  status: "Not Started" | "In Progress" | "Completed";
+  // Additional tracking fields
+  progress: number;
+  trackingImplementationSteps: ImplementationStep[];
+  completedSteps: number;
+  notes: Note[];
+}
+
+/**
+ * Used when creating new recommendations via form
+ */
+export interface CreateRecommendationFormData {
+  userId: string;
+  title: string;
+  description: string;
+  scope: string;
+  impact: string;
+  category: CategoryType;
+  estimatedEmissionReduction: number;
+  priorityLevel: "Low" | "Medium" | "High";
+  difficulty: "Easy" | "Moderate" | "Hard";
+  estimatedTimeframe: string;
+  implementationSteps: string[];
+}
+
+/* ------------------------------------------------------------------ */
+/*  6. Other Domain Interfaces (Emissions, Weather, etc.)             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Represents threshold data for a given user and scope.
+ */
 export interface ThresholdData {
   userId: string;
   scope: string;
@@ -61,13 +221,17 @@ export interface ThresholdData {
   updatedAt?: Date;
 }
 
-// Emission Data Interface
+/**
+ * Emission data, typically stored with a timestamp, scope, etc.
+ */
 export interface EmissionData {
   scope: string;
   value: number;
   unit: string;
   timestamp?: Date;
-}
+} 
+
+
 
 export interface WeatherData {
   _id: {
@@ -80,21 +244,27 @@ export interface WeatherData {
   location: string;
 }
 
-// Recommendation Response Data Interface
+/* ------------------------------------------------------------------ */
+/*  7. Example API Response Types                                     */
+/* ------------------------------------------------------------------ */
+
+export interface CampaignAPIResponse {
+  campaign: Campaign;
+  user: User;
+}
+
+/**
+ * Example shape if you return metrics & weather from a recommendation endpoint.
+ */
 export interface ResponseData {
   metrics: MetricData;
   weatherData: WeatherData;
   recommendations?: Recommendation[];
 }
 
-// Recommendation Card Props
-export interface RecommendationCardProps {
-  rec: Recommendation;
-  isImplemented?: boolean;
-  toggleRecommendation?: (id: string) => void;
-}
-
-// Metric Data Type (based on previous context)
+/**
+ * Metrics structure used by your app.
+ */
 export interface MetricData {
   userId: string;
   energy: {
@@ -118,32 +288,29 @@ export interface MetricData {
   };
 }
 
-// State for Implemented Recommendations
+/* ------------------------------------------------------------------ */
+/*  8. Utility State & Helper Types                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * For tracking which recommendations are marked “implemented.”
+ */
 export interface ImplementedRecommendationsState {
   [recommendationId: string]: boolean;
 }
 
-// Category Data Interface with more flexible structure
-export interface CategoryData {
-  [category: string]: Recommendation[];
-  overall: Recommendation[];
-}
-
-// Scope Emissions Interface
-export interface ScopeEmissions {
-  scope1: number;
-  scope2: number;
-  scope3: number;
-}
-
-// Utility type to convert ImplementedRecommendationsState to boolean array
+/**
+ * Converts an object-based state to a boolean array
+ */
 export function implementedToArray(state: ImplementedRecommendationsState): boolean[] {
   return Object.values(state);
 }
 
-// Utility type to convert boolean array to ImplementedRecommendationsState
+/**
+ * Converts a boolean array back to an object-based state
+ */
 export function arrayToImplemented(
-  arr: boolean[], 
+  arr: boolean[],
   recommendations: Recommendation[]
 ): ImplementedRecommendationsState {
   return recommendations.reduce((acc, rec, index) => {
@@ -152,7 +319,9 @@ export function arrayToImplemented(
   }, {} as ImplementedRecommendationsState);
 }
 
-// Utility type to convert ImplementedRecommendationsState to Set
+/**
+ * Converts object-based state to a Set of implemented IDs
+ */
 export function implementedToSet(state: ImplementedRecommendationsState): Set<string> {
   return new Set(
     Object.entries(state)
@@ -161,17 +330,16 @@ export function implementedToSet(state: ImplementedRecommendationsState): Set<st
   );
 }
 
-// Utility type to convert Set back to ImplementedRecommendationsState
+/**
+ * Converts a Set of IDs to object-based state
+ */
 export function setToImplemented(
-  set: Set<string>, 
+  set: Set<string>,
   existingState?: ImplementedRecommendationsState
 ): ImplementedRecommendationsState {
   const newState: ImplementedRecommendationsState = existingState || {};
-  set.forEach(id => {
+  set.forEach((id) => {
     newState[id] = true;
   });
   return newState;
 }
-
-// Export any other existing types
-export * from './leaderboard'; // If you have a leaderboard types file

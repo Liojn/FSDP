@@ -1,27 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   fetchUniqueYears,
   getMetricsData,
   fetchMonthlyCarbonEmissions,
   fetchEmissionTarget,
   fetchEmissionCategory,
+  fetchEquipmentTopThree,
+  fetchCropCycle
 } from "../../api/dashboards/api";
 import { 
+  EquipmentTopData, //interface for topthreemachinery
+  CropCalendarData, //interface for cropcycle
   ScopeThreshold, 
   MetricData, 
   EmissionCategoryData,
   TargetGoalResponse,
   MetricsDataResponse,
   EmissionsDataResponse,
-  MetricsUpdateParams
+  MetricsUpdateParams,
 } from "../types";
 import { 
-  DEFAULT_DESCRIPTIONS, 
-  METRIC_TO_SCOPE, 
   DEFAULT_METRICS 
 } from "../constants";
+
 
 export const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
@@ -42,38 +45,10 @@ export const useDashboardData = () => {
 
   const [categoryEmissionsData, setCategoryEmissionsData] = useState<EmissionCategoryData[] | null>(null);
   const [metricsData, setMetricsData] = useState<MetricData[]>(DEFAULT_METRICS);
-  const [thresholds, setThresholds] = useState<ScopeThreshold[]>([]);
-  const [exceedingScopes, setExceedingScopes] = useState<string[]>([]);
-
-  // Fetch thresholds
-  useEffect(() => {
-    const fetchThresholds = async () => {
-      const storedUserId = localStorage.getItem("userId");
-      if (!storedUserId) {
-        console.warn("No userId found");
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/thresholds?userId=${storedUserId}`);
-        if (response.ok) {
-          const data = await response.json();
-          const userDefinedThresholds = data.thresholds.map(
-            (threshold: ScopeThreshold) => ({
-              ...threshold,
-              description: DEFAULT_DESCRIPTIONS[threshold.scope],
-            })
-          );
-          setThresholds(userDefinedThresholds);
-        } else {
-          console.error("Failed to fetch user thresholds");
-        }
-      } catch (error) {
-        console.error("Error fetching thresholds:", error);
-      }
-    };
-    fetchThresholds();
-  }, []);
+  //ASSG2 onwards
+  const [machineryData, setMachineryData] = useState<EquipmentTopData[]>([]);
+  const [calendarData, setCalendarData] = useState<CropCalendarData[]>([]);
+  const [thresholds] = useState<ScopeThreshold[]>([]);
 
   // Fetch years
   useEffect(() => {
@@ -114,12 +89,16 @@ export const useDashboardData = () => {
                 getMetricsData(companyId, selectedYear - 1),
                 fetchEmissionTarget(companyId, selectedYear),
                 fetchEmissionCategory(companyId, selectedYear, selectedMonth),
+                fetchEquipmentTopThree(companyId, selectedYear, selectedMonth),
+                fetchCropCycle(companyId, selectedYear, "Samarinda"),
               ])
             : Promise.all([
                 getMetricsData(companyId, selectedYear),
                 fetchMonthlyCarbonEmissions(companyId, selectedYear),
                 fetchEmissionTarget(companyId, selectedYear),
-                fetchEmissionCategory(companyId, selectedYear, selectedMonth),
+                fetchEmissionCategory(companyId, selectedYear, ''),
+                fetchEquipmentTopThree(companyId, selectedYear, ''),
+                fetchCropCycle(companyId, selectedYear, "Samarinda"),
               ]);
 
           const results = await fetchPromises;
@@ -130,6 +109,8 @@ export const useDashboardData = () => {
                 previousEmissionsData: results[2] as MetricsDataResponse,
                 targetGoalData: results[3] as TargetGoalResponse,
                 emissionCategoryData: results[4] as EmissionCategoryData[],
+                topEquipmentData: results[5] as EquipmentTopData[],
+                cropCycleData: results[6] as CropCalendarData[],
               }
             : {
                 data: results[0] as MetricsDataResponse,
@@ -137,6 +118,8 @@ export const useDashboardData = () => {
                 previousEmissionsData: null,
                 targetGoalData: results[2] as TargetGoalResponse,
                 emissionCategoryData: results[3] as EmissionCategoryData[],
+                topEquipmentData: results[4] as EquipmentTopData[],
+                cropCycleData: results[5] as CropCalendarData[],
               };
 
           updateMetricsData(updateParams);
@@ -149,7 +132,7 @@ export const useDashboardData = () => {
     };
 
     fetchMetricsData();
-  }, [selectedYear, thresholds, userId, yearOptions]);
+  }, [selectedYear, userId, yearOptions]);
 
   // Fetch metrics data for the filtered DONUT CHART
   useEffect(() => {
@@ -160,6 +143,9 @@ export const useDashboardData = () => {
           const fetchPromises = fetchEmissionCategory(companyId, selectedYear, selectedMonth);
           const results = await fetchPromises;
           setCategoryEmissionsData(results);
+          const fetchTopMachinery = fetchEquipmentTopThree(companyId, selectedYear, selectedMonth);
+          const results2 = await fetchTopMachinery;
+          setMachineryData(results2);
         } catch (error) {
           console.error("Failed to fetch emission data:", error);
         }
@@ -169,21 +155,6 @@ export const useDashboardData = () => {
     fetchMetricsData();
   }, [selectedMonth]);
 
-  // Check thresholds
-  const checkThresholds = (metrics: MetricData[]) => {
-    const exceeding: string[] = [];
-
-    metrics.forEach((metric) => {
-      const scopeType = METRIC_TO_SCOPE[metric.title];
-      const threshold = thresholds.find((t) => t.scope === scopeType);
-
-      if (threshold && parseFloat(metric.value.toString()) > threshold.value) {
-        exceeding.push(`${threshold.scope} (${threshold.description})`);
-      }
-    });
-
-    setExceedingScopes(exceeding);
-  };
 
   // Update metrics data
   const updateMetricsData = ({
@@ -192,6 +163,8 @@ export const useDashboardData = () => {
     previousEmissionsData,
     targetGoalData,
     emissionCategoryData,
+    topEquipmentData,
+    cropCycleData,
   }: MetricsUpdateParams) => {
     if (data) {
       const newMetricsData: MetricData[] = [
@@ -213,7 +186,6 @@ export const useDashboardData = () => {
       ];
 
       setMetricsData(newMetricsData);
-      checkThresholds(newMetricsData);
       setCurrentYearEmissions(data["carbonAverage in CO2E"]);
     }
 
@@ -234,6 +206,14 @@ export const useDashboardData = () => {
 
     if (emissionCategoryData) {
       setCategoryEmissionsData(emissionCategoryData);
+    }
+    
+     if (topEquipmentData) {
+      setMachineryData(topEquipmentData);
+    }
+
+    if (cropCycleData) {
+      setCalendarData(cropCycleData);
     }
   };
 
@@ -274,6 +254,8 @@ export const useDashboardData = () => {
     metricsData,
     thresholds,
     exceedingScopes,
+    machineryData, //newly added
+    calendarData, //newlyadded
     handleYearFilterChange,
     handleMonthClick,
   };
