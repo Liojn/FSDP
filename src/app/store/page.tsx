@@ -10,7 +10,8 @@ import {
   Sun, 
   LeafIcon, 
   CheckCircle2,
-  XCircle
+  XCircle,
+  Star
 } from "lucide-react";
 import { 
   AlertDialog, 
@@ -44,34 +45,61 @@ const StorePage: React.FC = () => {
   const [purchaseItem, setPurchaseItem] = useState<StoreItem | null>(null);
 
   const storeItems: StoreItem[] = [
-    { 
-      id: 1, 
-      name: "Tree Planting Kit", 
-      shortDescription: "Support Local Reforestation", 
-      fullDescription: "Our Tree Planting Kit enables you to directly contribute to local ecosystem restoration. Each kit supports the planting of 10 native trees in your community, helping to combat climate change, restore habitats, and improve air quality.",
-      cost: 1, 
-      impact: "Offset approximately 200 kg of CO2 annually",
-      icon: <TreePine className="text-lime-600" /> 
-    },
-    { 
-      id: 2, 
-      name: "Solar Panel Contribution", 
-      shortDescription: "Renewable Energy Infrastructure", 
-      fullDescription: "By purchasing this contribution, you're helping fund solar panel installations in underserved communities. Your support directly supports the transition to clean, renewable energy and helps reduce carbon emissions from traditional power sources.",
-      cost: 2, 
-      impact: "Generate 500 kWh of clean energy",
-      icon: <Sun className="text-lime-600" /> 
-    },
-    { 
-      id: 3, 
-      name: "Renewable Energy Offset", 
-      shortDescription: "Carbon Emission Reduction", 
-      fullDescription: "This offset supports verified renewable energy projects that directly reduce carbon emissions. Your contribution funds wind, solar, and hydroelectric initiatives that replace fossil fuel-based energy production.",
-      cost: 1, 
-      impact: "Neutralize 1 ton of carbon emissions",
-      icon: <LeafIcon className="text-lime-600" /> 
-    }
-  ];
+  { 
+    id: 1, 
+    name: "Tree Planting Kit", 
+    shortDescription: "Support Local Reforestation", 
+    fullDescription: "Our Tree Planting Kit enables you to directly contribute to local ecosystem restoration. Each kit supports the planting of 10 native trees in your community, helping to combat climate change, restore habitats, and improve air quality.",
+    cost: 500, 
+    impact: "Offset approximately 200 kg of CO2 annually",
+    icon: <TreePine className="text-lime-600" />,
+  },
+  { 
+    id: 2, 
+    name: "Solar Panel Contribution", 
+    shortDescription: "Renewable Energy Infrastructure", 
+    fullDescription: "By purchasing this contribution, you're helping fund solar panel installations in underserved communities. Your support directly supports the transition to clean, renewable energy and helps reduce carbon emissions from traditional power sources.",
+    cost: 750, 
+    impact: "Generate 500 kWh of clean energy",
+    icon: <Sun className="text-lime-600" />,
+  },
+  { 
+    id: 3, 
+    name: "Renewable Energy Offset Carbon Credits (ICC)", 
+    shortDescription: "Carbon Emission Reduction", 
+    fullDescription: "This offset supports verified renewable energy projects that directly reduce carbon emissions. Your contribution funds wind, solar, and hydroelectric initiatives that replace fossil fuel-based energy production.",
+    cost: 1000, 
+    impact: "Neutralize 1 ton of carbon emissions",
+    icon: <LeafIcon className="text-lime-600" />,
+  },
+  {
+    id: 4,
+    name: "Solar-Powered Water Pump",
+    shortDescription: "Efficient Water Management",
+    fullDescription: "This solar-powered water pump helps farmers reduce their reliance on fossil fuels while efficiently managing water resources. It is ideal for remote areas with limited access to electricity.",
+    cost: 900,
+    impact: "Reduces diesel consumption by 200 liters annually",
+    icon: <Sun className="text-lime-600" />,
+  },
+  {
+    id: 5,
+    name: "Organic Fertilizer Kit",
+    shortDescription: "Promote Sustainable Farming",
+    fullDescription: "This organic fertilizer kit helps farmers transition to sustainable farming practices by reducing the need for chemical fertilizers. It improves soil health, reduces water pollution, and supports biodiversity.",
+    cost: 300,
+    impact: "Reduces chemical runoff by 50% and improves soil fertility",
+    icon: <LeafIcon className="text-lime-600" />,
+  },
+  {
+    id: 6,
+    name: "Energy-Efficient LED Lighting",
+    shortDescription: "Reduce Energy Consumption",
+    fullDescription: "Upgrade your workspace or farm with energy-efficient LED lighting. These lights consume up to 75% less energy than traditional bulbs and have a longer lifespan, reducing both energy costs and waste.",
+    cost: 400,
+    impact: "Reduces energy consumption by up to 75%",
+    icon: <Star className="text-lime-600" />,
+  }
+];
 
   useEffect(() => {
     const fetchUserData = async () => {

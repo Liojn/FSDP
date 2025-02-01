@@ -21,36 +21,10 @@ interface Achievement {
   creditsAwarded: boolean;
 }
 
-interface CampaignData {
-  campaign: {
-    _id: string;
-    name: string;
-    status: string;
-    totalReduction: number;
-    targetReduction: number;
-    signeesCount: number;
-  };
-  participants: Array<{
-    company: {
-      _id: string;
-      name: string;
-      email: string;
-    };
-    participation: {
-      _id: string;
-      campaignId: string;
-      companyId: string;
-      joinedAt: string;
-      currentProgress: number;
-      lastUpdated: string;
-    };
-  }>;
-}
-
-const AchievementCard = ({ 
-  achievement, 
-  onClaimCredits 
-}: { 
+const AchievementCard = ({
+  achievement,
+  onClaimCredits,
+}: {
   achievement: Achievement;
   onClaimCredits: (badgeId: string) => Promise<void>;
 }) => {
@@ -60,8 +34,9 @@ const AchievementCard = ({
     try {
       setClaiming(true);
       await onClaimCredits(achievement.badge_id);
-    } catch (error) {
-      alert("Error claiming credits. Please try again later.");
+    } catch (error: any) {
+      console.error("Error claiming credits:", error);
+      alert(`Error claiming credits: ${error.message}`);
     } finally {
       setClaiming(false);
     }
@@ -82,7 +57,8 @@ const AchievementCard = ({
         <div className="flex flex-col items-end">
           {achievement.isUnlocked && (
             <span className="text-xs font-medium text-lime-600">
-              Unlocked {new Date(achievement.dateUnlocked!).toLocaleDateString()}
+              Unlocked{" "}
+              {new Date(achievement.dateUnlocked!).toLocaleDateString()}
             </span>
           )}
           {achievement.category === "Campaign" && (
@@ -95,7 +71,7 @@ const AchievementCard = ({
 
       <h3 className="font-bold text-lg">{achievement.title}</h3>
       <p className="text-gray-600 text-sm mb-3">{achievement.description}</p>
-      
+
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Coins className="w-4 h-4 text-lime-600" />
@@ -103,7 +79,7 @@ const AchievementCard = ({
             {achievement.credits} Credits
           </span>
         </div>
-        
+
         {achievement.isUnlocked && achievement.creditsAwarded ? (
           <span className="flex items-center gap-1 text-sm text-lime-600">
             <Check className="w-4 h-4" /> Claimed
@@ -154,7 +130,7 @@ const AchievementsPage = () => {
     "Equipment",
     "Crop",
     "Livestock",
-    "Campaign"
+    "Campaign",
   ];
 
   const calculateBadges = useCallback(async () => {
@@ -184,64 +160,69 @@ const AchievementsPage = () => {
     }
   }, []);
 
-const claimCredits = async (badgeId: string) => {
-  try {
-    const userId = localStorage.getItem("userId");
-    if (!userId) throw new Error("No user ID found");
+  const claimCredits = async (badgeId: string) => {
+    try {
+      const userId = localStorage.getItem("userId");
+      if (!userId) throw new Error("No user ID found");
 
-    const response = await fetch("/api/badges/claim", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ userId, badgeId }),
-    });
+      const response = await fetch("/api/badges/claim", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId, badgeId }),
+      });
 
-    if (!response.ok) throw new Error("Failed to claim credits");
+      if (!response.ok) throw new Error("Failed to claim credits");
 
-    const data = await response.json();
-    
-    // Ensure currentStoreCurrency is a valid number
-    const currentStoreCurrency = Number(localStorage.getItem("storeCurrency") || 0);
-    if (isNaN(currentStoreCurrency)) {
-      throw new Error("Invalid store currency value in localStorage");
+      const data = await response.json();
+
+      // Ensure currentStoreCurrency is a valid number
+      const currentStoreCurrency = Number(
+        localStorage.getItem("storeCurrency") || 0
+      );
+      if (isNaN(currentStoreCurrency)) {
+        throw new Error("Invalid store currency value in localStorage");
+      }
+
+      // Ensure creditsEarned is a valid number
+      const creditsEarned = Number(data.creditsEarned);
+      if (isNaN(creditsEarned)) {
+        throw new Error("Invalid credits earned value from API");
+      }
+
+      const newStoreCurrency = currentStoreCurrency + creditsEarned;
+
+      console.log("Current Store Currency:", currentStoreCurrency);
+      console.log("Credits Earned:", creditsEarned);
+      console.log("New Store Currency:", newStoreCurrency);
+
+      // Update localStorage
+      localStorage.setItem("storeCurrency", newStoreCurrency.toString());
+
+      // Dispatch event to update sidebar
+      window.dispatchEvent(
+        new CustomEvent("updateStoreCurrency", {
+          detail: {
+            newStoreCurrency: newStoreCurrency,
+            creditsEarned: creditsEarned,
+          },
+        })
+      );
+
+      // Update local state for claimed badge
+      setAchievements((prev) =>
+        prev.map((achievement) =>
+          achievement.badge_id === badgeId
+            ? { ...achievement, creditsAwarded: true }
+            : achievement
+        )
+      );
+    } catch (error) {
+      console.error("Error claiming credits:", error);
+      throw error;
     }
-
-    // Ensure creditsEarned is a valid number
-    const creditsEarned = Number(data.creditsEarned);
-    if (isNaN(creditsEarned)) {
-      throw new Error("Invalid credits earned value from API");
-    }
-
-    const newStoreCurrency = currentStoreCurrency + creditsEarned;
-
-    console.log("Current Store Currency:", currentStoreCurrency);
-    console.log("Credits Earned:", creditsEarned);
-    console.log("New Store Currency:", newStoreCurrency);
-
-    // Update localStorage
-    localStorage.setItem("storeCurrency", newStoreCurrency.toString());
-
-    // Dispatch event to update sidebar
-    window.dispatchEvent(new CustomEvent('updateStoreCurrency', { 
-      detail: { 
-        newStoreCurrency: newStoreCurrency,
-        creditsEarned: creditsEarned 
-      } 
-    }));
-
-    // Update local state for claimed badge
-    setAchievements(prev => prev.map(achievement => 
-      achievement.badge_id === badgeId 
-        ? { ...achievement, creditsAwarded: true }
-        : achievement
-    ));
-
-  } catch (error) {
-    console.error("Error claiming credits:", error);
-    throw error;
-  }
-};
+  };
 
   const fetchAndCombineData = useCallback(async () => {
     try {
@@ -264,22 +245,26 @@ const claimCredits = async (badgeId: string) => {
         achievementsResponse.json(),
       ]);
 
-      const combinedAchievements = achievementsData.userBadges.map((userBadge: any) => {
-        const badgeDetails = badgesData.find(
-          (badge: any) => badge._id.toString() === userBadge.badge_id.toString()
-        );
-        return {
-          ...userBadge,
-          title: badgeDetails?.title || "Unknown Badge",
-          description: badgeDetails?.description || "No description available",
-          category: badgeDetails?.category || "Uncategorized",
-          progress: userBadge.progress || 0,
-          isUnlocked: userBadge.isUnlocked || false,
-          dateUnlocked: userBadge.dateUnlocked || null,
-          credits: badgeDetails?.credits || 0,
-          creditsAwarded: userBadge.creditsAwarded || false
-        };
-      });
+      const combinedAchievements = achievementsData.userBadges.map(
+        (userBadge: any) => {
+          const badgeDetails = badgesData.find(
+            (badge: any) =>
+              badge._id.toString() === userBadge.badge_id.toString()
+          );
+          return {
+            ...userBadge,
+            title: badgeDetails?.title || "Unknown Badge",
+            description:
+              badgeDetails?.description || "No description available",
+            category: badgeDetails?.category || "Uncategorized",
+            progress: userBadge.progress || 0,
+            isUnlocked: userBadge.isUnlocked || false,
+            dateUnlocked: userBadge.dateUnlocked || null,
+            credits: badgeDetails?.credits || 0,
+            creditsAwarded: userBadge.creditsAwarded || false,
+          };
+        }
+      );
 
       setAchievements(combinedAchievements);
       setError(null);
@@ -299,7 +284,10 @@ const claimCredits = async (badgeId: string) => {
     init();
 
     const fetchInterval = setInterval(fetchAndCombineData, FETCH_INTERVAL);
-    const calculationInterval = setInterval(calculateBadges, CALCULATION_INTERVAL);
+    const calculationInterval = setInterval(
+      calculateBadges,
+      CALCULATION_INTERVAL
+    );
 
     return () => {
       clearInterval(fetchInterval);
@@ -317,7 +305,8 @@ const claimCredits = async (badgeId: string) => {
   );
 
   const earnedCredits = achievements.reduce(
-    (sum, achievement) => sum + (achievement.creditsAwarded ? achievement.credits : 0),
+    (sum, achievement) =>
+      sum + (achievement.creditsAwarded ? achievement.credits : 0),
     0
   );
 
@@ -410,8 +399,8 @@ const claimCredits = async (badgeId: string) => {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredAchievements.map((achievement) => (
-          <AchievementCard 
-            key={achievement._id} 
+          <AchievementCard
+            key={achievement._id}
             achievement={achievement}
             onClaimCredits={claimCredits}
           />

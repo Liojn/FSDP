@@ -3,17 +3,13 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert"; // Ensure this path is correct
 
-export default function SignUp({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,7 +58,7 @@ export default function SignUp({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted p-6 md:p-10">
       <div className="w-full max-w-sm md:max-w-5xl">
-        <div className={cn("flex flex-col gap-6", className)} {...props}>
+        <div className="flex flex-col gap-6">
           <Card className="overflow-hidden">
             <CardContent className="grid p-0 md:grid-cols-2">
               <form

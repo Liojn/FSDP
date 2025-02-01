@@ -47,9 +47,17 @@ const ScopeModal = ({
   const displayMonth = month ? Number(month) : undefined;
 
   // Add safety checks for scope calculations
-  const scope1 = Number(calculateScope1(data)) || 0;
-  const scope2 = Number(calculateScope2(data)) || 0;
-  const scope3 = Number(calculateScope3(data)) || 0;
+  // Transform the data to match EmissionsData interface
+  const transformedData = {
+    ...data,
+    crops: data.crops.map((crop) => ({
+      totalEmissions: crop.emissions || 0,
+    })),
+  };
+
+  const scope1 = Number(calculateScope1(transformedData)) || 0;
+  const scope2 = Number(calculateScope2(transformedData)) || 0;
+  const scope3 = Number(calculateScope3(transformedData)) || 0;
 
   console.log("Scope 1 value:", scope1);
   console.log("Scope 2 value:", scope2);
@@ -61,21 +69,23 @@ const ScopeModal = ({
     {
       name: "Scope 1",
       value: scope1,
-      description: "Direct emissions from owned or controlled sources (Eg. Fuel, Livestock Emissions)",
+      description:
+        "Direct emissions from owned or controlled sources (Eg. Fuel, Livestock Emissions)",
     },
     {
       name: "Scope 2",
       value: scope2,
-      description: "Indirect emissions from purchased electricity (Eg. Purchased Energy's Emission)",
+      description: "Indirect emissions from purchased electricity",
     },
     {
       name: "Scope 3",
       value: scope3,
-      description: "All other indirect emissions in value chain (Eg. Crops and Waste Emissions)",
+      description:
+        "All other indirect emissions in value chain (Eg. Crops and Waste Emissions)",
     },
   ].filter((item) => item.value > 0);
 
-  const COLORS = ["#4ade80", "#60a5fa", "#f472b6"];
+  const COLORS = ["#A0E274", "#F59E0B", "#3B82F6"];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">

@@ -1,6 +1,7 @@
 // src/app/api/recommendation/data/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "dbConfig";
+export const dynamic = "force-dynamic";
 
 // The REST of the code connects to the database, 
 // queries the "recommendations" collection for a specific userId, 

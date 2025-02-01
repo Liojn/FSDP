@@ -88,8 +88,8 @@ export const useDashboardData = () => {
                 fetchMonthlyCarbonEmissions(companyId, selectedYear),
                 getMetricsData(companyId, selectedYear - 1),
                 fetchEmissionTarget(companyId, selectedYear),
-                fetchEmissionCategory(companyId, selectedYear, selectedMonth),
-                fetchEquipmentTopThree(companyId, selectedYear, selectedMonth),
+                fetchEmissionCategory(companyId, selectedYear, ''),
+                fetchEquipmentTopThree(companyId, selectedYear, ''), 
                 fetchCropCycle(companyId, selectedYear, "Samarinda"),
               ])
             : Promise.all([
@@ -132,7 +132,7 @@ export const useDashboardData = () => {
     };
 
     fetchMetricsData();
-  }, [selectedYear, userId, yearOptions]);
+  }, [selectedMonth, selectedYear, userId, yearOptions]);
 
   // Fetch metrics data for the filtered DONUT CHART
   useEffect(() => {
@@ -153,7 +153,7 @@ export const useDashboardData = () => {
     };
 
     fetchMetricsData();
-  }, [selectedMonth]);
+  }, [selectedMonth, selectedYear, userId]);
 
 
   // Update metrics data
