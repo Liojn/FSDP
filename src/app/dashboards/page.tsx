@@ -483,6 +483,7 @@ const DashboardPage = () => {
 
   return (
     <div className="pt-0 p-4 space-y-6">
+    
       {/* Top Bar */}
       <div className="pt-0 flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
         {/* Page Title + Overlay Alert Icon */}
@@ -499,6 +500,32 @@ const DashboardPage = () => {
               )}
             </div>
           }
+        />
+        {/* Popup for Scope Modal*/}
+        {showModal && (
+          <Modal
+            isVisible={showModal}
+            category={selectedCategory}
+            userId={userId || ""}
+            month={selectedMonth}
+            year={selectedYear ?? new Date().getFullYear()}
+            onClose={closeModal}
+          />
+        )}
+
+        {/* Scope Details Modal */}
+        <ScopeModal
+          isOpen={isScopeModalOpen}
+          onClose={() => setIsScopeModalOpen(false)}
+          thresholds={(thresholdData || []).map((t) => ({
+            ...t,
+            description: `Threshold for ${t.scope}`,
+          }))}
+          data={emissionsData as ThresholdEmissionData | null}
+          exceedingScopes={exceedingScopes}
+          onViewRecommendations={handleViewRecommendations}
+          year={selectedYear}
+          month={selectedMonth}
         />
 
         {/* Right-side buttons (Export, Threshold, Year Filter) */}
@@ -780,31 +807,6 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {showModal && (
-        <Modal
-          isVisible={showModal}
-          category={selectedCategory}
-          userId={userId || ""}
-          month={selectedMonth}
-          year={selectedYear ?? new Date().getFullYear()}
-          onClose={closeModal}
-        />
-      )}
-
-      {/* Scope Details Modal */}
-      <ScopeModal
-        isOpen={isScopeModalOpen}
-        onClose={() => setIsScopeModalOpen(false)}
-        thresholds={(thresholdData || []).map((t) => ({
-          ...t,
-          description: `Threshold for ${t.scope}`,
-        }))}
-        data={emissionsData as ThresholdEmissionData | null}
-        exceedingScopes={exceedingScopes}
-        onViewRecommendations={handleViewRecommendations}
-        year={selectedYear}
-        month={selectedMonth}
-      />
     </div>
   );
 };

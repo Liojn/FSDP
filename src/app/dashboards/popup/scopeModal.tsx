@@ -85,7 +85,7 @@ const ScopeModal = ({
     },
   ].filter((item) => item.value > 0);
 
-  const COLORS = ["#4ade80", "#60a5fa", "#f472b6"];
+  const COLORS = ["#A0E274", "#F59E0B", "#3B82F6"];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">

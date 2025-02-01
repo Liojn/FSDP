@@ -237,7 +237,7 @@ const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-[28rem] max-w-full max-h-[60vh] flex flex-col">
         
         {/* Fixed Header with Close Button */}
