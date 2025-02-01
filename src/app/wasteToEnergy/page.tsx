@@ -23,6 +23,7 @@ interface WasteData {
   waste_category: string[];
   carbon_credits?: number;
   weight_accepted?: number;
+  processed: boolean;
 }
 
 interface DashboardMetrics {
@@ -136,6 +137,14 @@ const WasteTrackingPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+  
+    const userName = 
+      typeof window !== "undefined" ? localStorage.getItem("userName") : null;
+    
+    if (!userName) {
+      setError('User name not found');
+      return;
+    }
     if (!termsAccepted) {
       setFormError("Please accept the Terms and Conditions before submitting");
       return;
@@ -153,7 +162,7 @@ const WasteTrackingPage = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'userName': 'nicole'
+          'userName': userName,
         },
         body: JSON.stringify(formData)
       });
@@ -182,12 +191,19 @@ const WasteTrackingPage = () => {
   const fetchWasteData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    const userName = 
+      typeof window !== "undefined" ? localStorage.getItem("userName") : null;
+    
+    if (!userName) {
+      setError('User name not found');
+      return;
+    }
     try {
       const response = await fetch('http://localhost:3000/api/wasteToEnergy', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'userName': 'nicole'
+          'userName': userName,
         }
       });
       
@@ -270,6 +286,19 @@ const WasteTrackingPage = () => {
     </div>
   );
 
+  const getCarbonCreditsDisplay = (item: WasteData) => {
+    if (!item.carbon_credits) return '-';
+    
+    return (
+      <div className="flex flex-col">
+        <span>{item.carbon_credits.toLocaleString()}</span>
+        <span className="text-sm text-gray-500">
+          ({item.processed ? 'processed' : 'unprocessed'})
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div 
       className="p-7 space-y-6"
@@ -288,7 +317,7 @@ const WasteTrackingPage = () => {
               <CardTitle>Waste Records</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Your existing table content */}
+              {/* table content */}
               {isLoading ? (
                 <div className="text-center py-4">Loading waste data...</div>
               ) : error ? (
@@ -320,7 +349,7 @@ const WasteTrackingPage = () => {
                           <td className="p-2">{item.status}</td>
                           <td className="p-2">{item.weight_tons.toLocaleString()}</td>
                           <td className="p-2">{item.weight_accepted?.toLocaleString()}</td>
-                          <td className="p-2">{item.carbon_credits?.toLocaleString() ?? '-'}</td>
+                          <td className="p-2">{getCarbonCreditsDisplay(item)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -417,7 +446,7 @@ const WasteTrackingPage = () => {
                   <div className="text-sm space-y-2">
                     <p>1. Revenue Distribution:</p>
                     <ul className="list-disc pl-5 space-y-1">
-                      <li>Carbon credits will be awarded based on energy generated (1 credit per 100kWh)</li>
+                      <li>Carbon credits will be awarded based on energy generated (1 credit per 100kW generated)</li>
                       <li>Only accepted waste will be eligible for AgriTech credits</li>
                     </ul>
                     <p>2. Operational Guidelines:</p>
