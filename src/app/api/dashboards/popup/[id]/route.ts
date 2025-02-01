@@ -53,6 +53,7 @@ type Crop = {
     _id: { $oid: string };
     company_id: { $oid: string };
     crop_type: string;
+    status: string;
     area_planted_ha: number;
     fertilizer_amt_used_kg: number;
     date: string;
@@ -83,6 +84,43 @@ type CollectionData = {
     Waste: Waste[];
 };
 
+
+//Type explicit for Calculate DetailedMissions
+type Emissions = {
+    equipment: Array<{
+        date: string;
+        fuelType: string;
+        fuelConsumed: number;
+        electricityUsed: number;
+        fuelEmissions: number;
+        electricityEmissions: number;
+        totalEmissions: number;
+    }>;
+    livestock: Array<{
+        date: string;
+        species: string;
+        count: number;
+        emissions: number;
+    }>;
+    crops: Array<{
+        date: string;
+        cropType: string;
+        areaPlanted: number;
+        fertilizerUsed: number;
+        yieldTons: number;
+        fertilizerEmissions: number;
+        soilEmissions: number;
+        totalEmissions: number;
+    }>;
+    waste: Array<{
+        date: string;
+        wasteType: string;
+        quantity: number;
+        emissions: number;
+    }>;
+    totalEmissions: number;
+};
+
 // Modified to calculate emissions for specific year and month
 const calculateDetailedEmissions = (
     equipmentData: Equipment[],
@@ -91,13 +129,12 @@ const calculateDetailedEmissions = (
     wasteData: Waste[],
     emissionData: EmissionsRate[],
     month: number | null
-) => {
-    // Calculation logic remains the same...
-    const emissions = {
-        equipment: [] as any[],
-        livestock: [] as any[],
-        crops: [] as any[],
-        waste: [] as any[],
+): Emissions => {
+    const emissions: Emissions = {
+        equipment: [],
+        livestock: [],
+        crops: [],
+        waste: [],
         totalEmissions: 0
     };
 
@@ -151,9 +188,13 @@ const calculateDetailedEmissions = (
         const matchesMonth = month === null || cropDate.getUTCMonth() === month;
 
         if (matchesMonth) {
+            let slash_emit = 0;
+            if (crop.status === "Land Preparation") {
+                slash_emit += (19800 * crop.area_planted_ha); // 1.98kg/m² = 19800kg/ha
+            }
             const fertEmission = crop.fertilizer_amt_used_kg * emissionData[0].crops_emissions["nitrogen_fertilizer"];
             const soilEmission = crop.area_planted_ha * emissionData[0].crops_emissions["soil_emissions"];
-            const totalCropEmission = fertEmission + soilEmission;
+            const totalCropEmission = fertEmission + soilEmission + slash_emit;
 
             emissions.crops.push({
                 date: crop.date,
@@ -192,6 +233,7 @@ const calculateDetailedEmissions = (
 
     return emissions;
 };
+
 
 // Adjusted API route handler to use parameters similarly to the first code
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -239,7 +281,26 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
                     }
                 };
             const documents = await collection.find(query).toArray();
-            results[collectionName as keyof CollectionData] = documents as any;
+            // Type the documents explicitly based on the collection
+            switch (collectionName) {
+                case 'EmissionRates':
+                    results.EmissionRates = documents as EmissionsRate[];
+                    break;
+                case 'Equipment':
+                    results.Equipment = documents as Equipment[];
+                    break;
+                case 'Crops':
+                    results.Crops = documents as Crop[];
+                    break;
+                case 'Livestock':
+                    results.Livestock = documents as Livestock[];
+                    break;
+                case 'Waste':
+                    results.Waste = documents as Waste[];
+                    break;
+                default:
+                    break;
+            }
         }
 
         const detailedEmissions = calculateDetailedEmissions(

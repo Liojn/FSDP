@@ -3,7 +3,8 @@
 import { SidebarTrigger } from "../ui/sidebar";
 
 interface PageHeaderProps {
-  title: string;
+  title: string | React.ReactNode;
+
   className?: string;
 }
 

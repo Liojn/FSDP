@@ -1,9 +1,28 @@
 "use client";
+
 import { PageHeader } from "@/components/shared/page-header";
 import { useData, MonthlyData } from "@/context/DataContext";
 import { useRef, useEffect } from "react";
 import NetZeroGraph from "./netZeroGraph/netZeroGraph";
 import EmissionsChart from "./carbonNeutralGraph/predictionGraph";
+
+// Dynamically import components with skeleton fallback
+const NetZeroGraph = dynamic(() => import("./netZeroGraph/netZeroGraph"), {
+  loading: () => <Skeleton className="h-64 w-full" />,
+  ssr: false, // Set to false if the component relies on client-side only APIs
+});
+
+const EmissionsChart = dynamic(
+  () => import("./predictionComponents/predictionGraph"),
+  {
+    loading: () => <Skeleton className="h-48 w-full" />,
+    ssr: false, // Set to false if the component relies on client-side only APIs
+  }
+);
+
+// Memoize components to prevent unnecessary re-renders
+const MemoizedNetZeroGraph = memo(NetZeroGraph);
+const MemoizedEmissionsChart = memo(EmissionsChart);
 
 export default function PredictionPage() {
   const netZeroGraphRef = useRef<HTMLDivElement>(null);
@@ -12,23 +31,38 @@ export default function PredictionPage() {
 
   useEffect(() => {
     const fetchHistoricalData = async () => {
-      const userName = localStorage.getItem("userName");
+      const userName =
+        typeof window !== "undefined" ? localStorage.getItem("userName") : null;
+
+      if (!userName) {
+        setError("User not authenticated.");
+        setIsLoading(false);
+        return;
+      }
+
       try {
+        setIsLoading(true);
         const endYear = new Date().getFullYear();
         const startYear = endYear - 4;
 
         const promises = Array.from({ length: 5 }, (_, i) => {
+          const year = startYear + i;
           return fetch("/api/prediction", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              userName: userName || "",
+              userName: userName,
             },
             body: JSON.stringify({
-              endYear: startYear + i,
+              endYear: year,
               dataType: "carbon-emissions",
             }),
-          }).then((res) => res.json());
+          }).then((res) => {
+            if (!res.ok) {
+              throw new Error(`Failed to fetch data for year ${year}`);
+            }
+            return res.json();
+          });
         });
 
         const results = await Promise.all(promises);
@@ -59,13 +93,12 @@ export default function PredictionPage() {
             }
           });
         });
-
         setData(combinedData); // Use setData from context
       } catch (err) {
         console.error(err);
         setError(true);
       } finally {
-        setIsLoading(false); // Use setIsLoading from context
+        setIsLoading(false);
       }
     };
 
@@ -74,14 +107,28 @@ export default function PredictionPage() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
+      {/* Header Section */}
       <div className="pt-0 flex justify-between items-center mb-4">
-        <PageHeader title="Prediction" />
+        {isLoading ? (
+          <Skeleton className="w-1/3 h-8" />
+        ) : (
+          <PageHeader title="Prediction" />
+        )}
       </div>
       <div className="" ref={netZeroGraphRef}>
         <NetZeroGraph />
       </div>
-      <div className="" ref={emissionsChartRef}>
-        <EmissionsChart />
+
+      {/* Emissions Chart Section */}
+      <div ref={emissionsChartRef}>
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+        ) : (
+          <MemoizedEmissionsChart />
+        )}
       </div>
     </div>
   );
