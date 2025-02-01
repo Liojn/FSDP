@@ -24,6 +24,7 @@ interface WasteData {
   carbon_credits?: number;
   weight_accepted?: number;
   processed: boolean;
+  transport_mode: string;
 }
 
 interface DashboardMetrics {
@@ -300,21 +301,25 @@ const WasteTrackingPage = () => {
   };
 
   return (
-    <div 
-      className="p-7 space-y-6"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-    >
-      <h1 className="text-2xl font-bold mb-6">Waste-to-Energy Operation</h1>
-      
-      <Dashboard />
+    <div className="flex flex-col h-screen">
+      {/* Fixed header section */}
+      <div className="flex-none p-7 space-y-6 bg-background">
+        <h1 className="text-2xl font-bold">Waste-to-Energy Operation</h1>
+        <Dashboard />
+        <ViewToggle />
+      </div>
 
-      <ViewToggle />
+      {/* Scrollable content section */}
+      <div 
+        className="flex-1 overflow-y-auto px-7 pb-7"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+      >
       <div className="transition-transform duration-300 ease-in-out">
         {currentView === 'table' ? (
           <Card>
             <CardHeader>
-              <CardTitle>Waste Records</CardTitle>
+              <CardTitle>Waste Past Records</CardTitle>
             </CardHeader>
             <CardContent>
               {/* table content */}
@@ -330,11 +335,11 @@ const WasteTrackingPage = () => {
                     <thead>
                       <tr className="border-b">
                         <th className="p-2 text-left">Date Sent</th>
-                        <th className="p-2 text-left">Shipment ID</th>
                         <th className="p-2 text-left">Tracking ID</th>
+                        <th className="p-2 text-left">Transport</th>
                         <th className="p-2 text-left">Category</th>
                         <th className="p-2 text-left">Status</th>
-                        <th className="p-2 text-left">Weight Recorded</th>
+                        <th className="p-2 text-left">Weight Declared</th>
                         <th className="p-2 text-left">Weight Accepted</th>
                         <th className="p-2 text-left">Carbon Credits</th>
                       </tr>
@@ -342,9 +347,9 @@ const WasteTrackingPage = () => {
                     <tbody>
                       {wasteData.map((item) => (
                         <tr key={item.id} className="border-b hover:bg-gray-50">
-                          <td className="p-2">{new Date(item.date_sent).toLocaleDateString()}</td>
-                          <td className="p-2">{item.shipment_id}</td>
+                          <td className="p-2">{new Date(item.date_sent).toLocaleDateString('en-GB')}</td>
                           <td className="p-2">{item.tracking_id}</td>
+                          <td className="p-2">{item.transport_mode}</td>
                           <td className="p-2">{item.waste_category.join(", ")}</td>
                           <td className="p-2">{item.status}</td>
                           <td className="p-2">{item.weight_tons.toLocaleString()}</td>
@@ -496,6 +501,7 @@ const WasteTrackingPage = () => {
             </CardContent>
           </Card>
         )}
+        </div>
       </div>
     </div>
   );
