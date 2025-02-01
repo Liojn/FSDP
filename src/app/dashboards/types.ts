@@ -42,7 +42,7 @@ export interface EquipmentTopData{
 
 //Interface for CropCycle Analysis
 type Crop = {
-  emissions: number;
+  totalEmissions: number;
   type: string;
 };
 
@@ -87,7 +87,7 @@ export interface Waste {
   emissions: number;
 }
 
-
+ 
 
 
 export interface ThresholdEmissionData {

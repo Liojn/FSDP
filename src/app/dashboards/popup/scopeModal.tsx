@@ -51,9 +51,10 @@ const ScopeModal = ({
   const transformedData = {
     ...data,
     crops: data.crops.map((crop) => ({
-      totalEmissions: crop.emissions || 0,
+      totalEmissions: crop.totalEmissions  || 0,
     })),
   };
+  //console.log(transformedData);
 
   const scope1 = Number(calculateScope1(transformedData)) || 0;
   const scope2 = Number(calculateScope2(transformedData)) || 0;
