@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Flame, Leaf, Loader2, Zap, Calendar, AlertTriangle, Sprout, Thermometer } from "lucide-react";
+import { AlertCircle, Flame, Leaf, Zap, Calendar, Sprout, Thermometer } from "lucide-react";
 
 import {
   Select,
@@ -136,7 +136,6 @@ const DashboardPage = () => {
     firstYearGoal,
     categoryEmissionsData,
     metricsData,
-    exceedingScopes,
     machineryData, //just added
     calendarData, //just added
     handleYearFilterChange,
@@ -259,7 +258,7 @@ const DashboardPage = () => {
     const colors = {
       High: 'bg-red-100 border-red-500 text-red-700',
       Medium: 'bg-yellow-100 border-yellow-500 text-yellow-700',
-      Low: 'bg-green-100 border-green-500 text-green-700'
+      Low: 'bg-lime-100 border-lime-500 text-lime-700'
     };
     return colors[risk];
   };
@@ -681,7 +680,7 @@ const DashboardPage = () => {
               <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
                 <Flame className="h-3 w-3" />Medium Risk
               </span>
-              <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700">
+              <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-lime-100 text-lime-700">
                 <Flame className="h-3 w-3" />Low Risk
               </span>
             </div>

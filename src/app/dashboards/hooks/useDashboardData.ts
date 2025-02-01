@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   fetchUniqueYears,
   getMetricsData,
@@ -253,7 +253,6 @@ export const useDashboardData = () => {
     categoryEmissionsData,
     metricsData,
     thresholds,
-    exceedingScopes,
     machineryData, //newly added
     calendarData, //newlyadded
     handleYearFilterChange,

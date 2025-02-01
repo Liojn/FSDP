@@ -71,9 +71,9 @@ const CarbonEmissionChart: React.FC<CarbonEmissionChartProps> = ({
         label: "Total Carbon Emission (kg CO2E)",
         data: monthlyEmissions,
         backgroundColor: monthlyEmissions.map((_, index) =>
-          index === clickedMonthIndex ? "#4BA387" : "#66CDAA"
+          index === clickedMonthIndex ? "#A3D77A" : "#C0F58F"
         ),
-        hoverBackgroundColor: "#448C7A",
+        hoverBackgroundColor: "#A3D77A",
         type: "bar",
       },
     ],

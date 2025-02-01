@@ -61,17 +61,17 @@ const ScopeModal = ({
     {
       name: "Scope 1",
       value: scope1,
-      description: "Direct emissions from owned or controlled sources",
+      description: "Direct emissions from owned or controlled sources (Eg. Fuel, Livestock Emissions)",
     },
     {
       name: "Scope 2",
       value: scope2,
-      description: "Indirect emissions from purchased electricity",
+      description: "Indirect emissions from purchased electricity (Eg. Purchased Energy's Emission)",
     },
     {
       name: "Scope 3",
       value: scope3,
-      description: "All other indirect emissions in value chain",
+      description: "All other indirect emissions in value chain (Eg. Crops and Waste Emissions)",
     },
   ].filter((item) => item.value > 0);
 
@@ -79,7 +79,7 @@ const ScopeModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-5 max-w-2xl w-full mx-4 relative">
+      <div className="bg-white rounded-lg p-5 max-w-2xl w-full mx-4 relative overflow-y-auto max-h-[90vh]">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl"
