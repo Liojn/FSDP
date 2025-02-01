@@ -21,32 +21,6 @@ interface Achievement {
   creditsAwarded: boolean;
 }
 
-interface CampaignData {
-  campaign: {
-    _id: string;
-    name: string;
-    status: string;
-    totalReduction: number;
-    targetReduction: number;
-    signeesCount: number;
-  };
-  participants: Array<{
-    company: {
-      _id: string;
-      name: string;
-      email: string;
-    };
-    participation: {
-      _id: string;
-      campaignId: string;
-      companyId: string;
-      joinedAt: string;
-      currentProgress: number;
-      lastUpdated: string;
-    };
-  }>;
-}
-
 const AchievementCard = ({ 
   achievement, 
   onClaimCredits 
@@ -57,15 +31,16 @@ const AchievementCard = ({
   const [claiming, setClaiming] = useState(false);
 
   const handleClaim = async () => {
-    try {
-      setClaiming(true);
-      await onClaimCredits(achievement.badge_id);
-    } catch (error) {
-      alert("Error claiming credits. Please try again later.");
-    } finally {
-      setClaiming(false);
-    }
-  };
+  try {
+    setClaiming(true);
+    await onClaimCredits(achievement.badge_id);
+  } catch (error: any) {
+    console.error("Error claiming credits:", error);
+    alert(`Error claiming credits: ${error.message}`);
+  } finally {
+    setClaiming(false);
+  }
+};
 
   return (
     <Card

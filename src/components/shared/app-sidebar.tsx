@@ -30,7 +30,6 @@ import {
   BadgeCheck,
   ChartColumn,
   ChevronsUpDown,
-  ClipboardList,
   Handshake,
   LayoutDashboard,
   Lightbulb,

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import connectToDatabase from "@/../dbConfig";
-import { fetchEmissionCategory } from "../../dashboards/api";
 
 type EmissionsRate = {
     _id: { $oid: string };
@@ -49,26 +48,11 @@ type Crop = {
     status: string;
 };
 
-type Livestock = {
-    _id: { $oid: string };
-    company_id: { $oid: string };
-    species: string;
-    number_of_species: number;
-    date: { $date: string };
-};
-
 type Waste = {
     _id: { $oid: string };
     company_id: { $oid: string };
     waste_type: string;
     waste_quantity_kg: number;
-    date: { $date: string };
-};
-
-type Forest = {
-    _id: { $oid: string };
-    company_id: { $oid: string };
-    totalAreaInHectares: number;
     date: { $date: string };
 };
 
@@ -154,7 +138,7 @@ export async function POST(request: NextRequest) {
 
     const objectId = new ObjectId(userId);
 
-    const [crops, equipment, waste, emissionRates, existingBadges, userData, campaignData] = await Promise.all([
+    const [crops, equipment, waste, emissionRates, existingBadges, campaignData] = await Promise.all([
       db.collection("Crops").find({ company_id: objectId }).toArray(),
       db.collection("Equipment").find({ company_id: objectId }).toArray(),
       db.collection("Waste").find({ company_id: objectId }).toArray(),
