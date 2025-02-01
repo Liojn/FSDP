@@ -10,10 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export default function Login({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+export default function Login() {
   const [email, setEmail] = useState("");
   console.log(email);
   const [password, setPassword] = useState("");
@@ -47,7 +44,7 @@ export default function Login({
         console.log("Token:", data.token);
 
         const userId = await fetchUserId();
-        console.log("User Id: " , userId);
+        console.log("User Id: ", userId);
         localStorage.setItem("userId", userId || "");
 
         // Redirect to a protected page, e.g., dashboard
@@ -62,35 +59,33 @@ export default function Login({
     }
   };
 
-  
-  
   const fetchUserId = async () => {
-  try {
-    const email = localStorage.getItem("userEmail");
-    if (!email) {
-      throw new Error("No email found in local storage.");
-    }
-    const res = await fetch(`/api/company/${encodeURIComponent(email)}`, {
-      method: "GET",
-    });
-    const data = await res.json();
-    console.log("In page.tsx fetchUserId: ", data);
+    try {
+      const email = localStorage.getItem("userEmail");
+      if (!email) {
+        throw new Error("No email found in local storage.");
+      }
+      const res = await fetch(`/api/company/${encodeURIComponent(email)}`, {
+        method: "GET",
+      });
+      const data = await res.json();
+      console.log("In page.tsx fetchUserId: ", data);
 
-    if (res.ok) {
-      return data._id; // Access _id directly from the response object
-    } else {
-      throw new Error(data.error || "Failed to fetch user ID");
+      if (res.ok) {
+        return data._id; // Access _id directly from the response object
+      } else {
+        throw new Error(data.error || "Failed to fetch user ID");
+      }
+    } catch (err) {
+      console.error("Error fetching user ID:", err);
+      return "";
     }
-  } catch (err) {
-    console.error("Error fetching user ID:", err);
-    return "";
-  }
-};
+  };
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">
       <div className="w-full max-w-sm md:max-w-4xl">
-        <div className={cn("flex flex-col gap-6", className)} {...props}>
+        <div className={cn("flex flex-col gap-6")}>
           <Card className="overflow-hidden">
             <CardContent className="grid p-0 md:grid-cols-2">
               <form className="p-6 md:p-8" onSubmit={handleSubmission}>

@@ -43,11 +43,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         }
 
         // Assert the type of user to User
-        const userTyped = user as User;
+        const userTyped = user;
 
 
         // Find the emission target for the requested year
-        const emissionGoalForYear = userTyped.emissionGoal.find((goal) => goal.year === year);
+        const emissionGoalForYear = userTyped.emissionGoal.find((goal: { year: number; }) => goal.year === year);
 
          if (emissionGoalForYear) {
             // Check if it's the earliest year

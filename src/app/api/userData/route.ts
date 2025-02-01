@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import connectToDatabase from "dbConfig";
 import { MetricData } from "@/types";
-
+export const dynamic = "force-dynamic";
 
 
 async function fetchWeatherData() {

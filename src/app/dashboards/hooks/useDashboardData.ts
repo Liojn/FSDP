@@ -132,7 +132,7 @@ export const useDashboardData = () => {
     };
 
     fetchMetricsData();
-  }, [selectedYear, userId, yearOptions]);
+  }, [selectedMonth, selectedYear, userId, yearOptions]);
 
   // Fetch metrics data for the filtered DONUT CHART
   useEffect(() => {

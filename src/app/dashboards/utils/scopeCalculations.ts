@@ -1,7 +1,7 @@
 // utils/scopeCalculations.ts
-import { EmissionData } from "@/app/dashboards/types";  // Update this import to use the dashboard types
+import { EmissionsData } from "@/app/dashboards/types";  // Update this import to use the dashboard types
 
-export const calculateScope1 = (data: EmissionData): number => {
+export const calculateScope1 = (data: EmissionsData): number => {
   const fuelEmissions = data.equipment.reduce(
     (sum: number, eq) => sum + (eq.fuelEmissions || 0),
     0
@@ -15,14 +15,14 @@ export const calculateScope1 = (data: EmissionData): number => {
   return fuelEmissions + livestockEmissions;
 };
 
-export const calculateScope2 = (data: EmissionData): number => {
+export const calculateScope2 = (data: EmissionsData): number => {
   return data.equipment.reduce(
     (sum: number, eq) => sum + (eq.electricityEmissions || 0),
     0
   );
 };
 
-export const calculateScope3 = (data: EmissionData): number => {
+export const calculateScope3 = (data: EmissionsData): number => {
   const wasteEmissions = data.waste.reduce(
     (sum: number, item) => sum + (item.emissions || 0),
     0

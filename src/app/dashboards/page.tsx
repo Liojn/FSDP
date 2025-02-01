@@ -2,7 +2,15 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Flame, Leaf, Zap, Calendar, Sprout, Thermometer } from "lucide-react";
+import {
+  AlertCircle,
+  Flame,
+  Leaf,
+  Zap,
+  Calendar,
+  Sprout,
+  Thermometer,
+} from "lucide-react";
 
 import {
   Select,
@@ -40,7 +48,7 @@ import { useThresholdCheck } from "@/app/dashboards/hooks/useThresholdCheck";
 import { ThresholdEmissionData } from "./types";
 import NetZeroGraph from "../prediction/netZeroGraph/netZeroGraph";
 import EmissionsChart from "../prediction/carbonNeutralGraph/predictionGraph";
-import html2canvas from 'html2canvas';
+import html2canvas from "html2canvas";
 import { useData, MonthlyData } from "@/context/DataContext";
 
 // Popover components
@@ -189,6 +197,8 @@ const DashboardPage = () => {
   const emissionsChartRef = useRef<HTMLDivElement>(null);
   const { setData, setIsLoading } = useData();
 
+  // Run `fetchHistoricalData` once on component load
+
   useEffect(() => {
     const fetchHistoricalData = async () => {
       const userName = localStorage.getItem("userName");
@@ -248,28 +258,31 @@ const DashboardPage = () => {
     };
 
     fetchHistoricalData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array ensures it runs only once
 
-
   //Function for Crop Cycle Analysis
-  type RiskLevel = 'High' | 'Medium' | 'Low';
+  type RiskLevel = "High" | "Medium" | "Low";
   const getRiskColor = (risk: RiskLevel): string => {
     const colors = {
-      High: 'bg-red-100 border-red-500 text-red-700',
-      Medium: 'bg-yellow-100 border-yellow-500 text-yellow-700',
-      Low: 'bg-lime-100 border-lime-500 text-lime-700'
+      High: "bg-red-100 border-red-500 text-red-700",
+      Medium: "bg-yellow-100 border-yellow-500 text-yellow-700",
+      Low: "bg-lime-100 border-lime-500 text-lime-700",
     };
     return colors[risk];
   };
   const getRiskDescription = (risk: string): string => {
     switch (risk) {
-      case 'High': return 'High risk of uncontrolled fire spread. Extra precautions needed.';
-      case 'Medium': return 'Moderate fire risk. Standard safety measures required.';
-      case 'Low': return 'Low fire risk. Regular monitoring sufficient.';
-      default: return '';
+      case "High":
+        return "High risk of uncontrolled fire spread. Extra precautions needed.";
+      case "Medium":
+        return "Moderate fire risk. Standard safety measures required.";
+      case "Low":
+        return "Low fire risk. Regular monitoring sufficient.";
+      default:
+        return "";
     }
   };
-
 
   // Only show loading screen on initial load
   if (initialLoading || !userId) {
@@ -348,7 +361,7 @@ const DashboardPage = () => {
     setClickedMonthIndex(monthIndex === clickedMonthIndex ? null : monthIndex);
     handleMonthClick(monthIndex);
   };
- 
+
   const handleCategoryClick = (category: string) => {
     setSelectedCategory(category);
     setShowModal(true);
@@ -378,9 +391,9 @@ const DashboardPage = () => {
       return;
     }
 
-    const invisibleDiv = document.getElementById('invisible-div');
+    const invisibleDiv = document.getElementById("invisible-div");
     if (invisibleDiv) {
-        invisibleDiv.style.display = 'block'; // Show the div
+      invisibleDiv.style.display = "block"; // Show the div
     }
 
     setIsCancelled(false);
@@ -391,30 +404,29 @@ const DashboardPage = () => {
 
     try {
       setTimeout(async () => {
-
         let netZeroImage = null;
         let emissionsChartImage = null;
 
-      if (netZeroGraphRef.current) {
-        try {
-          console.log("Capturing Net Zero Graph...");
-          const canvas = await html2canvas(netZeroGraphRef.current);
-          netZeroImage = canvas.toDataURL("image/png");
-          console.log("Net Zero Graph captured successfully.");
-        } catch (error) {
-          console.error("Error capturing Net Zero Graph:", error);
+        if (netZeroGraphRef.current) {
+          try {
+            console.log("Capturing Net Zero Graph...");
+            const canvas = await html2canvas(netZeroGraphRef.current);
+            netZeroImage = canvas.toDataURL("image/png");
+            console.log("Net Zero Graph captured successfully.");
+          } catch (error) {
+            console.error("Error capturing Net Zero Graph:", error);
+          }
         }
-      }
-      if (emissionsChartRef.current) {
-        try {
-          console.log("Capturing Net Zero Graph...");
-          const canvas = await html2canvas(emissionsChartRef.current);
-          emissionsChartImage = canvas.toDataURL("image/png");
-          console.log("Net Zero Graph captured successfully.");
-        } catch (error) {
-          console.error("Error capturing Net Zero Graph:", error);
+        if (emissionsChartRef.current) {
+          try {
+            console.log("Capturing Net Zero Graph...");
+            const canvas = await html2canvas(emissionsChartRef.current);
+            emissionsChartImage = canvas.toDataURL("image/png");
+            console.log("Net Zero Graph captured successfully.");
+          } catch (error) {
+            console.error("Error capturing Net Zero Graph:", error);
+          }
         }
-      }
 
         if (isCancelled) return;
         setExportProgress(30);
@@ -451,7 +463,7 @@ const DashboardPage = () => {
 
         // Step 5: Once the report is generated, hide the invisible div
         if (invisibleDiv) {
-            invisibleDiv.style.display = 'none'; // Hide the div after completion
+          invisibleDiv.style.display = "none"; // Hide the div after completion
         }
 
         setExportProgress(100);
@@ -579,7 +591,9 @@ const DashboardPage = () => {
                   unit={metric.unit}
                   icon={getIconForMetric(metric.title)}
                   className={`bg-white p-4 shadow-md rounded-lg transition-all duration-200 ${
-                    index === 1 ? "cursor-pointer hover:bg-gray-100 hover:ring-2 hover:ring-blue-500" : ""
+                    index === 1
+                      ? "cursor-pointer hover:bg-gray-100 hover:ring-2 hover:ring-blue-500"
+                      : ""
                   }`}
                 />
               </div>
@@ -593,7 +607,7 @@ const DashboardPage = () => {
                 Yearly Carbon Emission&apos;s Progress
               </h3>
               <div className="flex items-center gap-1 text-sm text-gray-500">
-                <span className="text-blue-500">🖱️</span> 
+                <span className="text-blue-500">🖱️</span>
                 <span>Click a bar to filter by month</span>
               </div>
             </div>
@@ -639,8 +653,10 @@ const DashboardPage = () => {
                 Emissions By Category
               </h3>
               <div className="flex items-center gap-1 text-sm text-gray-500 mt-2 sm:mt-0">
-                <span className="text-blue-500">🖱️</span> 
-                <span className="text-gray-600">Click a category for details</span>
+                <span className="text-blue-500">🖱️</span>
+                <span className="text-gray-600">
+                  Click a category for details
+                </span>
               </div>
             </div>
             <div className="flex-1 flex justify-center items-center">
@@ -661,11 +677,14 @@ const DashboardPage = () => {
           <h3 className="text-lg font-semibold text-gray-700 mb-4">
             Top Electricity Consuming Machinery (kWh)
           </h3>
-          <div className="h-64 flex justify-center items-center" style={{ height: '256px' }}>
-            <ElectricityConsumptionChart data={machineryData}/>
+          <div
+            className="h-64 flex justify-center items-center"
+            style={{ height: "256px" }}
+          >
+            <ElectricityConsumptionChart data={machineryData} />
           </div>
         </div>
-        
+
         {/* Right side (3/5) */}
         <div className="col-span-5 md:col-span-3 bg-white p-4 shadow-md rounded-lg">
           <div className="flex items-center justify-between mb-4">
@@ -674,13 +693,16 @@ const DashboardPage = () => {
             </h3>
             <div className="flex gap-2 text-xs">
               <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 text-red-700">
-                <Flame className="h-3 w-3" />High Risk
+                <Flame className="h-3 w-3" />
+                High Risk
               </span>
               <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
-                <Flame className="h-3 w-3" />Medium Risk
+                <Flame className="h-3 w-3" />
+                Medium Risk
               </span>
               <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-lime-100 text-lime-700">
-                <Flame className="h-3 w-3" />Low Risk
+                <Flame className="h-3 w-3" />
+                Low Risk
               </span>
             </div>
           </div>
@@ -688,11 +710,13 @@ const DashboardPage = () => {
           <div className="h-64 overflow-y-auto">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {calendarData.map((month, index) => (
-                <div 
+                <div
                   key={index}
                   className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <div className={`p-3 border-b ${getRiskColor(month.burnRisk)}`}>
+                  <div
+                    className={`p-3 border-b ${getRiskColor(month.burnRisk)}`}
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
@@ -700,14 +724,20 @@ const DashboardPage = () => {
                       </div>
                       <div className="flex items-center gap-1">
                         <Flame className="h-4 w-4" />
-                        <span className="text-xs font-medium">{month.burnRisk}</span>
+                        <span className="text-xs font-medium">
+                          {month.burnRisk}
+                        </span>
                       </div>
                     </div>
-                    <p className="text-xs">{getRiskDescription(month.burnRisk)}</p>
+                    <p className="text-xs">
+                      {getRiskDescription(month.burnRisk)}
+                    </p>
                   </div>
 
                   <div className="p-3 space-y-3">
-                    <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium bg-gray-100`}>
+                    <div
+                      className={`inline-block px-2 py-1 rounded-full text-xs font-medium bg-gray-100`}
+                    >
                       {month.phase}
                     </div>
 
@@ -718,7 +748,10 @@ const DashboardPage = () => {
 
                     <div className="space-y-1">
                       {month.crops.map((crop, cropIndex) => (
-                        <div key={cropIndex} className="flex items-center gap-2 text-sm">
+                        <div
+                          key={cropIndex}
+                          className="flex items-center gap-2 text-sm"
+                        >
                           <Sprout className="h-4 w-4 text-green-600" />
                           <span>{crop.type}</span>
                         </div>
@@ -730,7 +763,7 @@ const DashboardPage = () => {
             </div>
           </div>
         </div>
-        { /* end of the crop cycle analysis */}
+        {/* end of the crop cycle analysis */}
       </div>
 
       {/* Invisible div section */}
@@ -746,7 +779,7 @@ const DashboardPage = () => {
           <EmissionsChart />
         </div>
       </div>
-        
+
       {showModal && (
         <Modal
           isVisible={showModal}
@@ -772,8 +805,6 @@ const DashboardPage = () => {
         year={selectedYear}
         month={selectedMonth}
       />
-
-
     </div>
   );
 };

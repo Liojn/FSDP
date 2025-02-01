@@ -42,8 +42,10 @@ export interface EquipmentTopData{
 
 //Interface for CropCycle Analysis
 type Crop = {
+  emissions: number;
   type: string;
 };
+
 export interface CropCalendarData{
   month: string;
   phase: string;
@@ -53,14 +55,23 @@ export interface CropCalendarData{
 };
 
 export interface MetricsUpdateParams {
+
   data: MetricsDataResponse | null;
+
   emissionsData: EmissionsDataResponse | null;
+
   previousEmissionsData: MetricsDataResponse | null;
-  targetGoalData: TargetGoalResponse;
-  emissionCategoryData: EmissionCategoryData[];
-  topEquipmentData: EquipmentTopData[];
-  cropCycleData: CropCalendarData[];
+
+  targetGoalData: TargetGoalResponse | null;
+
+  emissionCategoryData: EmissionCategoryData[] | null;
+
+  topEquipmentData: EquipmentTopData[] | null;
+
+  cropCycleData: CropCalendarData[] | null;
+
 }
+
 
 // Emission Data Interfaces
 export interface Equipment {
@@ -77,9 +88,7 @@ export interface Waste {
 }
 
 
-export interface Crop {
-  totalEmissions: number;
-}
+
 
 export interface ThresholdEmissionData {
   equipment: Equipment[];

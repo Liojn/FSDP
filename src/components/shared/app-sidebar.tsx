@@ -70,64 +70,73 @@ const AppSidebar = React.memo(function AppSidebar() {
     storeCurrency: 0,
   });
 
-useEffect(() => {
-  const handleStoreCurrencyUpdate = (event: CustomEvent) => {
-    console.log("Store Currency Update Event Received:", event.detail);
-    
-    const newStoreCurrency = Number(event.detail?.newStoreCurrency);
-    
-    console.log("Parsed New Store Currency:", newStoreCurrency);
-    
-    if (!isNaN(newStoreCurrency)) {
-      setUserData(prev => ({
-        ...prev,
-        storeCurrency: newStoreCurrency
-      }));
-      
-      // Optional: Update localStorage for persistence
-      localStorage.setItem("storeCurrency", newStoreCurrency.toString());
-    } else {
-      console.error("Invalid store currency value received");
-    }
-  };
+  useEffect(() => {
+    const handleStoreCurrencyUpdate = (event: CustomEvent) => {
+      console.log("Store Currency Update Event Received:", event.detail);
 
-  window.addEventListener('updateStoreCurrency', handleStoreCurrencyUpdate as EventListener);
+      const newStoreCurrency = Number(event.detail?.newStoreCurrency);
 
-  return () => {
-    window.removeEventListener('updateStoreCurrency', handleStoreCurrencyUpdate as EventListener);
-  };
-}, []);
+      console.log("Parsed New Store Currency:", newStoreCurrency);
 
-useEffect(() => {
-  const fetchUserData = async () => {
-    const storedEmail = localStorage.getItem("userEmail");
-    if (storedEmail) {
-      try {
-        const response = await fetch(`/api/company/${storedEmail}`);
-        if (response.ok) {
-          const userData = await response.json();
-          const storeCurrency = Number(userData.carbonCredits) || 0; // Ensure it's a number
+      if (!isNaN(newStoreCurrency)) {
+        setUserData((prev) => ({
+          ...prev,
+          storeCurrency: newStoreCurrency,
+        }));
+
+        // Optional: Update localStorage for persistence
+        localStorage.setItem("storeCurrency", newStoreCurrency.toString());
+      } else {
+        console.error("Invalid store currency value received");
+      }
+    };
+
+    window.addEventListener(
+      "updateStoreCurrency",
+      handleStoreCurrencyUpdate as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "updateStoreCurrency",
+        handleStoreCurrencyUpdate as EventListener
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const storedEmail = localStorage.getItem("userEmail");
+      if (storedEmail) {
+        try {
+          const response = await fetch(`/api/company/${storedEmail}`);
+          if (response.ok) {
+            const userData = await response.json();
+            const storeCurrency = Number(userData.carbonCredits) || 0; // Ensure it's a number
+            setUserData({
+              name: userData.name || "Placeholder Name",
+              email: userData.email || "guest@example.com",
+              storeCurrency,
+            });
+            localStorage.setItem("storeCurrency", storeCurrency.toString()); // Initialize in localStorage
+          }
+        } catch (error) {
+          console.error("Failed to fetch user data:", error);
+          const storeCurrency = parseInt(
+            localStorage.getItem("storeCurrency") || "0",
+            10
+          ); // Fallback to localStorage
           setUserData({
-            name: userData.name || "Placeholder Name",
-            email: userData.email || "guest@example.com",
+            name: localStorage.getItem("userName") || "Placeholder Name",
+            email: localStorage.getItem("userEmail") || "guest@example.com",
             storeCurrency,
           });
-          localStorage.setItem("storeCurrency", storeCurrency.toString()); // Initialize in localStorage
         }
-      } catch (error) {
-        console.error("Failed to fetch user data:", error);
-        const storeCurrency = parseInt(localStorage.getItem("storeCurrency") || "0", 10); // Fallback to localStorage
-        setUserData({
-          name: localStorage.getItem("userName") || "Placeholder Name",
-          email: localStorage.getItem("userEmail") || "guest@example.com",
-          storeCurrency,
-        });
       }
-    }
-  };
+    };
 
-  fetchUserData();
-}, []);
+    fetchUserData();
+  }, []);
 
   const handleLogout = useCallback(async () => {
     localStorage.removeItem("token");
@@ -202,7 +211,13 @@ useEffect(() => {
         </DropdownMenuItem>
       </>
     ),
-    [userData.name, userData.email, handleLogout, router]
+    [
+      userData.name,
+      userData.email,
+      userData.storeCurrency,
+      handleLogout,
+      router,
+    ]
   );
 
   return (
@@ -231,9 +246,8 @@ useEffect(() => {
         </div>
       </SidebarHeader>
 
-       <SidebarContent>
+      <SidebarContent>
         <SidebarGroup>
-          
           {/* New Carbon Credits Section with more spacing */}
           <div className="px-4 py-3 flex items-center text-emerald-300 text-xs border-b border-stone-800">
             <Coins className="mr-2 size-4 text-emerald-400" />
