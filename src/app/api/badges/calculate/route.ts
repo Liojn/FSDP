@@ -191,9 +191,56 @@ export async function POST(request: NextRequest) {
         isUnlocked: calculateUniqueCropTypes(crops) >= 3,
         credits: 100,
         status: calculateUniqueCropTypes(crops) >= 3 ? "Completed" : "Incomplete",
-        creditsAwarded: false
       },
-      // ... [Other badge calculations with creditsAwarded added] ...
+      {
+        badge_id: new ObjectId("672c51705ad1bf64a1872661"),
+        progress: (() => {
+          const efficiency = calculateEquipmentEfficiency(equipment);
+          const fuelProgress = Math.max(0, 100 - (efficiency.fuelPerDay / 100 * 100));
+          const electricityProgress = Math.max(0, 100 - (efficiency.electricityPerDay / 500 * 100));
+          return Math.min((fuelProgress + electricityProgress) / 2, 100);
+        })(),
+        isUnlocked: (() => {
+          const efficiency = calculateEquipmentEfficiency(equipment);
+          return efficiency.fuelPerDay < 100 && efficiency.electricityPerDay < 500;
+        })(),
+        credits: 150, 
+        status: (() => {
+          const efficiency = calculateEquipmentEfficiency(equipment);
+          return efficiency.fuelPerDay < 100 && efficiency.electricityPerDay < 500 ? "Completed" : "Incomplete";
+        })(),
+      },
+      {
+        badge_id: new ObjectId("672c51705ad1bf64a1872662"),
+        progress: Math.min((500 - calculateWasteEmissions(waste, emissionRates)) / 5, 100),
+        isUnlocked: calculateWasteEmissions(waste, emissionRates) < 500,
+        credits: 200, 
+        status: calculateWasteEmissions(waste, emissionRates) < 500 ? "Completed" : "Incomplete",
+      },
+      {
+        badge_id: new ObjectId("672c51705ad1bf64a1872663"),
+        progress: Math.min((1 - calculateWasteReduction(waste)) * 100, 100),
+        isUnlocked: calculateWasteReduction(waste) < 0.8,
+        credits: 250, 
+        status: calculateWasteReduction(waste) < 0.8 ? "Completed" : "Incomplete",
+      },
+      {
+        badge_id: new ObjectId("672c51705ad1bf64a1872664"),
+        progress: (() => {
+          const emissions = calculateFertilizerEmissions(crops, emissionRates);
+          return Math.max(0, Math.min(100, (1 - emissions / 100) * 100));
+        })(),
+        isUnlocked: calculateFertilizerEmissions(crops, emissionRates) < 100,
+        credits: 300, 
+        status: calculateFertilizerEmissions(crops, emissionRates) < 100 ? "Completed" : "Incomplete",
+      },
+      {
+        badge_id: new ObjectId("672c51705ad1bf64a1872665"),
+        progress: Math.min((500 - calculateElectricityEmissions(equipment, emissionRates)) / 5, 100),
+        isUnlocked: calculateElectricityEmissions(equipment, emissionRates) < 500,
+        credits: 350, 
+        status: calculateElectricityEmissions(equipment, emissionRates) < 500 ? "Completed" : "Incomplete",
+      },
       ...campaignBadges
     ];
 
