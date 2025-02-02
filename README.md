@@ -6,7 +6,8 @@ Firstly, npm install these modules using these in a new terminal:
 
 ```bash
 
-npm install
+npm run build
+npm start
 
 
 ```
