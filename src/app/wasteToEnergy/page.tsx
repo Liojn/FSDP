@@ -17,9 +17,6 @@ interface WasteData {
   date_sent: string;
   tracking_id: string;
   energy_generated_kwh?: number;
-  rate_cents_per_kwh: number;
-  total_energy_value_sgd: number;
-  compensation_sgd: number;
   waste_category: string[];
   carbon_credits?: number;
   weight_accepted?: number;
@@ -353,7 +350,7 @@ const WasteTrackingPage = () => {
                           <td className="p-2">{item.waste_category.join(", ")}</td>
                           <td className="p-2">{item.status}</td>
                           <td className="p-2">{item.weight_tons.toLocaleString()}</td>
-                          <td className="p-2">{item.weight_accepted?.toLocaleString()}</td>
+                          <td className="p-2">{item.weight_accepted?.toLocaleString() || '-'}</td>
                           <td className="p-2">{getCarbonCreditsDisplay(item)}</td>
                         </tr>
                       ))}
