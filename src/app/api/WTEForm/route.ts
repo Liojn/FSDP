@@ -46,15 +46,15 @@ export async function POST(req: Request) {
     const shipment_id = `WTE-${nextNumber}`;
 
     // Calculate energy generation based on waste type
-    let energyMultiplier = 433; // Base multiplier
-    if (waste_category.includes('organic')) energyMultiplier *= 1.2; // 20% more efficient
-    if (waste_category.includes('process')) energyMultiplier *= 1.1; // 10% more efficient
-    if (waste_category.includes('animal')) energyMultiplier *= 1.3; // 30% more efficient
+    // let energyMultiplier = 433; // Base multiplier
+    // if (waste_category.includes('organic')) energyMultiplier *= 1.2; // 20% more efficient
+    // if (waste_category.includes('process')) energyMultiplier *= 1.1; // 10% more efficient
+    // if (waste_category.includes('animal')) energyMultiplier *= 1.3; // 30% more efficient
     
-    const estimatedEnergyKwh = weight_tons * energyMultiplier;
+    // const estimatedEnergyKwh = weight_tons * energyMultiplier;
     
-    // Calculate carbon credits (1 credit per 100 kWh)
-    const carbonCredits = Math.floor(estimatedEnergyKwh / 100);
+    // // Calculate carbon credits (1 credit per 100 kWh)
+    // const carbonCredits = Math.floor(estimatedEnergyKwh / 100);
     
     // Create enhanced WTE data document
     const newWTEData = {
@@ -66,11 +66,6 @@ export async function POST(req: Request) {
       transport_mode,
       status: "In Progress",
       date_sent: new Date(),
-      energy_generated_kwh: estimatedEnergyKwh,
-      rate_cents_per_kwh: 18.5, // Current Singapore electricity rate
-      total_energy_value_sgd: (estimatedEnergyKwh * 0.185), // Value in SGD
-      carbon_credits: carbonCredits,
-      compensation_sgd: (estimatedEnergyKwh * 0.185 * 0.3), // 30% compensation rate
     };
 
     // Insert into database

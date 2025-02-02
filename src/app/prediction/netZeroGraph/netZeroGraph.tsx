@@ -404,7 +404,7 @@ const NetZeroGraph: React.FC<NetZeroGraphProps> = ({
                 <br />
                 {predictedNetZeroYear ? (
                   predictedNetZeroYear <= 2050 ? (
-                    <span>Based on your current data trend, you are on track to reach net zero by <strong>{predictedNetZeroYear}</strong>, ahead of the 2050 target</span>
+                    <span>Based on your current data trend, you are on track to reach net zero by <strong>{predictedNetZeroYear}</strong>, ahead of the <strong>2050</strong> target</span>
                   ) : (
                     <span>Based on your current data trend, you are predicted to hit net zero around <strong>{predictedNetZeroYear}</strong>, falling behind the <strong>2050</strong> target</span>
                   )
